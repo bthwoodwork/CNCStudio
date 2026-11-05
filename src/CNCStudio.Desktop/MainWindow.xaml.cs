@@ -197,7 +197,7 @@ public partial class MainWindow : Window
 
 
     public MainWindow() { InitializeComponent(); RefreshInlaySettings(); Render(); }
-    private void Window_Loaded(object sender, RoutedEventArgs e) { FitToMaterial(); InitGrblUi(); }
+    private void Window_Loaded(object sender, RoutedEventArgs e) { FitToMaterial(); InitGrblUi(); MarkWorkspace(); }
     private static double Clamp(double n, double lo, double hi) => Math.Max(lo, Math.Min(hi, n));
     private void UpdateZoomLabel()
     {
@@ -364,27 +364,52 @@ public partial class MainWindow : Window
         foreach (var window in _floatingPanels.Values.ToList()) window.Close();
         if (_grbl is not null) DisconnectGrbl("Programmet stängs.");
     }
-    private void DesignWorkspace_Click(object sender, RoutedEventArgs e)
+    private enum Workspace { Design, Cam, Machine }
+    private Workspace _workspace = Workspace.Design;
+
+    private void DesignWorkspace_Click(object sender, RoutedEventArgs e) => SetWorkspace(Workspace.Design);
+    private void CamWorkspace_Click(object sender, RoutedEventArgs e) => SetWorkspace(Workspace.Cam);
+    private void MachineWorkspace_Click(object sender, RoutedEventArgs e) => SetWorkspace(Workspace.Machine);
+
+    /// <summary>
+    /// The one place that switches workspace: view (material or machine table), panels and the
+    /// highlighted tab/menu item. Design and CAM show the material; Maskin shows the machine table.
+    /// </summary>
+    private void SetWorkspace(Workspace ws)
     {
-        SetMachineView(false);
-        SetPanelVisible("Tools", true); SetPanelVisible("Properties", true);
-        SetPanelVisible("Cam", false); SetPanelVisible("Machine", true);
-        StatusText.Text = "Arbetsyta: Design – ritverktyg och egenskaper.";
+        _workspace = ws;
+        SetMachineView(ws == Workspace.Machine);
+        switch (ws)
+        {
+            case Workspace.Design:
+                SetPanelVisible("Tools", true); SetPanelVisible("Properties", true);
+                SetPanelVisible("Cam", false); SetPanelVisible("Machine", true);
+                StatusText.Text = "Arbetsyta Design – rita och redigera på materialet.";
+                break;
+            case Workspace.Cam:
+                SetPanelVisible("Tools", true); SetPanelVisible("Properties", false);
+                SetPanelVisible("Machine", false); SetPanelVisible("Cam", true);
+                StatusText.Text = "Arbetsyta CAM – bearbetning och körbanor på materialet. Ingen G-code.";
+                break;
+            case Workspace.Machine:
+                SetPanelVisible("Tools", false); SetPanelVisible("Cam", false);
+                SetPanelVisible("Machine", true);
+                SetPanelVisible("Properties", true); // fixture and Z settings live there
+                StatusText.Text = "Arbetsyta Maskin – maskinbordet: materialplacering, fastspänningar och maskinstyrning.";
+                break;
+        }
+        MarkWorkspace();
     }
-    private void CamWorkspace_Click(object sender, RoutedEventArgs e)
+
+    private void MarkWorkspace()
     {
-        SetMachineView(false);
-        SetPanelVisible("Tools", true); SetPanelVisible("Properties", false);
-        SetPanelVisible("Machine", false); SetPanelVisible("Cam", true);
-        StatusText.Text = "Arbetsyta: CAM – XY-förhandsvisning för rektangel/ellips. Ingen G-code.";
-    }
-    private void MachineWorkspace_Click(object sender, RoutedEventArgs e)
-    {
-        SetMachineView(true);
-        SetPanelVisible("Tools", false); SetPanelVisible("Properties", false);
-        SetPanelVisible("Cam", false); SetPanelVisible("Machine", true);
-        SetPanelVisible("Properties", true); // Fixture controls must remain visible in machine workspace.
-        StatusText.Text = "Maskinvy: + Rita fastspänning i verktygsraden och dra på bordet; inga maskinrörelser.";
+        if (DesignTab is null) return;
+        DesignTab.Tag = _workspace == Workspace.Design ? "Active" : null;
+        CamTab.Tag = _workspace == Workspace.Cam ? "Active" : null;
+        MachineTab.Tag = _workspace == Workspace.Machine ? "Active" : null;
+        DesignMenuItem.IsChecked = _workspace == Workspace.Design;
+        CamMenuItem.IsChecked = _workspace == Workspace.Cam;
+        MachineMenuItem.IsChecked = _workspace == Workspace.Machine;
     }
     private void SaveAs_Click(object sender, RoutedEventArgs e)
     {
@@ -399,6 +424,10 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        // Workspace shortcuts work everywhere, also while typing in a field.
+        if (e.Key == Key.F1) { SetWorkspace(Workspace.Design); e.Handled = true; return; }
+        if (e.Key == Key.F2) { SetWorkspace(Workspace.Cam); e.Handled = true; return; }
+        if (e.Key == Key.F3) { SetWorkspace(Workspace.Machine); e.Handled = true; return; }
         if (Keyboard.FocusedElement is TextBox) return;
         if (_fixtureDrawing && e.Key == Key.Escape)
         { SetFixtureDrawing(false); _machineDragStart = null;

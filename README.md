@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.5.10)
+# CNC Studio – källkod (senaste: 0.5.11)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -130,3 +130,12 @@ Byggd i Windows (0 fel, 0 varningar), alla tester godkända. Användaren har ver
 **Tester:** 166 tester, varav 46 mot en simulerad GRBL.
 
 Byggd i Windows (0 fel, 0 varningar), alla tester godkända. **Inte testad mot riktig maskin ännu.**
+
+## 0.5.11 – Ny verktygsrad och tydliga arbetsytor
+
+- Verktygsrad med ikoner under menyerna (Ny, Öppna, Spara | Ångra, Gör om | Importera | Anpassa, 1:1) med tooltips och kortkommandon. Allt finns kvar i menyerna.
+- Arbetsytorna Design, CAM och Maskin visas som flikar; den aktiva är blå och fetstilt och har en bock i Visa-menyn. Kortkommandon F1, F2 och F3.
+- Knapparna Materialvy och Maskinvy är borttagna. Arbetsytan styr vyn: Design och CAM visar materialet, Maskin visar maskinbordet.
+- "+ Rita fastspänning" byter till arbetsytan Maskin med rätt paneler.
+
+Byggd i Windows (0 fel, 0 varningar), 166 tester godkända. Användaren har godkänt utseendet.

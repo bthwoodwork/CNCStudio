@@ -16,9 +16,6 @@ public partial class MainWindow
     private readonly Canvas _machineGridLayer = new() { IsHitTestVisible = false };
     private (double W, double H, double Zoom, double Step)? _machineGridCache;
 
-    private void MachineView_Click(object sender, RoutedEventArgs e) => SetMachineView(true);
-    private void StockView_Click(object sender, RoutedEventArgs e) => SetMachineView(false);
-
     private void SetMachineView(bool machine)
     {
         _machineView = machine;
@@ -174,9 +171,8 @@ public partial class MainWindow
 
     private void StartFixture_Click(object sender, RoutedEventArgs e)
     {
-        SetMachineView(true);
+        if (_workspace != Workspace.Machine) SetWorkspace(Workspace.Machine);
         SetFixtureDrawing(true);
-        SetPanelVisible("Properties", true);
         StatusText.Text = "FASTSPÄNNING AKTIV: Dra en rektangel på maskinbordet. Ange höjd i Egenskaper. Esc avbryter.";
     }
 
