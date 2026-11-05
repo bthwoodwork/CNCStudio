@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.5.11)
+# CNC Studio – källkod (senaste: 0.5.12)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -139,3 +139,13 @@ Byggd i Windows (0 fel, 0 varningar), alla tester godkända. **Inte testad mot r
 - "+ Rita fastspänning" byter till arbetsytan Maskin med rätt paneler.
 
 Byggd i Windows (0 fel, 0 varningar), 166 tester godkända. Användaren har godkänt utseendet.
+
+## 0.5.12 – Tydligare layout
+
+- Mörka, läsbara menyer med markering, kortkommandon och bock för aktiv arbetsyta.
+- Panelerna följer arbetsytan: Design visar Markerat objekt överst och sedan Projekt och material; Maskin visar panelen Maskinbord med Fastspänningar, Materialplacering, Z-höjder och Maskin. Maskinkontrollen visas inte i Design.
+- "+ Rita fastspänning" ligger under Fastspänningar i stället för i huvudverktygsraden.
+- Zoom och rutnät visas i statusraden.
+- Läsbara rubriker och etiketter i hopfällbara sektioner, maskinsammanfattningen fylls i vid start och hjälpraden döljs inte längre av linjalen.
+
+Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren har godkänt layouten.

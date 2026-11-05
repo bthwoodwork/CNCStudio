@@ -197,11 +197,16 @@ public partial class MainWindow : Window
 
 
     public MainWindow() { InitializeComponent(); RefreshInlaySettings(); Render(); }
-    private void Window_Loaded(object sender, RoutedEventArgs e) { FitToMaterial(); InitGrblUi(); MarkWorkspace(); }
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        FitToMaterial(); InitGrblUi();
+        RefreshMachineSummary(); RefreshMotionFields();
+        SetWorkspace(Workspace.Design);
+    }
     private static double Clamp(double n, double lo, double hi) => Math.Max(lo, Math.Min(hi, n));
     private void UpdateZoomLabel()
     {
-        ZoomLabel.Text = $"  |  Zoom {_zoom * 100:0}%";
+        ZoomLabel.Text = $"Zoom {_zoom * 100:0} %";
         if (GridStepLabel is not null) GridStepLabel.Text = $"Rutnät: {GridStep(_zoom):0.##} mm";
     }
     private void ApplyZoom(double newZoom, Point anchor)
@@ -383,7 +388,7 @@ public partial class MainWindow : Window
         {
             case Workspace.Design:
                 SetPanelVisible("Tools", true); SetPanelVisible("Properties", true);
-                SetPanelVisible("Cam", false); SetPanelVisible("Machine", true);
+                SetPanelVisible("Cam", false); SetPanelVisible("Machine", false);
                 StatusText.Text = "Arbetsyta Design – rita och redigera på materialet.";
                 break;
             case Workspace.Cam:
@@ -404,6 +409,11 @@ public partial class MainWindow : Window
     private void MarkWorkspace()
     {
         if (DesignTab is null) return;
+        // The properties panel shows what belongs to the workspace.
+        bool machine = _workspace == Workspace.Machine;
+        DesignSections.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
+        MachineSections.Visibility = machine ? Visibility.Visible : Visibility.Collapsed;
+        PropertiesTitle.Text = machine ? "MASKINBORD" : "EGENSKAPER";
         DesignTab.Tag = _workspace == Workspace.Design ? "Active" : null;
         CamTab.Tag = _workspace == Workspace.Cam ? "Active" : null;
         MachineTab.Tag = _workspace == Workspace.Machine ? "Active" : null;

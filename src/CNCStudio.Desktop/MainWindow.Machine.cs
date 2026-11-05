@@ -173,7 +173,7 @@ public partial class MainWindow
     {
         if (_workspace != Workspace.Machine) SetWorkspace(Workspace.Machine);
         SetFixtureDrawing(true);
-        StatusText.Text = "FASTSPÄNNING AKTIV: Dra en rektangel på maskinbordet. Ange höjd i Egenskaper. Esc avbryter.";
+        StatusText.Text = "FASTSPÄNNING AKTIV: Dra en rektangel på maskinbordet. Ange höjd under Fastspänningar. Esc avbryter.";
     }
 
     /// <summary>
@@ -229,7 +229,7 @@ public partial class MainWindow
     {
         if (FixtureSelectionLabel is null) return;
         var f = _selectedFixture;
-        FixtureSelectionLabel.Text = f is null ? "Inget hinder valt" : f.Name;
+        FixtureSelectionLabel.Text = f is null ? "Ingen vald – klicka på en på bordet" : f.Name;
         if (f is null) return;
         FixtureNameBox.Text = f.Name;
         FixtureXBox.Text = F(f.X); FixtureYBox.Text = F(f.Y);
@@ -241,7 +241,7 @@ public partial class MainWindow
 
     private void SaveFixture_Click(object sender, RoutedEventArgs e)
     {
-        if (_selectedFixture is null) { Error("Välj ett hinder i maskinvyn först."); return; }
+        if (_selectedFixture is null) { Error("Klicka på en fastspänning på maskinbordet först."); return; }
         if (!Parse(FixtureXBox, out var x) || !Parse(FixtureYBox, out var y) ||
             !Parse(FixtureWidthBox, out var width) || !Parse(FixtureLengthBox, out var length) ||
             !Parse(FixtureHeightBox, out var height) || !Parse(FixtureClearanceBox, out var clearance))
