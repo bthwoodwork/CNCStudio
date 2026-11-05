@@ -120,11 +120,7 @@ public partial class MainWindow
                 ToolTip = $"{f.Name}: {f.HeightAboveStockMm:0.##} mm över material, marginal {f.ClearanceMm:0.##} mm" };
             Canvas.SetLeft(block, f.X); Canvas.SetTop(block, f.Y);
             MachineCanvas.Children.Add(block);
-            var text = new TextBlock { Text = $"{f.Name} ({f.HeightAboveStockMm:0.#} mm)",
-                FontWeight = FontWeights.SemiBold, FontSize = 12 / _zoom,
-                Foreground = Brushes.DarkRed, IsHitTestVisible = false };
-            Canvas.SetLeft(text, f.X); Canvas.SetTop(text, f.Y + f.Length + 3 / _zoom);
-            MachineCanvas.Children.Add(text);
+            AddFixtureLabel(f);
         }
         // Deliberately do not show a 'live' toolhead here. Homing/GRBL mapping is not implemented.
     }
@@ -152,6 +148,35 @@ public partial class MainWindow
         SetFixtureDrawing(true);
         SetPanelVisible("Properties", true);
         StatusText.Text = "FASTSPÄNNING AKTIV: Dra en rektangel på maskinbordet. Ange höjd i Egenskaper. Esc avbryter.";
+    }
+
+    /// <summary>
+    /// Places the fixture name inside the block when it fits; otherwise just above
+    /// the block on a light plate so it stays readable over design and toolpaths.
+    /// </summary>
+    private void AddFixtureLabel(FixtureBlock f)
+    {
+        double pad = 3 / _zoom;
+        var text = new TextBlock { Text = $"{f.Name} ({f.HeightAboveStockMm:0.#} mm)",
+            FontWeight = FontWeights.SemiBold, FontSize = 12 / _zoom,
+            Padding = new Thickness(pad, pad / 2, pad, pad / 2), IsHitTestVisible = false };
+        text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var size = text.DesiredSize;
+        if (size.Width <= f.Width && size.Height <= f.Length)
+        {
+            text.Foreground = Brushes.White;
+            Canvas.SetLeft(text, f.X); Canvas.SetTop(text, f.Y);
+        }
+        else
+        {
+            text.Foreground = Brushes.DarkRed;
+            text.Background = new SolidColorBrush(Color.FromArgb(215, 255, 248, 236));
+            Canvas.SetLeft(text, f.X);
+            // Above the block; below it if the block sits at the top edge of the table.
+            double top = f.Y - size.Height - pad;
+            Canvas.SetTop(text, top >= 0 ? top : f.Y + f.Length + pad);
+        }
+        MachineCanvas.Children.Add(text);
     }
 
     /// <summary>

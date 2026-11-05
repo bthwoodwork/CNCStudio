@@ -49,7 +49,7 @@ public partial class MainWindow : Window
     private bool _propertiesVisible = true;
     private bool _camVisible;
     private readonly Dictionary<string, Window> _floatingPanels = new();
-    private readonly Dictionary<string, double> _savedPanelWidths = new() { ["Tools"] = 126, ["Properties"] = 250, ["Machine"] = 300, ["Cam"] = 300 };
+    private readonly Dictionary<string, double> _savedPanelWidths = new() { ["Tools"] = 144, ["Properties"] = 250, ["Machine"] = 300, ["Cam"] = 300 };
     private bool _closingMain;
     private bool _loadingCam;
     private bool _showContourPreview = true;
@@ -394,7 +394,7 @@ public partial class MainWindow : Window
     }
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
     private void About_Click(object sender, RoutedEventArgs e)
-        => MessageBox.Show(this, "CNC Studio 0.5.6.2\nMaskinvy och materialplacering, fastspänningar och CAM XY-förhandsvisning.\nIngen GRBL-styrning, kameraanslutning eller körbar G-code finns ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
+        => MessageBox.Show(this, "CNC Studio 0.5.6.3\nMaskinvy och materialplacering, fastspänningar och CAM XY-förhandsvisning.\nIngen GRBL-styrning, kameraanslutning eller körbar G-code finns ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
@@ -1462,7 +1462,7 @@ public partial class MainWindow : Window
         StatusText.Text = $"CAM XY-kontroll: {issueCount} möjliga konflikter, {unsupportedCount} ej granskade.";
         MessageBox.Show(this, header + string.Join("\n", lines.Take(30)) +
             (lines.Count > 30 ? $"\n...och {lines.Count - 30} fler." : "") + limitations,
-            "CNC Studio 0.5.6.2 – kontroll av fastspänning (XY)", MessageBoxButton.OK,
+            "CNC Studio 0.5.6.3 – kontroll av fastspänning (XY)", MessageBoxButton.OK,
             issueCount > 0 || unsupportedCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
     }
 

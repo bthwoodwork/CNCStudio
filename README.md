@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.5.6.2)
+# CNC Studio – källkod (senaste: 0.5.6.3)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -46,3 +46,10 @@ Kompilering i Windows krävs; den här miljön har inte .NET SDK/WPF.
 - Ritläget för fastspänning visar ett tunt hårkors över hela maskinbordet i stället för materialets flyttmarkör. Esc återställer nu även knappens färg.
 - Versionsnummer uppdaterat i fönstertitel, Om-ruta och kontrollrapport; inaktuella texter om 0.5.4/0.5.5 borttagna.
 - Byggd och körd i Windows (.NET 8, 0 fel, 0 varningar). Användaren har verifierat röd delmarkering och hårkors.
+
+## 0.5.6.3 – Läsbar fastspänningsetikett och ritverktygspanel
+
+- Fastspänningens namn och höjd visas inuti blocket när det får plats, annars ovanför blocket på en ljus bakgrund (under blocket om det ligger vid bordets överkant). Etiketten ligger inte längre ovanpå designen utan bakgrund.
+- Ritverktygspanelen är 144 px bred (tidigare 126) och rubrikknapparna är kompaktare, så "RITVERKTYG" får plats. Rubriken avslutas med "…" om panelen görs smalare.
+- Versionsnummer 0.5.6.3.
+- Byggd och körd i Windows (0 fel, 0 varningar). Användaren har godkänt ändringarna.

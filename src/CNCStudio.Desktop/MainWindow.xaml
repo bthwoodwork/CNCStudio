@@ -1,7 +1,7 @@
 ﻿<Window x:Class="CNCStudio.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="CNC Studio 0.5.6.2 – Synliga verktygsbanor och fastspänningar" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.5.6.3 – Synliga verktygsbanor och fastspänningar" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -52,7 +52,7 @@
  <StatusBar DockPanel.Dock="Bottom" Background="#223243" Foreground="#D1DCE8"><StatusBarItem><TextBlock x:Name="StatusText" Text="Designläge – maskinstyrning ej ansluten"/></StatusBarItem></StatusBar>
  <Grid x:Name="LayoutGrid">
  <Grid.ColumnDefinitions>
- <ColumnDefinition x:Name="ToolsColumn" Width="126"/><ColumnDefinition x:Name="ToolsSplitterColumn" Width="5"/>
+ <ColumnDefinition x:Name="ToolsColumn" Width="144"/><ColumnDefinition x:Name="ToolsSplitterColumn" Width="5"/>
  <ColumnDefinition Width="*"/>
  <ColumnDefinition x:Name="PropertiesSplitterColumn" Width="5"/><ColumnDefinition x:Name="PropertiesColumn" Width="250"/>
  <ColumnDefinition x:Name="MachineSplitterColumn" Width="5"/><ColumnDefinition x:Name="MachineColumn" Width="300"/>
@@ -62,9 +62,9 @@
     <DockPanel><Border DockPanel.Dock="Top" Background="#30465C" Padding="8,5">
  <DockPanel LastChildFill="True">
   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-   <Button Content="↗" Tag="Tools" Click="FloatPanel_Click" Padding="5,2" Margin="2" ToolTip="Lossa panel som eget fönster"/>
-   <Button Content="×" Tag="Tools" Click="HidePanel_Click" Padding="6,2" Margin="2" ToolTip="Dölj panel"/>
-  </StackPanel><TextBlock Text="RITVERKTYG" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+   <Button Content="↗" Tag="Tools" Click="FloatPanel_Click" Padding="3,1" Margin="1" ToolTip="Lossa panel som eget fönster"/>
+   <Button Content="×" Tag="Tools" Click="HidePanel_Click" Padding="4,1" Margin="1" ToolTip="Dölj panel"/>
+  </StackPanel><TextBlock Text="RITVERKTYG" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="Ritverktyg"/>
  </DockPanel></Border><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
  <TextBlock Text="RITA" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,5,0,7"/>
  <Button x:Name="SelectToolButton" Content="Markera" Click="SelectTool_Click" ToolTip="Markera objekt direkt med vänsterklick"/>
