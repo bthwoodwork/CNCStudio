@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -16,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.5.7";
+    private const string AppTitle = "CNC Studio 0.5.8";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -44,6 +45,7 @@ public partial class MainWindow
                     foreach (var point in centerline) line.Points.Add(new Point(point.X + offsetX, point.Y + offsetY));
                     canvas.Children.Add(line);
                 }
+                DrawTabs(canvas, preview, result.TabSpans, offsetX, offsetY);
                 // Warnings first so critical marks are drawn on top.
                 AddConflictMarks(canvas, preview, result.Findings.Where(f => f.Severity == CamSeverity.Warning), offsetX, offsetY);
                 AddConflictMarks(canvas, preview, result.Findings.Where(f => f.Severity == CamSeverity.Critical), offsetX, offsetY);
@@ -64,6 +66,34 @@ public partial class MainWindow
                 Canvas.SetLeft(label, shape.X + offsetX); Canvas.SetTop(label, shape.Y + offsetY);
                 canvas.Children.Add(label);
             }
+        }
+    }
+
+    private static readonly Brush TabBrush = new SolidColorBrush(Color.FromRgb(255, 214, 10));
+    private static readonly Brush TabEdgeBrush = new SolidColorBrush(Color.FromRgb(90, 62, 0));
+
+    /// <summary>
+    /// Tabs as thick yellow bars with a dark edge, sized in screen pixels so they stay
+    /// visible at any zoom and on top of the selection outline. The tool lifts over these.
+    /// </summary>
+    private void DrawTabs(Canvas canvas, ContourPreview preview, IReadOnlyList<TabSpan> tabs,
+        double offsetX, double offsetY)
+    {
+        var paths = preview.Centerlines.Count > 0 ? preview.Centerlines :
+            new IReadOnlyList<CamPoint>[] { preview.Centerline };
+        foreach (var tab in tabs)
+        {
+            if (tab.PathIndex >= paths.Count) continue;
+            var points = new PointCollection(PathMath.Slice(paths[tab.PathIndex], tab.Start, tab.End)
+                .Select(p => new Point(p.X + offsetX, p.Y + offsetY)));
+            canvas.Children.Add(new Polyline { Points = points, Stroke = TabEdgeBrush,
+                StrokeThickness = 11 / _zoom, StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Square, StrokeEndLineCap = PenLineCap.Square,
+                IsHitTestVisible = false });
+            canvas.Children.Add(new Polyline { Points = points, Stroke = TabBrush,
+                StrokeThickness = 8 / _zoom, StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Flat, StrokeEndLineCap = PenLineCap.Flat,
+                IsHitTestVisible = false });
         }
     }
 
@@ -106,11 +136,12 @@ public partial class MainWindow
                 ? new SolidColorBrush(Color.FromRgb(196, 110, 20))
                 : new SolidColorBrush(Color.FromRgb(35, 98, 63));
         }
+        CamHealthText.Inlines.Clear();
         if (r.Operations.Count == 0)
         {
             CamHealthHeader.Text = "CAM-kontroll";
             CamHealthHeader.Foreground = CamHealthText.Foreground;
-            CamHealthText.Text = "Inga CAM-operationer.";
+            CamHealthText.Inlines.Add(new Run("Inga CAM-operationer."));
             return;
         }
         CamHealthHeader.Text = $"CAM-kontroll: {r.CriticalCount} kritiska · {r.WarningCount} varningar · {r.InfoCount} info";
@@ -122,30 +153,43 @@ public partial class MainWindow
             .SelectMany(o => o.Findings
                 .GroupBy(f => (f.Severity, f.Code, f.FixtureId))
                 .OrderBy(g => g.Key.Severity)
-                .Select(g => $"{Symbol(g.Key.Severity)} {ShapeLabel(o.Shape, o.Operation.ShapeId)}: {g.First().Message}" +
-                             (g.Count() > 1 && g.First().HasSegment ? $" ({g.Count()} delsträckor)" : "")))
+                .Select(g => (Severity: g.Key.Severity,
+                              Text: $"{ShapeLabel(o.Shape, o.Operation.ShapeId)}: {g.First().Message}" +
+                                    (g.Count() > 1 && g.First().HasSegment ? $" ({g.Count()} delsträckor)" : ""))))
             .ToList();
-        var text = lines.Count == 0
-            ? "Inga problem hittades i de kontroller som finns."
-            : string.Join("\n", lines.Take(8)) + (lines.Count > 8 ? $"\n… och {lines.Count - 8} till (se Kontrollera hinder)." : "");
-        CamHealthText.Text = text + "\n\nKontrolleras: inställningar, XY mot fastspänningar och maskinens gränser. " +
-            "Ej kontrollerat: Z-rörelser, hållare, materialgränser. Detta är inget säkerhetsgodkännande.";
+        if (lines.Count == 0)
+            CamHealthText.Inlines.Add(new Run("Inga problem hittades i de kontroller som finns."));
+        foreach (var (severity, text) in lines.Take(8))
+        {
+            // A coloured word instead of a symbol: always renders, and is readable at a glance.
+            CamHealthText.Inlines.Add(new Run(SeverityName(severity) + "  ")
+                { FontWeight = FontWeights.Bold, Foreground = SeverityTextBrush(severity) });
+            CamHealthText.Inlines.Add(new Run(text));
+            CamHealthText.Inlines.Add(new LineBreak());
+        }
+        if (lines.Count > 8)
+        {
+            CamHealthText.Inlines.Add(new Run($"… och {lines.Count - 8} till (se Kontrollera hinder)."));
+            CamHealthText.Inlines.Add(new LineBreak());
+        }
+        CamHealthText.Inlines.Add(new LineBreak());
+        CamHealthText.Inlines.Add(new Run("Kontrolleras: inställningar, djup, materialgränser, hållflikar, XY mot " +
+            "fastspänningar, maskinens gränser och andra delar. " +
+            "Ej kontrollerat: Z-rörelser, snabbförflyttningar, hållare/spännhylsa. Detta är inget säkerhetsgodkännande.")
+            { Foreground = new SolidColorBrush(Color.FromRgb(160, 178, 196)) });
     }
 
-    private static string Symbol(CamSeverity s) => s switch
+    private static Brush SeverityTextBrush(CamSeverity s) => s switch
     {
-        CamSeverity.Critical => "⛔", CamSeverity.Warning => "⚠", _ => "ℹ"
+        CamSeverity.Critical => HealthCritical,
+        CamSeverity.Warning => HealthWarning,
+        _ => new SolidColorBrush(Color.FromRgb(130, 190, 255))
     };
 
     private string ShapeLabel(DesignShape? shape, Guid id)
     {
         if (shape is null) return $"Okänt objekt {id.ToString()[..4]}";
-        int index = _document.Shapes.IndexOf(shape) + 1;
-        string kind = shape.Kind switch
-        {
-            ShapeKind.Rectangle => "Rektangel", ShapeKind.Ellipse => "Ellips", _ => "Vektorform"
-        };
-        return $"{kind} {index}";
+        return CamPlanner.Label(_document, shape);
     }
 
     /// <summary>"Beräkna körbanor": recomputes every outdated toolpath.</summary>
@@ -182,8 +226,9 @@ public partial class MainWindow
         else if (lines.Count == 0) lines.Add("Inga problem hittades i de kontroller som finns.");
         var header = $"{r.Operations.Count} operationer · {r.CriticalCount} kritiska · {r.WarningCount} varningar · " +
                      $"{r.InfoCount} info · {r.NotAnalyzedCount} ej kontrollerade.\n\n";
-        var limitations = "\n\nKONTROLLERAS: CAM-inställningar, skärande XY-banor mot fastspänningar och maskinens XY-gränser.\n" +
-            "KONTROLLERAS INTE: Z-rörelser, snabbförflyttningar, hållare/spännhylsa, materialgränser, " +
+        var limitations = "\n\nKONTROLLERAS: CAM-inställningar, djup och kvarvarande botten, materialgränser, " +
+            "hållflikar, skärande XY-banor mot fastspänningar, maskinens XY-gränser och andra delar med CAM.\n" +
+            "KONTROLLERAS INTE: Z-rörelser, snabbförflyttningar, hållare/spännhylsa, " +
             "materialets verkliga läge och maskinens verkliga inställningar. Detta är INTE ett säkerhetsgodkännande.";
         _showContourPreview = true;
         Render();

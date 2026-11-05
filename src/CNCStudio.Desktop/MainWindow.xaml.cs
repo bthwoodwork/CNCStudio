@@ -1119,7 +1119,8 @@ public partial class MainWindow : Window
             var op = _document.CamOperations.FirstOrDefault(o => o.ShapeId == originals[i].Id);
             if (op != null) _document.CamOperations.Add(new CamOperation { ShapeId = duplicates[i].Id,
                 Kind = op.Kind, ToolDiameter = op.ToolDiameter, TotalDepth = op.TotalDepth,
-                DepthPerPass = op.DepthPerPass, UseTabs = op.UseTabs });
+                DepthPerPass = op.DepthPerPass, UseTabs = op.UseTabs,
+                TabCount = op.TabCount, TabWidth = op.TabWidth, TabHeight = op.TabHeight });
         }
         _selection.Clear(); foreach (var item in duplicates) _selection.Add(item);
         _selected = duplicates.FirstOrDefault();
@@ -1365,12 +1366,19 @@ public partial class MainWindow : Window
             CamDepth.Text = F(operation?.TotalDepth ?? 6);
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
             CamTabs.IsChecked = operation?.UseTabs ?? true;
+            var defaults = new CamOperation();
+            CamTabCount.Text = (operation?.TabCount ?? defaults.TabCount).ToString(CultureInfo.InvariantCulture);
+            CamTabWidth.Text = F(operation?.TabWidth ?? defaults.TabWidth);
+            CamTabHeight.Text = F(operation?.TabHeight ?? defaults.TabHeight);
+            TabSettingsPanel.Visibility = CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         }
         finally { _loadingCam = false; }
         UpdateCamSummary();
     }
     private void CamInput_Changed(object sender, RoutedEventArgs e)
     {
+        if (TabSettingsPanel is not null && CamTabs is not null)
+            TabSettingsPanel.Visibility = CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         if (!_loadingCam) UpdateCamSummary();
     }
     private CamOperation? ReadCam()
@@ -1379,9 +1387,23 @@ public partial class MainWindow : Window
             return null;
         if (!Parse(CamDiameter, out var diameter) || !Parse(CamDepth, out var depth) || !Parse(CamPass, out var step))
             return null;
+        bool useTabs = CamTabs.IsChecked == true;
+        var defaults = new CamOperation();
+        int tabCount = defaults.TabCount; double tabWidth = defaults.TabWidth, tabHeight = defaults.TabHeight;
+        if (CamTabCount is not null && CamTabWidth is not null && CamTabHeight is not null)
+        {
+            bool okCount = int.TryParse(CamTabCount.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var c);
+            bool okWidth = Parse(CamTabWidth, out var w), okHeight = Parse(CamTabHeight, out var h);
+            // Tab fields only need to be valid when tabs are used.
+            if (useTabs && !(okCount && okWidth && okHeight)) return null;
+            if (okCount) tabCount = c;
+            if (okWidth) tabWidth = w;
+            if (okHeight) tabHeight = h;
+        }
         return new CamOperation { ShapeId = _selected.Id,
             Kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex), ToolDiameter = diameter,
-            TotalDepth = depth, DepthPerPass = step, UseTabs = CamTabs.IsChecked == true };
+            TotalDepth = depth, DepthPerPass = step, UseTabs = useTabs,
+            TabCount = tabCount, TabWidth = tabWidth, TabHeight = tabHeight };
     }
     private void UpdateCamSummary()
     {
@@ -1390,7 +1412,11 @@ public partial class MainWindow : Window
         if (op is null) { CamSummary.Text = "Markera ett objekt och ange numeriska värden."; return; }
         var error = CamValidation.GetError(op, _document.MaterialThickness);
         CamSummary.Text = error ?? $"{op.Kind} · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm djup · " +
-            $"{Math.Ceiling(op.TotalDepth / op.DepthPerPass):0} pass · Hållflikar: {(op.UseTabs ? "Ja" : "Nej")}";
+            $"{Math.Ceiling(op.TotalDepth / op.DepthPerPass):0} pass · Hållflikar: " +
+            (!op.UseTabs ? "Nej"
+             : op.TotalDepth >= _document.MaterialThickness - 1e-6
+                ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"
+                : "används först vid genomskärning");
     }
     private void SaveCam_Click(object sender, RoutedEventArgs e)
     {

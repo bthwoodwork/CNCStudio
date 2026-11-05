@@ -45,6 +45,12 @@ public sealed class CamOperation
     public double TotalDepth { get; set; } = 6;
     public double DepthPerPass { get; set; } = 2;
     public bool UseTabs { get; set; } = true;
+    /// <summary>Tabs per closed path (fewer are placed if the path is too short).</summary>
+    public int TabCount { get; set; } = 4;
+    /// <summary>Width of the material bridge left at each tab, in mm (measured at the part).</summary>
+    public double TabWidth { get; set; } = 6;
+    /// <summary>Height of the tab above the bottom of the cut, in mm.</summary>
+    public double TabHeight { get; set; } = 3;
 }
 
 public static class CamValidation
@@ -59,6 +65,15 @@ public static class CamValidation
             return "Djup per pass måste vara större än 0 och får inte överstiga totalt djup.";
         if (operation.Kind == CamOperationKind.Pocket && operation.UseTabs)
             return "Hållflikar används inte för fickfräsning.";
+        if (operation.UseTabs)
+        {
+            if (operation.TabCount < 1 || operation.TabCount > 50)
+                return "Antal hållflikar måste vara mellan 1 och 50.";
+            if (!double.IsFinite(operation.TabWidth) || operation.TabWidth <= 0 || operation.TabWidth > 100)
+                return "Flikbredd måste vara större än 0 och högst 100 mm.";
+            if (!double.IsFinite(operation.TabHeight) || operation.TabHeight <= 0 || operation.TabHeight > 100)
+                return "Flikhöjd måste vara större än 0 och högst 100 mm.";
+        }
         return null;
     }
 }

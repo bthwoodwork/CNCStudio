@@ -1,7 +1,7 @@
 ﻿<Window x:Class="CNCStudio.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="CNC Studio 0.5.7 – Automatisk CAM-kontroll" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.5.8 – Hållflikar och materialkontroll" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -208,7 +208,13 @@
             <TextBlock Text="Fräsdiameter (mm)"/><TextBox x:Name="CamDiameter" Text="3.175" TextChanged="CamInput_Changed"/>
             <TextBlock Text="Totalt djup (mm)" Margin="0,8,0,0"/><TextBox x:Name="CamDepth" Text="6" TextChanged="CamInput_Changed"/>
             <TextBlock Text="Djup per pass (mm)" Margin="0,8,0,0"/><TextBox x:Name="CamPass" Text="2" TextChanged="CamInput_Changed"/>
-            <CheckBox x:Name="CamTabs" IsChecked="True" Content="Hållflikar" Margin="4,14,4,10" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
+            <CheckBox x:Name="CamTabs" IsChecked="True" Content="Hållflikar (vid genomskärning)" Margin="4,14,4,6" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
+            <Grid x:Name="TabSettingsPanel" Margin="18,0,0,8">
+              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0"><TextBlock Text="Antal" FontSize="11"/><TextBox x:Name="CamTabCount" Text="4" TextChanged="CamInput_Changed" ToolTip="Flikar per sluten bana. Färre placeras om banan är för kort."/></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="Bredd mm" FontSize="11"/><TextBox x:Name="CamTabWidth" Text="6" TextChanged="CamInput_Changed" ToolTip="Bredden på materialbryggan vid delen."/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="Höjd mm" FontSize="11"/><TextBox x:Name="CamTabHeight" Text="3" TextChanged="CamInput_Changed" ToolTip="Flikens höjd ovanför spårets botten."/></StackPanel>
+            </Grid>
             <Border Background="#1C2A39" Padding="10" CornerRadius="4" Margin="0,6,0,8">
               <TextBlock x:Name="CamSummary" Text="3 pass vid 2 mm/pass." TextWrapping="Wrap" Foreground="#D5E3F0"/>
             </Border>
@@ -223,8 +229,8 @@
                 <TextBlock x:Name="CamHealthText" Text="Inga CAM-operationer." TextWrapping="Wrap" Foreground="#D5E3F0" Margin="0,5,0,0" FontSize="11.5"/>
               </StackPanel>
             </Border>
-            <TextBlock Text="Grön streckad linje = fräscentrum. Slutna rektanglar, ellipser, DXF/SVG- och Boolean-konturer (Outside/Inside). Fickor, hållflikar, säkra Z-förflyttningar och G-code saknas fortfarande." Foreground="#FFD18C" Margin="1,6,1,2" TextWrapping="Wrap"/>
-            <TextBlock Margin="0,15,0,0" Foreground="#FFCE96" TextWrapping="Wrap" Text="CAM är än så länge en XY-förhandsvisning; inga körbara fräsprogram skapas. Hållflikar tillämpas inte på banan ännu."/>
+            <TextBlock Text="Grön streckad linje = fräscentrum. Gula partier = hållflikar (fräsen lyfts där). Slutna rektanglar, ellipser, DXF/SVG- och Boolean-konturer (Outside/Inside). Fickor, säkra Z-förflyttningar och G-code saknas fortfarande." Foreground="#FFD18C" Margin="1,6,1,2" TextWrapping="Wrap"/>
+            <TextBlock Margin="0,15,0,0" Foreground="#FFCE96" TextWrapping="Wrap" Text="CAM är än så länge en XY-förhandsvisning; inga körbara fräsprogram skapas. Hållflikarna är planerade lägen för kommande G-code."/>
             <Expander x:Name="InlayExpander" Header="V-CARVE INLAY · hona + hane" IsExpanded="False" Margin="0,16,0,0" Foreground="#E8F1FA">
               <StackPanel Margin="4,10,4,4">
                 <TextBlock Text="InlayStudio-inställningar integrerade i projektet" TextWrapping="Wrap" Foreground="#BDCEE0" Margin="0,0,0,9"/>

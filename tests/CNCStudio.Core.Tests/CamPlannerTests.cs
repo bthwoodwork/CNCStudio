@@ -256,11 +256,46 @@ public class CamOperationChecksTests
     }
 
     [Fact]
-    public void Through_cut_with_tabs_warns_that_tabs_are_not_applied()
+    public void Through_cut_with_tabs_has_no_loose_part_warning()
     {
         var f = CamOperationChecks.Analyze(new CamOperation { TotalDepth = 18, DepthPerPass = 2, UseTabs = true }, Shape, 18);
-        Assert.Contains(f, x => x.Code == "TabsNotApplied");
         Assert.DoesNotContain(f, x => x.Code == "LoosePart");
+        Assert.DoesNotContain(f, x => x.Severity == CamSeverity.Warning);
+    }
+
+    [Fact]
+    public void Tab_as_high_as_the_cut_is_a_warning()
+    {
+        var f = CamOperationChecks.Analyze(new CamOperation { TotalDepth = 18, DepthPerPass = 2, TabHeight = 18 }, Shape, 18);
+        Assert.Contains(f, x => x.Severity == CamSeverity.Warning && x.Code == "TabTooHigh");
+    }
+
+    [Theory]
+    [InlineData(17.5, true)]   // 0.5 mm left
+    [InlineData(17.0, false)]  // exactly 1 mm left
+    [InlineData(10.0, false)]
+    public void Thin_floor_under_a_partial_cut_is_a_warning(double depth, bool expected)
+    {
+        var f = CamOperationChecks.Analyze(new CamOperation { TotalDepth = depth, DepthPerPass = 2 }, Shape, 18);
+        Assert.Equal(expected, f.Any(x => x.Code == "ThinFloor"));
+    }
+
+    [Theory]
+    [InlineData(0, 6, 3)]
+    [InlineData(4, 0, 3)]
+    [InlineData(4, 6, 0)]
+    [InlineData(51, 6, 3)]
+    public void Invalid_tab_settings_are_rejected(int count, double width, double height)
+    {
+        var op = new CamOperation { UseTabs = true, TabCount = count, TabWidth = width, TabHeight = height };
+        Assert.NotNull(CamValidation.GetError(op, 18));
+    }
+
+    [Fact]
+    public void Invalid_tab_settings_are_ignored_when_tabs_are_off()
+    {
+        var op = new CamOperation { UseTabs = false, TabCount = 0, TabWidth = 0, TabHeight = 0 };
+        Assert.Null(CamValidation.GetError(op, 18));
     }
 
     [Fact]

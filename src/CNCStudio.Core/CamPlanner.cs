@@ -28,8 +28,10 @@ public sealed record CamFinding(CamSeverity Severity, string Code, string Messag
 
 /// <summary>Result for one CAM operation. Preview is null when no toolpath could be computed.</summary>
 public sealed record CamOperationResult(CamOperation Operation, DesignShape? Shape,
-    ContourPreview? Preview, IReadOnlyList<CamFinding> Findings, bool Stale = false)
+    ContourPreview? Preview, IReadOnlyList<CamFinding> Findings, bool Stale = false,
+    IReadOnlyList<TabSpan>? Tabs = null)
 {
+    public IReadOnlyList<TabSpan> TabSpans => Tabs ?? Array.Empty<TabSpan>();
     /// <summary>True only when a toolpath exists and the available checks have run on it.</summary>
     public bool Analyzed => Preview is not null;
     public CamSeverity? Worst => Findings.Count == 0 ? null : Findings.Min(f => f.Severity);
@@ -52,6 +54,9 @@ public sealed record CamReport(IReadOnlyList<CamOperationResult> Operations)
 /// </summary>
 public static class CamOperationChecks
 {
+    /// <summary>A floor thinner than this under a partial-depth cut is flagged.</summary>
+    public const double ThinFloorMm = 1.0;
+
     public static IReadOnlyList<CamFinding> Analyze(CamOperation op, DesignShape shape, double materialThickness)
     {
         var list = new List<CamFinding>();
@@ -62,6 +67,11 @@ public static class CamOperationChecks
                 "Risk för fräsbrott; ett vanligt riktvärde i trä är högst 1 × diametern.", id));
         bool through = op.TotalDepth >= materialThickness - 1e-6;
         bool contour = op.Kind is CamOperationKind.Outside or CamOperationKind.Inside;
+        double remaining = materialThickness - op.TotalDepth;
+        if (!through && remaining < ThinFloorMm)
+            list.Add(new CamFinding(CamSeverity.Warning, "ThinFloor",
+                $"Bara {F(remaining)} mm material kvar under spåret. Risk att det bryts igenom eller att " +
+                "delen lossnar – välj genomskärning eller ett grundare djup.", id));
         if (through)
         {
             list.Add(new CamFinding(CamSeverity.Info, "ThroughCut",
@@ -70,10 +80,11 @@ public static class CamOperationChecks
             if (contour && !op.UseTabs)
                 list.Add(new CamFinding(CamSeverity.Warning, "LoosePart",
                     "Genomskärning utan hållflikar: den utskurna delen kan lossna och slungas iväg av fräsen.", id));
-            if (contour && op.UseTabs)
-                list.Add(new CamFinding(CamSeverity.Warning, "TabsNotApplied",
-                    "Hållflikar är valda men finns ännu inte i banan – den skär runt helt och delen kan lossna.", id));
+            if (contour && op.UseTabs && op.TabHeight >= op.TotalDepth - 1e-9)
+                list.Add(new CamFinding(CamSeverity.Warning, "TabTooHigh",
+                    $"Flikhöjden ({F(op.TabHeight)} mm) är lika stor som skärdjupet – vid flikarna skärs inget alls.", id));
         }
+        // Tabs on a partial-depth cut are simply not applied; no message (tabs are on by default).
         return list;
     }
 
@@ -103,13 +114,14 @@ public sealed class CamPlanner
 
     private readonly PreviewGenerator _generator;
     private readonly Dictionary<Guid, CacheEntry> _cache = new();
+    private readonly Dictionary<Guid, (string Key, IReadOnlyList<CamFinding> Findings)> _partCache = new();
 
     public CamPlanner(PreviewGenerator generator) => _generator = generator;
 
     /// <summary>Number of times the generator has been invoked (diagnostics/tests).</summary>
     public int GenerationCount { get; private set; }
 
-    public void Clear() => _cache.Clear();
+    public void Clear() { _cache.Clear(); _partCache.Clear(); }
 
     /// <summary>True when the shape's toolpath is cheap enough to recompute on every change.</summary>
     public static bool IsCheap(DesignShape shape) =>
@@ -125,6 +137,11 @@ public sealed class CamPlanner
     {
         var results = new List<CamOperationResult>();
         var live = new HashSet<Guid>();
+        // Geometry keys of every part with CAM, computed once per review for the part-to-part check.
+        var geometryKeys = new Dictionary<Guid, string>();
+        foreach (var op in document.CamOperations)
+            if (document.Shapes.FirstOrDefault(s => s.Id == op.ShapeId) is DesignShape s && !geometryKeys.ContainsKey(s.Id))
+                geometryKeys[s.Id] = GeometryKey(s);
         foreach (var op in document.CamOperations)
         {
             live.Add(op.ShapeId);
@@ -163,10 +180,16 @@ public sealed class CamPlanner
                 continue;
             }
             findings.AddRange(CamSafetyReview.Analyze(document, shape, op, entry.Preview));
-            results.Add(new CamOperationResult(op, shape, entry.Preview, findings));
+            findings.AddRange(CamGeometryChecks.MaterialBounds(document, shape, op, entry.Preview));
+            findings.AddRange(PartClearance(document, shape, op, entry.Preview, geometryKeys));
+            var tabs = CamTabs.Plan(entry.Preview, op, document.MaterialThickness);
+            findings.AddRange(TabFindings(op, shape, entry.Preview, tabs, document.MaterialThickness));
+            results.Add(new CamOperationResult(op, shape, entry.Preview, findings, Tabs: tabs));
         }
         foreach (var stale in _cache.Keys.Where(k => !live.Contains(k)).ToList())
             _cache.Remove(stale);
+        foreach (var stale in _partCache.Keys.Where(k => !live.Contains(k)).ToList())
+            _partCache.Remove(stale);
         return new CamReport(results);
     }
 
@@ -195,6 +218,74 @@ public sealed class CamPlanner
         return entry;
     }
 
+    /// <summary>
+    /// Part-to-part check, cached per operation: it only depends on this path and the other
+    /// parts' geometry and position, not on fixtures or stock placement.
+    /// </summary>
+    private IReadOnlyList<CamFinding> PartClearance(CncDocument doc, DesignShape shape, CamOperation op,
+        ContourPreview preview, IReadOnlyDictionary<Guid, string> geometryKeys)
+    {
+        var others = geometryKeys.Where(k => k.Key != shape.Id).OrderBy(k => k.Key).ToList();
+        var key = Fingerprint(shape, op, doc.MaterialThickness) + "@" + R(shape.X) + "," + R(shape.Y) + "#" +
+                  string.Join(";", others.Select(k => k.Key + "=" + k.Value + ":" + doc.Shapes.FindIndex(s => s.Id == k.Key)));
+        if (_partCache.TryGetValue(shape.Id, out var hit) && hit.Key == key) return hit.Findings;
+        var parts = others
+            .Select(k => doc.Shapes.First(s => s.Id == k.Key))
+            .Select(s => (s, Label(doc, s)));
+        var findings = CamGeometryChecks.PartClearance(shape, op, preview, parts);
+        _partCache[shape.Id] = (key, findings);
+        return findings;
+    }
+
+    private static IEnumerable<CamFinding> TabFindings(CamOperation op, DesignShape shape,
+        ContourPreview preview, IReadOnlyList<TabSpan> tabs, double thickness)
+    {
+        if (!CamTabs.AppliesTo(op, thickness)) yield break;
+        int paths = preview.Centerlines.Count > 0 ? preview.Centerlines.Count : 1;
+        if (tabs.Count == 0)
+        {
+            yield return new CamFinding(CamSeverity.Warning, "NoTabsFit",
+                $"Banan är för kort för hållflikar på {op.TabWidth:0.###} mm – delen kan lossna. " +
+                "Minska flikbredden eller fäst delen på annat sätt.", shape.Id);
+            yield break;
+        }
+        int pathsWithTabs = tabs.Select(t => t.PathIndex).Distinct().Count();
+        yield return new CamFinding(CamSeverity.Info, "TabsPlaced",
+            $"{tabs.Count} hållflikar ({op.TabWidth:0.###} mm breda, {op.TabHeight:0.###} mm höga) på " +
+            $"{pathsWithTabs} av {paths} bana/banor.", shape.Id);
+        if (tabs.GroupBy(t => t.PathIndex).Any(g => g.Count() < op.TabCount))
+            yield return new CamFinding(CamSeverity.Info, "FewerTabs",
+                $"Färre än {op.TabCount} flikar fick plats på en eller flera korta banor.", shape.Id);
+    }
+
+    /// <summary>Human-readable name used in messages, e.g. "Rektangel 2".</summary>
+    public static string Label(CncDocument doc, DesignShape shape)
+    {
+        string kind = shape.Kind switch
+        {
+            ShapeKind.Rectangle => "Rektangel", ShapeKind.Ellipse => "Ellips", _ => "Vektorform"
+        };
+        return $"{kind} {doc.Shapes.IndexOf(shape) + 1}";
+    }
+
+    /// <summary>Shape geometry including position (no CAM settings).</summary>
+    private static string GeometryKey(DesignShape s) =>
+        string.Join("|", s.Kind, R(s.X), R(s.Y), R(s.Width), R(s.Height), ContourHash(s));
+
+    private static int ContourHash(DesignShape shape)
+    {
+        var hash = new HashCode();
+        if (shape.Contours is not null)
+            foreach (var c in shape.Contours)
+            {
+                hash.Add(c.Closed);
+                hash.Add(c.Points?.Count ?? -1);
+                if (c.Points is null) continue;
+                foreach (var p in c.Points) { hash.Add(p.X); hash.Add(p.Y); }
+            }
+        return hash.ToHashCode();
+    }
+
     private static ContourPreview Translate(ContourPreview p, double dx, double dy)
     {
         static IReadOnlyList<CamPoint> Shift(IReadOnlyList<CamPoint> path, double dx, double dy) =>
@@ -209,18 +300,10 @@ public sealed class CamPlanner
     /// </summary>
     public static string Fingerprint(DesignShape shape, CamOperation op, double thickness)
     {
-        var hash = new HashCode();
-        if (shape.Contours is not null)
-            foreach (var c in shape.Contours)
-            {
-                hash.Add(c.Closed);
-                hash.Add(c.Points?.Count ?? -1);
-                if (c.Points is null) continue;
-                foreach (var p in c.Points) { hash.Add(p.X); hash.Add(p.Y); }
-            }
         return string.Join("|", shape.Kind, R(shape.Width), R(shape.Height),
-            shape.Contours?.Count ?? -1, hash.ToHashCode(),
-            op.Kind, R(op.ToolDiameter), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs, R(thickness));
+            shape.Contours?.Count ?? -1, ContourHash(shape),
+            op.Kind, R(op.ToolDiameter), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
+            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(thickness));
     }
 
     private static string R(double v) => v.ToString("R", CultureInfo.InvariantCulture);

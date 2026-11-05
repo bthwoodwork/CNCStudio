@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.5.7)
+# CNC Studio – källkod (senaste: 0.5.8)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -79,3 +79,24 @@ Kompilering i Windows krävs; den här miljön har inte .NET SDK/WPF.
 - Nytt testprojekt `tests/CNCStudio.Core.Tests` (xUnit) med 38 tester för konturbanor, XY-kontroll mot fastspänningar, svårighetsgrader, cachning, förflyttning och inaktuella banor. Kör med `dotnet test`.
 
 Byggd i Windows (0 fel, 0 varningar), alla tester godkända. Användaren har godkänt versionen.
+
+## 0.5.8 – Hållflikar, materialgränser och kontroll mellan delar
+
+**Hållflikar (`CNCStudio.Core/CamTabs.cs`)**
+- Nya CAM-inställningar: antal flikar, flikbredd och flikhöjd (standard 4 st, 6 mm, 3 mm). Visas i CAM-panelen när Hållflikar är ikryssat. Gamla projektfiler laddas med standardvärden.
+- Flikar placeras jämnt längs varje sluten bana vid genomskärning. Längden på banan är flikbredd + fräsdiameter. Korta banor får färre flikar; får ingen plats ges en varning.
+- Flikarna visas som tjocka gula partier med mörk kant och anger djupet där fräsen ska lyftas (planerat för kommande G-code; ingen körbar kod skapas).
+
+**Nya kontroller (`CNCStudio.Core/CamGeometryChecks.cs`)**
+- Varning: objekt helt eller delvis utanför materialet. Info: fräsen går utanför materialkanten.
+- Varning: mindre än 1 mm material kvar under ett spår som inte går igenom.
+- Varning: flikhöjd lika stor som skärdjupet. Kritiskt: ogiltiga flikinställningar.
+- Varning: banan skär in i en annan del med CAM (hål i DXF/Boolean-former räknas inte; ellipser kontrolleras med marginal). Resultatet cachas per operation.
+
+**Gränssnitt**
+- CAM-kontrollen visar färgade nivåer (KRITISKT / Varning / Info) i stället för symboler.
+- Flikinställningar följer med vid duplicering.
+
+**Tester:** 69 tester (31 nya) för flikar, materialgränser, tunn botten, delar nära varandra, hål, ellipskontur och laddning av gamla projektfiler.
+
+Byggd i Windows (0 fel, 0 varningar), alla tester godkända. Användaren har verifierat flikarna i appen.
