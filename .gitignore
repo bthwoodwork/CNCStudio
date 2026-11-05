@@ -1,0 +1,13 @@
+# Byggutdata
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+
+# Visual Studio
+.vs/
+
+# Testresultat
+TestResults/

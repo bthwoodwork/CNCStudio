@@ -1,0 +1,47 @@
+{
+  "Name": "Nytt projekt",
+  "Machine": {
+    "Name": "Maskinprofil (ej verifierad)",
+    "WorkWidthMm": 750,
+    "WorkLengthMm": 750,
+    "CalibratedToGrbl": false
+  },
+  "Stock": {
+    "X": 205.45447815823462,
+    "Y": 268.99341169116383
+  },
+  "Fixtures": [
+    {
+      "Id": "99931f6a-89a3-411a-ba40-2be35f8939e6",
+      "Name": "Fastsp\u00E4nning",
+      "X": 189.00982077496934,
+      "Y": 358.2547150412489,
+      "Width": 24.675313993370594,
+      "Length": 35.779205290387324,
+      "HeightAboveStockMm": 20,
+      "ClearanceMm": 5,
+      "Locked": false
+    },
+    {
+      "Id": "16fb5a20-c254-4d60-84d2-4690fa78ecb6",
+      "Name": "Fastsp\u00E4nning",
+      "X": 494.36683144293005,
+      "Y": 353.3196522425748,
+      "Width": 24.675313993370764,
+      "Length": 37.62985383989013,
+      "HeightAboveStockMm": 20,
+      "ClearanceMm": 5,
+      "Locked": false
+    }
+  ],
+  "Camera": {
+    "CalibrationVerified": false,
+    "DeviceId": null
+  },
+  "MaterialWidth": 300,
+  "MaterialHeight": 200,
+  "MaterialThickness": 18,
+  "Shapes": [],
+  "CamOperations": [],
+  "Inlay": null
+}
