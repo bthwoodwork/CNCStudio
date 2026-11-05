@@ -394,7 +394,7 @@ public partial class MainWindow : Window
     }
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
     private void About_Click(object sender, RoutedEventArgs e)
-        => MessageBox.Show(this, "CNC Studio 0.5.6.3\nMaskinvy och materialplacering, fastspänningar och CAM XY-förhandsvisning.\nIngen GRBL-styrning, kameraanslutning eller körbar G-code finns ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
+        => MessageBox.Show(this, AppTitle + "\nMaskinvy och materialplacering, fastspänningar, CAM XY-förhandsvisning och automatisk CAM-kontroll.\nIngen GRBL-styrning, kameraanslutning eller körbar G-code finns ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
@@ -705,8 +705,12 @@ public partial class MainWindow : Window
 
     private void Render()
     {
+        // Toolpaths are not recalculated while a shape is being moved, resized or drawn;
+        // the review runs again (from cache where possible) when the gesture ends.
+        bool geometryGesture = _moving || _resizing || _drawing;
+        if (!geometryGesture) RefreshCamReport();
         // Never redraw the hidden machine view during CAD pointer movement.
-        if (_machineView && MachineCanvas is not null) RenderMachine();
+        if (_machineView && MachineCanvas is not null) RenderMachine(refreshCam: false);
         UpdateToolButtonStates();
         DesignCanvas.Width = _document.MaterialWidth;
         DesignCanvas.Height = _document.MaterialHeight;
@@ -784,29 +788,9 @@ public partial class MainWindow : Window
         // XY-only CAD/CAM preview. This is not G-code and does not imply valid tabs or safe moves.
         // Generating toolpaths on every MouseMove is prohibitively expensive.
         // Recalculate after MouseUp; transient drags show only their geometry.
-        if (_showContourPreview && !(_moving || _resizing || _drawing || _marqueeActive))
-        {
-            foreach (var op in _document.CamOperations)
-            {
-                var target = _document.Shapes.FirstOrDefault(sh => sh.Id == op.ShapeId);
-                if (target is null) continue;
-                try
-                {
-                    var preview = VectorContourPreview.Generate(target, op, _document.MaterialThickness);
-                    var problems = CamSafetyReview.Analyze(_document, target, op, preview);
-                    for (int pathIndex = 0; pathIndex < preview.Centerlines.Count; pathIndex++)
-                    {
-                        var centerline = preview.Centerlines[pathIndex];
-                        var line = new Polyline { Stroke = Brushes.LimeGreen, StrokeThickness = 2.4 / _zoom,
-                            IsHitTestVisible = false, StrokeDashArray = new DoubleCollection { 5, 2 } };
-                        foreach (var point in centerline) line.Points.Add(new Point(point.X, point.Y));
-                        DesignCanvas.Children.Add(line);
-                    }
-                    AddConflictMarks(DesignCanvas, preview, problems, 0, 0);
-                }
-                catch (Exception) { /* unsupported operations remain without a misleading path */ }
-            }
-        }
+        if (_showContourPreview && !geometryGesture)
+            DrawCamResults(DesignCanvas, 0, 0);
+        UpdateCamHealth();
         if (_marqueeActive)
         {
             var box = WindowRect(_marqueeStart, _marqueeEnd);
@@ -1318,7 +1302,7 @@ public partial class MainWindow : Window
     }
 
     private void New_Click(object sender, RoutedEventArgs e)
-    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = new CncDocument(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
+    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = new CncDocument(); _camPlanner.Clear(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
     private void SyncMetadata()
     { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
       MachineWidthBox.Text = F(_document.Machine.WorkWidthMm); MachineLengthBox.Text = F(_document.Machine.WorkLengthMm);
@@ -1341,7 +1325,7 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json|JSON|*.json" };
         if (dialog.ShowDialog(this) != true) return;
-        try { var document = DocumentStorage.Load(dialog.FileName); _document = document; _path = dialog.FileName; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
+        try { var document = DocumentStorage.Load(dialog.FileName); _document = document; _camPlanner.Clear(); _path = dialog.FileName; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
         catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); }
     }
     private void UpdatePositions()
@@ -1422,70 +1406,10 @@ public partial class MainWindow : Window
         _document.CamOperations.Add(op);
         _showContourPreview = true;
         if (ContourVisibilityCheck is not null) ContourVisibilityCheck.IsChecked = true;
+        // A newly saved operation is always computed at once, even for heavy shapes.
+        _camReport = _camPlanner.Review(_document, computeShapes: new[] { op.ShapeId });
         Render();
         StatusText.Text = "CAM sparad. Grön streckad XY-bana visas direkt (ej körbar G-code).";
-    }
-    // A diagnostic of XY preview paths only; no safety approval and no G-code output.
-    private void ReviewCamSafety_Click(object sender, RoutedEventArgs e)
-    {
-        if (MachineSetupValidation.Validate(_document) is string setupError)
-        { Error(setupError); return; }
-        var lines = new List<string>();
-        var issueCount = 0;
-        var unsupportedCount = 0;
-        foreach (var operation in _document.CamOperations)
-        {
-            var shape = _document.Shapes.FirstOrDefault(x => x.Id == operation.ShapeId);
-            if (shape is null) { lines.Add("Saknat objekt för CAM-operation."); unsupportedCount++; continue; }
-            try
-            {
-                var preview = VectorContourPreview.Generate(shape, operation, _document.MaterialThickness);
-                var issues = CamSafetyReview.Analyze(_document, shape, operation, preview);
-                issueCount += issues.Count;
-                foreach (var group in issues.GroupBy(i => (i.Code, i.FixtureId)))
-                {
-                    var first = group.First();
-                    lines.Add($"Objekt {shape.Id.ToString()[..8]}: {first.Description} ({group.Count()} delsträckor)");
-                }
-            }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
-            { unsupportedCount++; lines.Add($"Objekt {shape.Id.ToString()[..8]}: kan inte kontrolleras: {ex.Message}"); }
-        }
-        if (_document.CamOperations.Count == 0) lines.Add("Inga CAM-operationer är sparade.");
-        if (lines.Count == 0) lines.Add("Inga XY-konflikter upptäcktes i de beräknade konturerna.");
-        var header = $"XY-granskning: {issueCount} träffade delsträckor, {unsupportedCount} ej analyserade operationer.\n\n";
-        var limitations = "\n\nBEGRÄNSNING: Endast skärande XY-konturer granskas. " +
-            "Ingen kontroll av Z, snabbförflyttningar, hållare, materialets verkliga läge " +
-            "eller maskinens verkliga inställningar. Detta är INTE ett säkerhetsgodkännande.";
-        _showContourPreview = true;
-        Render();
-        StatusText.Text = $"CAM XY-kontroll: {issueCount} möjliga konflikter, {unsupportedCount} ej granskade.";
-        MessageBox.Show(this, header + string.Join("\n", lines.Take(30)) +
-            (lines.Count > 30 ? $"\n...och {lines.Count - 30} fler." : "") + limitations,
-            "CNC Studio 0.5.6.3 – kontroll av fastspänning (XY)", MessageBoxButton.OK,
-            issueCount > 0 || unsupportedCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
-    }
-
-    private void PreviewContour_Click(object sender, RoutedEventArgs e)
-    {
-        // Validate the selected saved operation before claiming that a preview is available.
-        if (_selected is null)
-        { Error("Markera ett slutet vektorobjekt först."); return; }
-        var op = _document.CamOperations.FirstOrDefault(o => o.ShapeId == _selected.Id);
-        if (op is null)
-        { Error("Spara CAM-inställningarna för objektet innan förhandsvisning."); return; }
-        try
-        {
-            var preview = VectorContourPreview.Generate(_selected, op, _document.MaterialThickness);
-            _showContourPreview = true;
-            Render();
-            StatusText.Text = $"XY-förhandsvisning: {preview.Centerlines.Count} kontur(er), {preview.PassDepths.Count} djupsteg ({string.Join(", ", preview.PassDepths.Select(d => d.ToString("0.###", CultureInfo.InvariantCulture)))} mm).";
-            // Preview is already drawn; keep warning in status rather than blocking the canvas.
-            if (!string.IsNullOrWhiteSpace(preview.Warning))
-                StatusText.Text += " " + preview.Warning;
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
-        { Error(ex.Message); }
     }
     private void ToggleContourPreview_Click(object sender, RoutedEventArgs e)
     {

@@ -12,20 +12,30 @@ namespace CNCStudio.Core;
 public static class CamSafetyReview
 {
     /// <summary>
-    /// TStart/TEnd (0..1) give the conflicting portion of the segment, so the UI
-    /// marks only that part red. Issues that are not localized use 0..1.
+    /// Checks the tool's swept XY area against the machine envelope and every fixture.
+    /// <list type="bullet">
+    /// <item>Critical: path outside the machine, or the tool itself overlaps a fixture's footprint.</item>
+    /// <item>Warning: the tool is within the fixture's own safety clearance.</item>
+    /// </list>
     /// </summary>
-    public sealed record Issue(string Code, string Description, Guid ShapeId, Guid? FixtureId,
-        int PathIndex, int SegmentIndex, double TStart = 0, double TEnd = 1);
-
-    public static IReadOnlyList<Issue> Analyze(
+    public static IReadOnlyList<CamFinding> Analyze(
         CncDocument document, DesignShape shape, CamOperation operation, ContourPreview preview)
     {
-        var result = new List<Issue>();
+        var result = new List<CamFinding>();
         var paths = preview.Centerlines.Count > 0 ? preview.Centerlines :
             new IReadOnlyList<CamPoint>[] { preview.Centerline };
         double toolRadius = operation.ToolDiameter / 2.0;
-        if (!double.IsFinite(toolRadius) || toolRadius <= 0) return result;
+        if (!double.IsFinite(toolRadius) || toolRadius <= 0)
+        {
+            result.Add(new CamFinding(CamSeverity.Critical, "InvalidTool",
+                "Ogiltig fräsdiameter – banan kan inte kontrolleras.", shape.Id));
+            return result;
+        }
+        // A tool's *entire diameter* must remain inside the machine envelope.
+        double minX = toolRadius, minY = toolRadius;
+        double maxX = document.Machine.WorkWidthMm - toolRadius;
+        double maxY = document.Machine.WorkLengthMm - toolRadius;
+
         for (int pi = 0; pi < paths.Count; pi++)
         {
             var path = paths[pi];
@@ -35,35 +45,57 @@ public static class CamSafetyReview
                 var a = path[si - 1]; var b = path[si];
                 if (!Valid(a) || !Valid(b))
                 {
-                    result.Add(new Issue("InvalidCoordinate", "Ogiltig koordinat i XY-bana.", shape.Id, null, pi, si - 1));
+                    result.Add(new CamFinding(CamSeverity.Critical, "InvalidCoordinate",
+                        "Ogiltig koordinat i XY-bana.", shape.Id, null, pi, si - 1));
                     continue;
                 }
                 double ax = a.X + document.Stock.X, ay = a.Y + document.Stock.Y;
                 double bx = b.X + document.Stock.X, by = b.Y + document.Stock.Y;
-                // A tool's *entire diameter* must remain inside the machine envelope.
-                double minX = toolRadius, minY = toolRadius;
-                double maxX = document.Machine.WorkWidthMm - toolRadius;
-                double maxY = document.Machine.WorkLengthMm - toolRadius;
-                if (!Inside(ax, ay, minX, minY, maxX, maxY) ||
-                    !Inside(bx, by, minX, minY, maxX, maxY))
-                    result.Add(new Issue("OutsideMachine", "Verktygets svepta XY-område kan gå utanför maskinens planerade arbetsyta.",
+                if (!Inside(ax, ay, minX, minY, maxX, maxY) || !Inside(bx, by, minX, minY, maxX, maxY))
+                    result.Add(new CamFinding(CamSeverity.Critical, "OutsideMachine",
+                        "Verktygets svepta XY-område går utanför maskinens planerade arbetsyta.",
                         shape.Id, null, pi, si - 1));
 
                 foreach (var f in document.Fixtures)
-                {
-                    // Inflation by tool radius and fixture-specific clearance is
-                    // deliberately conservative around square fixture corners.
-                    double inflate = toolRadius + f.ClearanceMm;
-                    if (SegmentRectInterval(ax, ay, bx, by,
-                        f.X - inflate, f.Y - inflate,
-                        f.X + f.Width + inflate, f.Y + f.Length + inflate, out var t0, out var t1))
-                        result.Add(new Issue("FixtureProximity",
-                            $"XY-banan passerar nära fastspänningen '{f.Name}' (Ø {operation.ToolDiameter:0.###} mm, marginal {f.ClearanceMm:0.###} mm, höjd {f.HeightAboveStockMm:0.###} mm).",
-                            shape.Id, f.Id, pi, si - 1, t0, t1));
-                }
+                    AddFixtureFindings(result, f, shape.Id, operation, toolRadius, ax, ay, bx, by, pi, si - 1);
             }
         }
         return result;
+    }
+
+    private static void AddFixtureFindings(List<CamFinding> result, FixtureBlock f, Guid shapeId,
+        CamOperation operation, double toolRadius,
+        double ax, double ay, double bx, double by, int pathIndex, int segmentIndex)
+    {
+        // Outer zone: footprint + tool radius + the fixture's own clearance.
+        double outer = toolRadius + Math.Max(0, f.ClearanceMm);
+        if (!SegmentRectInterval(ax, ay, bx, by, f.X - outer, f.Y - outer,
+                f.X + f.Width + outer, f.Y + f.Length + outer, out var w0, out var w1))
+            return;
+        // Inner zone: the tool's edge actually overlaps the fixture footprint.
+        // Inflating a rectangle by the radius is conservative at its corners.
+        bool hitsCore = SegmentRectInterval(ax, ay, bx, by, f.X - toolRadius, f.Y - toolRadius,
+            f.X + f.Width + toolRadius, f.Y + f.Length + toolRadius, out var c0, out var c1);
+        string details = $"(Ø {operation.ToolDiameter:0.###} mm, marginal {f.ClearanceMm:0.###} mm, höjd {f.HeightAboveStockMm:0.###} mm)";
+        if (!hitsCore)
+        {
+            result.Add(new CamFinding(CamSeverity.Warning, "FixtureClearance",
+                $"Banan går inom säkerhetsmarginalen för fastspänningen '{f.Name}' {details}.",
+                shapeId, f.Id, pathIndex, segmentIndex, w0, w1));
+            return;
+        }
+        result.Add(new CamFinding(CamSeverity.Critical, "FixtureCollision",
+            $"Fräsen skär in i fastspänningen '{f.Name}' {details}.",
+            shapeId, f.Id, pathIndex, segmentIndex, c0, c1));
+        const double eps = 1e-9;
+        if (c0 - w0 > eps)
+            result.Add(new CamFinding(CamSeverity.Warning, "FixtureClearance",
+                $"Banan går inom säkerhetsmarginalen för fastspänningen '{f.Name}' {details}.",
+                shapeId, f.Id, pathIndex, segmentIndex, w0, c0));
+        if (w1 - c1 > eps)
+            result.Add(new CamFinding(CamSeverity.Warning, "FixtureClearance",
+                $"Banan går inom säkerhetsmarginalen för fastspänningen '{f.Name}' {details}.",
+                shapeId, f.Id, pathIndex, segmentIndex, c1, w1));
     }
 
     private static bool Valid(CamPoint p) => double.IsFinite(p.X) && double.IsFinite(p.Y);

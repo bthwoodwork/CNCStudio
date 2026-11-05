@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.5.6.3)
+# CNC Studio – källkod (senaste: 0.5.7)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -53,3 +53,29 @@ Kompilering i Windows krävs; den här miljön har inte .NET SDK/WPF.
 - Ritverktygspanelen är 144 px bred (tidigare 126) och rubrikknapparna är kompaktare, så "RITVERKTYG" får plats. Rubriken avslutas med "…" om panelen görs smalare.
 - Versionsnummer 0.5.6.3.
 - Byggd och körd i Windows (0 fel, 0 varningar). Användaren har godkänt ändringarna.
+
+## 0.5.7 – Automatisk CAM-kontroll och cachade körbanor
+
+**CAM-planerare (`CNCStudio.Core/CamPlanner.cs`)**
+- Alla körbanor beräknas via en gemensam `CamPlanner` som sparar (cachar) dem per operation. Både materialvy, maskinvy och kontrollrapporten använder samma resultat.
+- En bana räknas om bara när något som påverkar dess form ändras: storlek, kontur, CAM-inställningar eller materialtjocklek. Zoom, markering, flytt av material/fastspänningar räknar aldrig om.
+- **Flytt av objekt** förskjuter den sparade banan i stället för att räkna om den – snabbt även för stora DXF/SVG-filer.
+- Enkla former (rektangel, ellips, vektorformer upp till 1000 punkter) räknas om automatiskt. **Tunga former** markeras som *inaktuella* efter storleks-/konturändring: banan döljs, objektet får orange streckad ram och operationen räknas som ej kontrollerad tills man klickar **Beräkna körbanor** (CAM-panelen eller CAM-menyn). Spara CAM beräknar alltid objektets bana direkt.
+
+**Tre nivåer i kontrollen (CAM Safety & Validation Engine)**
+- ⛔ Kritiskt: fräsen skär in i en fastspänning, banan utanför maskinens område, ogiltiga CAM-inställningar (t.ex. djup > materialtjocklek), bana som inte kunde beräknas, CAM utan ritobjekt.
+- ⚠ Varning: banan inom fastspänningens säkerhetsmarginal, djup per pass > fräsdiameter, genomskärning utan hållflikar, hållflikar valda men ännu inte tillämpade, inaktuell körbana.
+- ℹ Info: genomskärning (offerskiva, Z-nollpunkt).
+- Kritiska delsträckor ritas röda, varningar orange – bara den berörda delen.
+- Operationer utan beräknad bana visas med röd ram "CAM-fel – ej kontrollerad" i stället för att tyst försvinna.
+
+**Gränssnitt**
+- Ny statusruta i CAM-panelen som uppdateras automatiskt: antal kritiska/varningar/info och de viktigaste meddelandena, markerat objekt först. Anger alltid vad som inte kontrolleras (Z, hållare, materialgränser) – aldrig ett säkerhetsgodkännande.
+- Konflikter uppdateras live när en fastspänning eller materialet dras i maskinvyn.
+- "Uppdatera konturvisning (XY)" har ersatts av **Beräkna körbanor**.
+- Versionsnummer på ett ställe i koden (`AppTitle`) för dialoger.
+
+**Tester**
+- Nytt testprojekt `tests/CNCStudio.Core.Tests` (xUnit) med 38 tester för konturbanor, XY-kontroll mot fastspänningar, svårighetsgrader, cachning, förflyttning och inaktuella banor. Kör med `dotnet test`.
+
+Byggd i Windows (0 fel, 0 varningar), alla tester godkända. Användaren har godkänt versionen.

@@ -34,9 +34,12 @@ public partial class MainWindow
             : "MATERIALVY: Redigera designen och dess CAM-inställningar.";
     }
 
-    private void RenderMachine()
+    private void RenderMachine(bool refreshCam = true)
     {
         if (MachineCanvas is null) return;
+        // Moving stock or fixtures never changes a stock-local toolpath, so this is a cache
+        // hit plus the XY review: conflicts update live while a fixture is dragged.
+        if (refreshCam) { RefreshCamReport(); UpdateCamHealth(); }
         MachineCanvas.Children.Clear();
         double w = _document.Machine.WorkWidthMm, h = _document.Machine.WorkLengthMm;
         MachineCanvas.Width = w; MachineCanvas.Height = h;
@@ -83,32 +86,8 @@ public partial class MainWindow
 
         // Render the saved CAM XY centerlines in machine coordinates as well.
         // This is a VISUAL PREVIEW only: no Z routing, tabs, holder collision or executable G-code.
-        // Avoid expensive regeneration during dragging, just as the design view does.
-        if (_showContourPreview && _machineDragStart is null)
-        {
-            foreach (var op in _document.CamOperations)
-            {
-                var target = _document.Shapes.FirstOrDefault(sh => sh.Id == op.ShapeId);
-                if (target is null) continue;
-                try
-                {
-                    var preview = VectorContourPreview.Generate(target, op, _document.MaterialThickness);
-                    var problems = CamSafetyReview.Analyze(_document, target, op, preview);
-                    for (int pathIndex = 0; pathIndex < preview.Centerlines.Count; pathIndex++)
-                    {
-                        var centerline = preview.Centerlines[pathIndex];
-                        var line = new Polyline { Stroke = Brushes.LimeGreen,
-                            StrokeThickness = 2.4 / _zoom, IsHitTestVisible = false,
-                            StrokeDashArray = new DoubleCollection { 5, 2 } };
-                        foreach (var point in centerline)
-                            line.Points.Add(new Point(point.X + _document.Stock.X, point.Y + _document.Stock.Y));
-                        MachineCanvas.Children.Add(line);
-                    }
-                    AddConflictMarks(MachineCanvas, preview, problems, _document.Stock.X, _document.Stock.Y);
-                }
-                catch (Exception) { /* Unsupported paths must not be shown as verified. */ }
-            }
-        }
+        if (_showContourPreview)
+            DrawCamResults(MachineCanvas, _document.Stock.X, _document.Stock.Y);
 
         foreach (var f in _document.Fixtures)
         {
@@ -341,28 +320,4 @@ public partial class MainWindow
         RefreshFixtureFields(); RenderMachine();
     }
 
-    /// <summary>
-    /// Draws only the conflicting part (TStart..TEnd) of each flagged segment in red.
-    /// offsetX/Y converts stock-local path coordinates to the target canvas.
-    /// </summary>
-    private void AddConflictMarks(Canvas canvas, ContourPreview preview,
-        IReadOnlyList<CamSafetyReview.Issue> issues, double offsetX, double offsetY)
-    {
-        var paths = preview.Centerlines.Count > 0 ? preview.Centerlines :
-            new IReadOnlyList<CamPoint>[] { preview.Centerline };
-        foreach (var issue in issues)
-        {
-            if (issue.PathIndex < 0 || issue.PathIndex >= paths.Count) continue;
-            var path = paths[issue.PathIndex];
-            if (issue.SegmentIndex < 0 || issue.SegmentIndex + 1 >= path.Count) continue;
-            var a = path[issue.SegmentIndex]; var b = path[issue.SegmentIndex + 1];
-            double t0 = Math.Clamp(issue.TStart, 0, 1), t1 = Math.Clamp(issue.TEnd, 0, 1);
-            canvas.Children.Add(new Line {
-                X1 = a.X + (b.X - a.X) * t0 + offsetX, Y1 = a.Y + (b.Y - a.Y) * t0 + offsetY,
-                X2 = a.X + (b.X - a.X) * t1 + offsetX, Y2 = a.Y + (b.Y - a.Y) * t1 + offsetY,
-                Stroke = Brushes.Red, StrokeThickness = 3.5 / _zoom,
-                StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
-                IsHitTestVisible = false });
-        }
-    }
 }
