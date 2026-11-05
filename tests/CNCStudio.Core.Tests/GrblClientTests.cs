@@ -359,5 +359,7 @@ public class GrblProtocolTests
         Assert.Equal(2, applied.HomingPullOffMm);
         Assert.True(applied.LimitMarginMm >= applied.HomingPullOffMm);
         Assert.True(applied.CalibratedToGrbl);
+        var grblSpindle = GrblSettings.ApplyToProfile(new MachineProfile { Spindle = SpindleControl.Grbl }, machine);
+        Assert.Equal(SpindleControl.Grbl, grblSpindle.Spindle); // user's choice survives
     }
 }

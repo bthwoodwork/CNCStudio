@@ -58,6 +58,8 @@ public partial class MachineSettingsWindow : Window
         UpdateMaskTexts();
         PullOffBox.Text = F(current.HomingPullOffMm);
         SoftLimitsBox.IsChecked = current.SoftLimits;
+        SpindleManualBox.IsChecked = current.Spindle == SpindleControl.Manual;
+        SpindleGrblBox.IsChecked = current.Spindle == SpindleControl.Grbl;
         MarginBox.Text = F(current.LimitMarginMm);
         HomeOnStartupBox.Checked += (_, _) => UpdateWarning();
         HomeOnStartupBox.Unchecked += (_, _) => UpdateWarning();
@@ -185,6 +187,7 @@ public partial class MachineSettingsWindow : Window
     {
         if (_machineSettings is null) return;
         var applied = GrblSettings.ApplyToProfile(ReadForm() ?? _original, _machineSettings);
+        _applied = applied;
         XBox.Text = F(applied.WorkWidthMm); YBox.Text = F(applied.WorkLengthMm); ZBox.Text = F(applied.ZTravelMm);
         PullOffBox.Text = F(applied.HomingPullOffMm); MarginBox.Text = F(applied.LimitMarginMm);
         SoftLimitsBox.IsChecked = applied.SoftLimits; HomeOnStartupBox.IsChecked = applied.HomeOnStartup;
@@ -201,6 +204,7 @@ public partial class MachineSettingsWindow : Window
     }
 
     private bool _calibrated;
+    private MachineProfile? _applied;
 
     private void SetGrblBusy(bool busy, string? text)
     {
@@ -221,7 +225,10 @@ public partial class MachineSettingsWindow : Window
             HomeOnStartup = HomeOnStartupBox.IsChecked == true,
             DirInvertMask = DirMask(), HomingDirInvertMask = HomingMask(),
             HomingPullOffMm = pullOff, SoftLimits = SoftLimitsBox.IsChecked == true, LimitMarginMm = margin,
-            CalibratedToGrbl = _calibrated || _original.CalibratedToGrbl
+            CalibratedToGrbl = _calibrated || _original.CalibratedToGrbl,
+            Spindle = SpindleGrblBox.IsChecked == true ? SpindleControl.Grbl : SpindleControl.Manual,
+            MaxRateX = (_applied ?? _original).MaxRateX, MaxRateY = (_applied ?? _original).MaxRateY,
+            MaxRateZ = (_applied ?? _original).MaxRateZ
         };
     }
 
@@ -240,7 +247,10 @@ public partial class MachineSettingsWindow : Window
             HomingPullOffMm = pullOff,
             SoftLimits = SoftLimitsBox.IsChecked == true,
             LimitMarginMm = margin,
-            CalibratedToGrbl = _calibrated || _original.CalibratedToGrbl
+            CalibratedToGrbl = _calibrated || _original.CalibratedToGrbl,
+            Spindle = SpindleGrblBox.IsChecked == true ? SpindleControl.Grbl : SpindleControl.Manual,
+            MaxRateX = (_applied ?? _original).MaxRateX, MaxRateY = (_applied ?? _original).MaxRateY,
+            MaxRateZ = (_applied ?? _original).MaxRateZ
         };
         if (_validate(candidate) is string error) { Show(error); return; }
         Result = candidate;

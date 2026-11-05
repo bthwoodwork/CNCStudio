@@ -97,6 +97,17 @@
       </StackPanel>
     </GroupBox>
 
+    <GroupBox Header="SPINDEL / FRÄS">
+      <StackPanel>
+        <RadioButton x:Name="SpindleManualBox" GroupName="Spindle" Foreground="#E8F1FA" Margin="3,4"
+                     Content="Manuell – fräsen startas och varvtalet ställs för hand"/>
+        <TextBlock Text="G-coden skriver inga M3/S/M5. Programmet pausar (M0) så att du kan starta fräsen och ställa varvtalet; fortsätt med ~ (Fortsätt)." TextWrapping="Wrap" FontSize="11" Foreground="#BDCEE0" Margin="22,0,3,6"/>
+        <RadioButton x:Name="SpindleGrblBox" GroupName="Spindle" Foreground="#E8F1FA" Margin="3,4"
+                     Content="Styrs av GRBL (M3 S… / M5)"/>
+        <TextBlock Text="GRBL slår på spindeln med M3 och varvtal S (skalas mot $30/$31) och väntar uppstartstiden (G4)." TextWrapping="Wrap" FontSize="11" Foreground="#BDCEE0" Margin="22,0,3,4"/>
+      </StackPanel>
+    </GroupBox>
+
     <GroupBox Header="SÄKERHET">
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition/></Grid.ColumnDefinitions>

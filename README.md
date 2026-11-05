@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.5.12)
+# CNC Studio – källkod (senaste: 0.6)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -149,3 +149,17 @@ Byggd i Windows (0 fel, 0 varningar), 166 tester godkända. Användaren har godk
 - Läsbara rubriker och etiketter i hopfällbara sektioner, maskinsammanfattningen fylls i vid start och hjälpraden döljs inte längre av linjalen.
 
 Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren har godkänt layouten.
+
+## 0.6 – G-code för GRBL
+
+- **Export** (CAM → Exportera G-code…, Ctrl+E, eller knappen i CAM-panelen) skapar en `.nc`-fil i ren ASCII med CRLF.
+- **Bara verifierade koder:** G0 G1 G4 G17 G21 G54 G90 G94 M0 M3 M5 M30 med X Y Z F S P. Fakta och källor finns i `docs/GRBL-verifierat.md`.
+- **Programmets ordning:** filhuvud med nollpunkt och krav → G21/G90/G94/G17/G54 → **lyft Z först** → spindelstart på säker höjd → till startpunkten → pass med nedmatning, kontur och lyft över hållflikar → lyft → avslut.
+- **Nollpunkt:** X0 Y0 = materialets främre vänstra hörn, Z0 = ovansidan. Y speglas från ritningen.
+- **Matning, nedmatning och varvtal** anges per operation i CAM-panelen. Spindelns uppstartstid finns under Z-höjder.
+- **Fräs:** *Manuell* (standard) skriver inga M3/S/M5. Programmet pausar i stället med M0 på säker höjd, med en kommentar om vilket varvtal som ska ställas in; fortsätt med `~`. *Styrs av GRBL* skriver M3 S, G4 för uppstart och M5. Varvtalsbyten mellan operationer görs på förflyttningshöjd.
+- **Exporten blockeras** vid kritiska fel, inaktuella eller okontrollerade körbanor, okänd MPos Z vid materialytan, eller om homing vid start är avstängd. Varningar visas, måste godkännas och skrivs i filhuvudet.
+- **Oberoende kontroll:** `GCodeVerifier` läser programmet rad för rad och kontrollerar bland annat att Z lyfts först, att ingen snabbförflyttning sker i materialet, att spindeln är på (eller att det finns en M0-paus) före skär, att F är satt före G1, Z-gränserna, avslutet, att raderna är ASCII och högst 70 tecken, och att bara tillåtna koder används. Vid fel skapas ingen fil.
+- Maxhastigheterna `$110`–`$112` läses in från maskinen och ger en varning om matningen är högre.
+
+**Tester:** 199 tester. Programmet är inte kört på en riktig maskin än – kontrollera filen i gSender och kör gärna i luften första gången.

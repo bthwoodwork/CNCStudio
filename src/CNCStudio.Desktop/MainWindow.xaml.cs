@@ -451,6 +451,8 @@ public partial class MainWindow : Window
         { SaveAs_Click(sender, new RoutedEventArgs()); e.Handled = true; return; }
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
         { Save_Click(sender, new RoutedEventArgs()); e.Handled = true; return; }
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.E)
+        { ExportGCode_Click(sender, new RoutedEventArgs()); e.Handled = true; return; }
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.I)
         { ImportVector_Click(sender, new RoutedEventArgs()); e.Handled = true; return; }
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.O)
@@ -1157,10 +1159,7 @@ public partial class MainWindow : Window
         for (int i = 0; i < Math.Min(originals.Count, duplicates.Count); i++)
         {
             var op = _document.CamOperations.FirstOrDefault(o => o.ShapeId == originals[i].Id);
-            if (op != null) _document.CamOperations.Add(new CamOperation { ShapeId = duplicates[i].Id,
-                Kind = op.Kind, ToolDiameter = op.ToolDiameter, TotalDepth = op.TotalDepth,
-                DepthPerPass = op.DepthPerPass, UseTabs = op.UseTabs,
-                TabCount = op.TabCount, TabWidth = op.TabWidth, TabHeight = op.TabHeight });
+            if (op != null) _document.CamOperations.Add(op.CopyFor(duplicates[i].Id));
         }
         _selection.Clear(); foreach (var item in duplicates) _selection.Add(item);
         _selected = duplicates.FirstOrDefault();
@@ -1407,6 +1406,9 @@ public partial class MainWindow : Window
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
             CamTabs.IsChecked = operation?.UseTabs ?? true;
             var defaults = new CamOperation();
+            CamFeed.Text = F(operation?.FeedRate ?? defaults.FeedRate);
+            CamPlunge.Text = F(operation?.PlungeRate ?? defaults.PlungeRate);
+            CamRpm.Text = F(operation?.SpindleRpm ?? defaults.SpindleRpm);
             CamTabCount.Text = (operation?.TabCount ?? defaults.TabCount).ToString(CultureInfo.InvariantCulture);
             CamTabWidth.Text = F(operation?.TabWidth ?? defaults.TabWidth);
             CamTabHeight.Text = F(operation?.TabHeight ?? defaults.TabHeight);
@@ -1440,10 +1442,14 @@ public partial class MainWindow : Window
             if (okWidth) tabWidth = w;
             if (okHeight) tabHeight = h;
         }
+        if (CamFeed is null || CamPlunge is null || CamRpm is null ||
+            !Parse(CamFeed, out var feed) || !Parse(CamPlunge, out var plunge) || !Parse(CamRpm, out var rpm))
+            return null;
         return new CamOperation { ShapeId = _selected.Id,
             Kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex), ToolDiameter = diameter,
             TotalDepth = depth, DepthPerPass = step, UseTabs = useTabs,
-            TabCount = tabCount, TabWidth = tabWidth, TabHeight = tabHeight };
+            TabCount = tabCount, TabWidth = tabWidth, TabHeight = tabHeight,
+            FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm };
     }
     private void UpdateCamSummary()
     {

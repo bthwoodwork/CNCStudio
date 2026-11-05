@@ -93,6 +93,36 @@ Kontrollerat 2026-11-05 mot:
   - Därför erbjuder brytartestet att tillfälligt sätta `$21=0`, men bara efter bekräftelse. `$21=1` skrivs alltid tillbaka och kontrolläses.
 - **`CHECK_LIMITS_AT_INIT`** är på: vid start eller återställning varnar GRBL om en brytare redan är aktiv.
 
+## G-code (`gcode.c`, `gcode.h`, `protocol.c`, Commands- och Laser-Mode-wikin, LinuxCNC)
+
+- **Kodar som stöds** (Commands-wikin) och som CNC Studio använder: `G0`, `G1`, `G4`, `G17`, `G21`, `G54`, `G90`, `G94`, `M3`, `M5`, `M30` samt orden `X` `Y` `Z` `F` `S` `P`. Inget annat skrivs, och verifieraren avvisar allt annat.
+- **`G4 P`** anges i **sekunder**. Negativt P ger `error:4`, och P saknas ger `error:28`. Wikin skriver att P måste vara > 0.
+- **F är modalt och måste vara satt före första `G1`**, annars `error:22`. `G0` behöver inget F och går med `$110`–`$112`.
+- **Modalgrupper:** G21 (grupp 6), G90 (3), G94 (5), G17 (2) och G54 (12) får stå på samma rad. Två koder ur samma grupp ger `error:21`. CNC Studio skriver ändå en kod per rad.
+- **Kommentarer:** `( … )` och `;` tas bort innan raden tolkas. Mellanslag och styrtecken tas också bort, och små bokstäver görs stora. `%` stöds **inte**. Radlängden räknas efter att kommentarerna tagits bort, och högst 79 tecken ryms. CNC Studio skriver kommentarer i ren ASCII (å→a) och högst 70 tecken per rad.
+- **`M2` och `M30` beter sig likadant i GRBL** (`gcode.c`):
+  - väntar tills alla rörelser är klara
+  - stänger av spindeln och kylningen
+  - återställer G1, G17, G90, G94 och G54
+  - skriver `[MSG:Pgm End]`
+  - F och S återställs **inte**.
+- **`M3 S`**: varvtalet skalas mot `$30`/`$31`. Om GRBL själv väntar på att spindeln ska komma upp i varv är **inte bekräftat**, så CNC Studio skriver alltid en egen `G4`.
+- **Laserläge `$32=1`**: G0 stänger då av utgången och M3/M4 beter sig annorlunda. Wikin säger att laserläget **måste** stängas av (`$32=0`) för fräsning. Filhuvudet påminner om detta.
+- **`G53`** (används inte än): flyttar i maskinkoordinater bara på den egna raden och kräver att G0 eller G1 är aktivt.
+
+### Programmets uppbyggnad i CNC Studio 0.6
+
+1. Kommentarer: projekt, datum, material, nollpunkt (X0 Y0 = materialets **främre vänstra hörn**, Z0 = ovansidan), krav och varningar.
+2. `G21`, `G90`, `G94`, `G17`, `G54`.
+3. `G0 Z<starthöjd>`: **först lyfts bara Z**, eftersom positionen är okänd.
+4. `M3 S<varvtal>` och `G4 P<sekunder>`: spindeln startar på säker höjd.
+5. `G0 X Y` till startpunkten, sedan `G0 Z<höjd före nedmatning>`.
+6. För varje pass: `G1 Z<djup> F<nedmatning>`, sedan `G1 X Y F<matning>` längs konturen. Vid hållflikar lyfts fräsen till flikens överkant med `G1 Z`.
+7. Mellan banor: `G0 Z<förflyttningshöjd>`, sedan `G0 X Y`. Över en fastspänning används högre Z.
+8. `G0 Z<sluthöjd>`, `M5`, `M30`.
+
+Varje program kontrolleras av `GCodeVerifier`, som läser filen rad för rad oberoende av generatorn. Om något fel hittas skapas ingen fil.
+
 ## Antaganden (inte GRBL, utan hur maskinen står)
 
 - Vilket hörn som blir hem utifrån `$23` förutsätter att **+X är åt höger och +Y bort från operatören (bakåt)**. Det måste stämmas av mot den egna maskinen.
@@ -104,4 +134,11 @@ Kontrollerat 2026-11-05 mot:
 
 - Hur `$130` mappas till inställningsindex i `settings.h`. Betydelsen är verifierad i wikin, men mappningen i koden är inte läst.
 - Exakt hur `gcode.c` skriver G10-offseten till EEPROM i exekveringsfasen.
-- Alla G/M-koder för G-code-generering (G0/G1, G17, G21, G90, G54, M3/M5, S, F, G4 osv.) och **i vilken ordning programmet ska skicka dem**. Det ska verifieras innan 0.6.
+- Exakt hur `read_float` tolkar tal (antal decimaler), och om `G4 P0` godtas i praktiken. CNC Studio skriver alltid högst tre decimaler och P > 0.
+
+## Manuell fräs (`M0`)
+
+- **`M0`** står under *Program mode: M0, M1, M2, M30* i Commands-wikin. Det är en programpaus.
+- **`~`** (Cycle start) fortsätter efter pausen. Wikin skriver att `~` *"resumes a feed hold, a safety door/parking state when the door is closed, and the M0 program pause states"*.
+- När fräsen är inställd som manuell skriver CNC Studio **inga** `M3`, `S` eller `M5`. Programmet pausar i stället med `M0` på säker höjd, och raden före pausen är en kommentar som anger vilket varvtal fräsen ska ha. Ett nytt varvtal för en senare operation ger en ny paus på förflyttningshöjden.
+- **Ej verifierat:** exakt hur `gcode.c` väntar in planeraren vid `M0`. CNC Studio lägger alltid pausen på säker höjd, så det spelar ingen roll om de tidigare rörelserna är klara när pausen inträffar.

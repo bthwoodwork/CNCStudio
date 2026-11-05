@@ -134,6 +134,10 @@ public static class GrblSettings
             WorkLengthMm = Get(131, p.WorkLengthMm),
             ZTravelMm = Get(132, p.ZTravelMm),
             LimitMarginMm = Math.Max(p.LimitMarginMm, Get(27, p.HomingPullOffMm)),
+            MaxRateX = s.TryGetValue(110, out var rx) ? rx : p.MaxRateX,
+            MaxRateY = s.TryGetValue(111, out var ry) ? ry : p.MaxRateY,
+            MaxRateZ = s.TryGetValue(112, out var rz) ? rz : p.MaxRateZ,
+            Spindle = p.Spindle, // not a GRBL setting: keep the user's choice
             CalibratedToGrbl = true
         };
     }

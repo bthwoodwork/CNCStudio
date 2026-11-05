@@ -166,6 +166,7 @@ public partial class MainWindow
         };
         MachineSummaryText.Text = $"{m.Name}\nX {F(m.WorkWidthMm)} × Y {F(m.WorkLengthMm)} × Z {F(m.ZTravelMm)} mm · " +
             $"hem {corner} ($23={m.HomingDirInvertMask}) · Z-brytare upptill · marginal {F(m.LimitMarginMm)} mm" +
+            $"\nFräs: {(m.Spindle == SpindleControl.Manual ? "manuell (programmet pausar med M0)" : "styrs av GRBL (M3/M5)")}" +
             (m.HomeOnStartup ? "" : "\nVARNING: homing vid start är avstängd.");
     }
 

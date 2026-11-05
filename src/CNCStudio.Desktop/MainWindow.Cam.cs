@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.5.12";
+    private const string AppTitle = "CNC Studio 0.6";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -37,6 +37,7 @@ public partial class MainWindow
         var m = _document.Motion;
         TravelHeightBox.Text = F(m.TravelHeightMm);
         PlungeClearanceBox.Text = F(m.PlungeClearanceMm);
+        SpinUpBox.Text = F(m.SpindleSpinUpSeconds);
         ZMaxBox.Text = m.StockTopMachineZ is double z ? F(z) : "";
         double margin = _document.Machine.LimitMarginMm;
         ZHeadroomText.Text = m.ZMaxAboveStockMm is double h
@@ -47,7 +48,8 @@ public partial class MainWindow
 
     private void SaveMotion_Click(object sender, RoutedEventArgs e)
     {
-        if (!Parse(TravelHeightBox, out var travel) || !Parse(PlungeClearanceBox, out var plunge))
+        if (!Parse(TravelHeightBox, out var travel) || !Parse(PlungeClearanceBox, out var plunge) ||
+            !Parse(SpinUpBox, out var spinUp))
         { Error("Ange giltiga Z-höjder."); return; }
         double margin = _document.Machine.LimitMarginMm;
         double? stockTop = null;
@@ -57,7 +59,7 @@ public partial class MainWindow
             stockTop = z;
         }
         var candidate = new MotionSettings { TravelHeightMm = travel, PlungeClearanceMm = plunge,
-            StockTopMachineZ = stockTop };
+            StockTopMachineZ = stockTop, SpindleSpinUpSeconds = spinUp };
         if (MotionValidation.GetError(candidate) is string error) { Error(error); return; }
         RememberChange();
         _document.Motion = candidate;

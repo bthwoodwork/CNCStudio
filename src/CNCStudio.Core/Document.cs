@@ -51,6 +51,20 @@ public sealed class CamOperation
     public double TabWidth { get; set; } = 6;
     /// <summary>Height of the tab above the bottom of the cut, in mm.</summary>
     public double TabHeight { get; set; } = 3;
+    /// <summary>Cutting feed rate in mm/min (G1 F, G94).</summary>
+    public double FeedRate { get; set; } = 1000;
+    /// <summary>Plunge (Z feed) rate in mm/min, also used to lift over tabs.</summary>
+    public double PlungeRate { get; set; } = 300;
+    /// <summary>Spindle speed for M3 S, in RPM. Mapped by GRBL to PWM via $30/$31.</summary>
+    public double SpindleRpm { get; set; } = 18000;
+
+    /// <summary>A copy with every setting, for another shape (used when duplicating).</summary>
+    public CamOperation CopyFor(Guid shapeId)
+    {
+        var copy = (CamOperation)MemberwiseClone();
+        copy.ShapeId = shapeId;
+        return copy;
+    }
 }
 
 public static class CamValidation
@@ -65,6 +79,12 @@ public static class CamValidation
             return "Djup per pass måste vara större än 0 och får inte överstiga totalt djup.";
         if (operation.Kind == CamOperationKind.Pocket && operation.UseTabs)
             return "Hållflikar används inte för fickfräsning.";
+        if (!double.IsFinite(operation.FeedRate) || operation.FeedRate < 1 || operation.FeedRate > 20000)
+            return "Matningen måste vara 1–20000 mm/min.";
+        if (!double.IsFinite(operation.PlungeRate) || operation.PlungeRate < 1 || operation.PlungeRate > 20000)
+            return "Nedmatningen måste vara 1–20000 mm/min.";
+        if (!double.IsFinite(operation.SpindleRpm) || operation.SpindleRpm < 0 || operation.SpindleRpm > 60000)
+            return "Spindelvarvtalet måste vara 0–60000 varv/min.";
         if (operation.UseTabs)
         {
             if (operation.TabCount < 1 || operation.TabCount > 50)
@@ -81,6 +101,15 @@ public static class CamValidation
 // Machine-space coordinates in millimetres use a normalized top-left screen convention.
 // A physical GRBL MPos mapping must be calibrated separately before machine use.
 public enum HomeCorner { BackLeft, BackRight, FrontLeft, FrontRight }
+
+/// <summary>How the spindle/router is switched on and its speed set.</summary>
+public enum SpindleControl
+{
+    /// <summary>GRBL switches the spindle (M3 S… / M5).</summary>
+    Grbl,
+    /// <summary>Router started and speed set by hand; the program pauses with M0 instead.</summary>
+    Manual
+}
 
 public sealed class MachineProfile
 {
@@ -134,6 +163,15 @@ public sealed class MachineProfile
     public bool SoftLimits { get; set; } = true;
     /// <summary>Planned moves keep at least this distance from every limit (XY edges, Z top and bottom).</summary>
     public double LimitMarginMm { get; set; } = 3;
+    /// <summary>
+    /// Manual router: no M3/S/M5 are written (they would have no effect); the program pauses with M0
+    /// (resume with '~', verified in the GRBL wiki) so the router can be started and set by hand.
+    /// </summary>
+    public SpindleControl Spindle { get; set; } = SpindleControl.Manual;
+    /// <summary>Maximum rates from GRBL $110/$111/$112 (mm/min; also the G0 rate). Null = not read.</summary>
+    public double? MaxRateX { get; set; }
+    public double? MaxRateY { get; set; }
+    public double? MaxRateZ { get; set; }
     public bool CalibratedToGrbl { get; set; } = false;
 }
 
@@ -157,6 +195,12 @@ public sealed class MotionSettings
     /// <summary>How far above the stock top Z can travel before reaching home (the Z switch).</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public double? ZMaxAboveStockMm => StockTopMachineZ is double z ? -z : null;
+
+    /// <summary>
+    /// Dwell after M3 before the first move, in seconds (G4 P is seconds in GRBL 1.1). Whether GRBL
+    /// itself waits for spin-up is not confirmed, so an explicit dwell is always written.
+    /// </summary>
+    public double SpindleSpinUpSeconds { get; set; } = 4;
 }
 
 public static class MotionValidation
@@ -169,6 +213,8 @@ public static class MotionValidation
             return "Förflyttningshöjden måste vara minst lika stor som höjden före nedmatning och högst 200 mm.";
         if (m.StockTopMachineZ is double z && (!double.IsFinite(z) || z >= 0 || z < -500))
             return "Maskinens Z vid materialytan måste vara negativ (under Z-brytaren efter homing), högst −500 mm.";
+        if (!double.IsFinite(m.SpindleSpinUpSeconds) || m.SpindleSpinUpSeconds < 0 || m.SpindleSpinUpSeconds > 60)
+            return "Spindelns uppstartstid måste vara 0–60 sekunder.";
         return null;
     }
 }
