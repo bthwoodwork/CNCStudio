@@ -197,7 +197,7 @@ public partial class MainWindow : Window
 
 
     public MainWindow() { InitializeComponent(); RefreshInlaySettings(); Render(); }
-    private void Window_Loaded(object sender, RoutedEventArgs e) => FitToMaterial();
+    private void Window_Loaded(object sender, RoutedEventArgs e) { FitToMaterial(); InitGrblUi(); }
     private static double Clamp(double n, double lo, double hi) => Math.Max(lo, Math.Min(hi, n));
     private void UpdateZoomLabel()
     {
@@ -362,6 +362,7 @@ public partial class MainWindow : Window
     {
         _closingMain = true;
         foreach (var window in _floatingPanels.Values.ToList()) window.Close();
+        if (_grbl is not null) DisconnectGrbl("Programmet stängs.");
     }
     private void DesignWorkspace_Click(object sender, RoutedEventArgs e)
     {
@@ -1306,9 +1307,9 @@ public partial class MainWindow : Window
     { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = new CncDocument(); _camPlanner.Clear(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
     private void SyncMetadata()
     { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
-      MachineWidthBox.Text = F(_document.Machine.WorkWidthMm); MachineLengthBox.Text = F(_document.Machine.WorkLengthMm);
+      RefreshMachineSummary();
       StockXBox.Text = F(_document.Stock.X); StockYBox.Text = F(_document.Stock.Y);
-      RefreshFixtureFields(); RefreshInlaySettings(); }
+      RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000) { Error("Kontrollera materialmåtten innan du sparar."); return; }

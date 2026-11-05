@@ -59,7 +59,7 @@ public class CamPlannerTests
         planner.Review(doc);
         var fixture = new FixtureBlock { X = 600, Y = 600, Width = 30, Length = 30 };
         doc.Fixtures.Add(fixture);
-        Assert.Empty(planner.Review(doc).AllFindings);
+        Assert.Empty(planner.Review(doc).Operations.SelectMany(o => o.Findings));
         fixture.X = 140; fixture.Y = 140; // over the path's corner: hits the top and left edges
         var hits = planner.Review(doc).AllFindings.Where(f => f.Severity == CamSeverity.Critical).ToList();
         Assert.Equal(2, hits.Count);

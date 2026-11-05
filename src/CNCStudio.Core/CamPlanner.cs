@@ -40,7 +40,11 @@ public sealed record CamOperationResult(CamOperation Operation, DesignShape? Sha
 public sealed record CamReport(IReadOnlyList<CamOperationResult> Operations)
 {
     public static readonly CamReport Empty = new(Array.Empty<CamOperationResult>());
-    public IEnumerable<CamFinding> AllFindings => Operations.SelectMany(o => o.Findings);
+    /// <summary>Planned Z motion between and around the cuts.</summary>
+    public MotionPlan Motion { get; init; } = MotionPlan.Empty;
+    /// <summary>Findings that belong to the whole program (motion, Z limit) rather than one object.</summary>
+    public IReadOnlyList<CamFinding> GlobalFindings { get; init; } = Array.Empty<CamFinding>();
+    public IEnumerable<CamFinding> AllFindings => Operations.SelectMany(o => o.Findings).Concat(GlobalFindings);
     public int CriticalCount => AllFindings.Count(f => f.Severity == CamSeverity.Critical);
     public int WarningCount => AllFindings.Count(f => f.Severity == CamSeverity.Warning);
     public int InfoCount => AllFindings.Count(f => f.Severity == CamSeverity.Info);
@@ -190,7 +194,8 @@ public sealed class CamPlanner
             _cache.Remove(stale);
         foreach (var stale in _partCache.Keys.Where(k => !live.Contains(k)).ToList())
             _partCache.Remove(stale);
-        return new CamReport(results);
+        var (motion, motionFindings) = MotionPlanner.Plan(document, results);
+        return new CamReport(results) { Motion = motion, GlobalFindings = motionFindings };
     }
 
     /// <summary>Returns null when the cached path is outdated and computing is not allowed.</summary>

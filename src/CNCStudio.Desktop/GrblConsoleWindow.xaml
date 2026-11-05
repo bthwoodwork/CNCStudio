@@ -1,0 +1,37 @@
+<Window x:Class="CNCStudio.Desktop.GrblConsoleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GRBL-konsol" Width="760" Height="560" MinWidth="560" MinHeight="380"
+        WindowStartupLocation="CenterOwner" Background="#17212C" Foreground="#E8F1FA">
+  <Window.Resources>
+    <Style TargetType="Button"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="10,5"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
+  </Window.Resources>
+  <DockPanel Margin="10">
+    <Border DockPanel.Dock="Top" Background="#4A3A1E" CornerRadius="4" Padding="8" Margin="0,0,0,8">
+      <TextBlock TextWrapping="Wrap" Foreground="#FFE0A8" FontSize="12"
+                 Text="Raderna skickas EXAKT som de skrivs, en i taget; nästa skickas först när GRBL svarat ok/error. G-code som G0/G1 får maskinen att röra sig. Ha nödstoppet inom räckhåll."/>
+    </Border>
+    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+      <Button Content="Status ?" Click="Status_Click" ToolTip="Realtidskommando '?': begär en statusrapport"/>
+      <Button Content="Paus !" Click="Hold_Click" Background="#8A6A1E" ToolTip="Realtidskommando '!': feed hold – bromsar in och stannar"/>
+      <Button Content="Fortsätt ~" Click="Resume_Click" ToolTip="Realtidskommando '~': fortsätter efter feed hold"/>
+      <Button Content="Återställ (Ctrl-X)" Click="Reset_Click" Background="#8A2E26" ToolTip="Realtidskommando 0x18: mjuk återställning. Under rörelse ger GRBL larm och positionen kan vara förlorad."/>
+      <Separator Width="12" Background="Transparent"/>
+      <Button Content="$H Homing" Click="Home_Click" ToolTip="Kör homing-cykeln: först Z uppåt, sedan X och Y"/>
+      <Button Content="$X Lås upp" Click="Unlock_Click" ToolTip="Häver larmlåset UTAN homing – positionen är då okänd"/>
+      <Button Content="$$" Click="Quick_Click" Tag="$$" ToolTip="Visa alla inställningar"/>
+      <Button Content="$#" Click="Quick_Click" Tag="$#" ToolTip="Visa koordinatoffset (G54…, G92, TLO)"/>
+      <Button Content="$G" Click="Quick_Click" Tag="$G" ToolTip="Visa parserns lägen"/>
+      <Button Content="$I" Click="Quick_Click" Tag="$I" ToolTip="Visa version"/>
+    </WrapPanel>
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+      <Button DockPanel.Dock="Right" x:Name="SendButton" Content="Skicka" IsDefault="True" Click="Send_Click" Background="#24618C"/>
+      <Button DockPanel.Dock="Right" Content="Rensa logg" Click="Clear_Click"/>
+      <TextBox x:Name="InputBox" FontFamily="Consolas" FontSize="14" Padding="5" Margin="3" PreviewKeyDown="Input_KeyDown"
+               ToolTip="En rad i taget, högst 70 tecken. Pil upp/ned bläddrar i historiken."/>
+    </DockPanel>
+    <TextBlock DockPanel.Dock="Bottom" x:Name="StateLine" Text="" Foreground="#B8CADC" Margin="3,6,3,0"/>
+    <TextBox x:Name="LogBox" IsReadOnly="True" FontFamily="Consolas" FontSize="13" Background="#0F1720" Foreground="#D8E6F3"
+             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" BorderBrush="#50657D"/>
+  </DockPanel>
+</Window>

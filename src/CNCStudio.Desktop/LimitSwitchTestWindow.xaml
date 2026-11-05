@@ -1,0 +1,44 @@
+<Window x:Class="CNCStudio.Desktop.LimitSwitchTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Test av gränslägesbrytare" Width="620" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" Background="#17212C" Foreground="#E8F1FA">
+  <Window.Resources>
+    <Style TargetType="Button"><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="14,6"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
+    <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
+  </Window.Resources>
+  <StackPanel Margin="16">
+    <TextBlock FontSize="13" Margin="0,0,0,8"
+               Text="Maskinen rör sig INTE under testet. Tryck in varje brytare för hand och släpp den igen. En axel är godkänd när brytaren syns intryckt och sedan släppt."/>
+    <TextBlock x:Name="SettingsText" Foreground="#BDCEE0" FontSize="12" Margin="0,0,0,8"/>
+
+    <Border x:Name="HardLimitBox" Background="#4A3A1E" CornerRadius="4" Padding="10" Margin="0,0,0,10" Visibility="Collapsed">
+      <StackPanel>
+        <TextBlock Foreground="#FFE0A8"
+                   Text="Hårda gränser är på ($21=1). Då larmar GRBL och stoppar (ALARM:1) så fort en brytare ändras – redan vid första tryckningen – och svarar sedan inte på statusfrågor förrän efter återställning. Testet kan därför inte se vilken brytare det var."/>
+        <Button x:Name="DisableHardLimitsButton" HorizontalAlignment="Left" Margin="0,8,0,0" Background="#8A5A1E" Click="DisableHardLimits_Click"
+                Content="Stäng av hårda gränser under testet ($21=0)…"/>
+      </StackPanel>
+    </Border>
+
+    <UniformGrid Columns="3" Margin="0,4,0,10">
+      <Border x:Name="LedX" CornerRadius="6" Margin="6" Padding="10" Background="#34475A">
+        <StackPanel><TextBlock Text="X" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="TextX" HorizontalAlignment="Center" TextAlignment="Center" FontSize="12"/></StackPanel>
+      </Border>
+      <Border x:Name="LedY" CornerRadius="6" Margin="6" Padding="10" Background="#34475A">
+        <StackPanel><TextBlock Text="Y" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="TextY" HorizontalAlignment="Center" TextAlignment="Center" FontSize="12"/></StackPanel>
+      </Border>
+      <Border x:Name="LedZ" CornerRadius="6" Margin="6" Padding="10" Background="#34475A">
+        <StackPanel><TextBlock Text="Z" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock x:Name="TextZ" HorizontalAlignment="Center" TextAlignment="Center" FontSize="12"/></StackPanel>
+      </Border>
+    </UniformGrid>
+
+    <TextBlock x:Name="ResultText" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,6"/>
+    <TextBlock x:Name="LiveText" Foreground="#9FB3C8" FontSize="11.5" FontFamily="Consolas"/>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+      <Button Content="Börja om" Click="Restart_Click"/>
+      <Button x:Name="DoneButton" Content="Klar" Background="#24618C" Click="Done_Click"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

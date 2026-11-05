@@ -80,12 +80,97 @@ public static class CamValidation
 
 // Machine-space coordinates in millimetres use a normalized top-left screen convention.
 // A physical GRBL MPos mapping must be calibrated separately before machine use.
+public enum HomeCorner { BackLeft, BackRight, FrontLeft, FrontRight }
+
 public sealed class MachineProfile
 {
     public string Name { get; set; } = "Maskinprofil (ej verifierad)";
+    /// <summary>Usable X travel (GRBL $130).</summary>
     public double WorkWidthMm { get; set; } = 750;
+    /// <summary>Usable Y travel (GRBL $131).</summary>
     public double WorkLengthMm { get; set; } = 750;
+    /// <summary>Usable Z travel from the top switch downwards (GRBL $132).</summary>
+    public double ZTravelMm { get; set; } = 65;
+    /// <summary>
+    /// The machine is homed with $H after every startup (requires $22=1 in GRBL, which keeps GRBL in
+    /// alarm until homed). Required for known machine coordinates and the Z switch position.
+    /// </summary>
+    public bool HomeOnStartup { get; set; } = true;
+    /// <summary>
+    /// GRBL $3, direction port invert mask: bit 1 = X, bit 2 = Y, bit 4 = Z. Verified (wiki, stepper.c):
+    /// it only flips the electrical direction signal so an axis physically moves the other way; machine
+    /// coordinates are unaffected. Set it so +X moves right, +Y away from the operator and +Z up
+    /// (right-hand rule) before setting up homing. Not to be confused with $2 (step pulse invert).
+    /// </summary>
+    public int DirInvertMask { get; set; } = 0;
+
+    /// <summary>
+    /// GRBL $23, homing direction invert mask: bit 1 = X, bit 2 = Y, bit 4 = Z. Verified (GRBL 1.1 wiki):
+    /// by default ($23=0) every axis homes in the positive direction; a set bit makes that axis home
+    /// negative. Z must home positive (up), so bit 4 must be clear.
+    /// </summary>
+    public int HomingDirInvertMask { get; set; } = 0;
+
+    /// <summary>
+    /// Corner where X/Y homing ends up, derived from $23. Assumes the usual orientation:
+    /// +X to the right and +Y away from the operator (towards the back).
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public HomeCorner HomeCorner =>
+        ((HomingDirInvertMask & 1) != 0, (HomingDirInvertMask & 2) != 0) switch
+        {
+            (false, false) => HomeCorner.BackRight,
+            (true, false) => HomeCorner.BackLeft,
+            (false, true) => HomeCorner.FrontRight,
+            (true, true) => HomeCorner.FrontLeft
+        };
+
+    /// <summary>
+    /// Distance GRBL backs off a switch after homing (GRBL $27). Verified in limits.c: an axis that
+    /// homes positive is set to MPos = −$27 after homing; the switch itself is at MPos 0.
+    /// </summary>
+    public double HomingPullOffMm { get; set; } = 1;
+    /// <summary>GRBL soft limits enabled ($20=1).</summary>
+    public bool SoftLimits { get; set; } = true;
+    /// <summary>Planned moves keep at least this distance from every limit (XY edges, Z top and bottom).</summary>
+    public double LimitMarginMm { get; set; } = 3;
     public bool CalibratedToGrbl { get; set; } = false;
+}
+
+/// <summary>
+/// Z heights for moves between cuts. All values are mm above the stock top (work Z0 = stock top).
+/// </summary>
+public sealed class MotionSettings
+{
+    /// <summary>Normal height for rapid (G0) moves between cuts.</summary>
+    public double TravelHeightMm { get; set; } = 10;
+    /// <summary>Rapid down to this height above the surface before the feed plunge.</summary>
+    public double PlungeClearanceMm { get; set; } = 2;
+    /// <summary>
+    /// Machine Z (MPos) at the stock top, i.e. where work Z0 is set. The machine always homes at
+    /// startup and the Z limit switch is at the top, so after homing MPos Z = 0 is the top of travel
+    /// and the stock top lies below it (negative). Null = not entered. Changes whenever Z0 is reset
+    /// (new stock, new tool). Later read automatically from GRBL's G54 offset.
+    /// </summary>
+    public double? StockTopMachineZ { get; set; }
+
+    /// <summary>How far above the stock top Z can travel before reaching home (the Z switch).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public double? ZMaxAboveStockMm => StockTopMachineZ is double z ? -z : null;
+}
+
+public static class MotionValidation
+{
+    public static string? GetError(MotionSettings m)
+    {
+        if (!double.IsFinite(m.PlungeClearanceMm) || m.PlungeClearanceMm <= 0 || m.PlungeClearanceMm > 50)
+            return "Höjd före nedmatning måste vara större än 0 och högst 50 mm.";
+        if (!double.IsFinite(m.TravelHeightMm) || m.TravelHeightMm < m.PlungeClearanceMm || m.TravelHeightMm > 200)
+            return "Förflyttningshöjden måste vara minst lika stor som höjden före nedmatning och högst 200 mm.";
+        if (m.StockTopMachineZ is double z && (!double.IsFinite(z) || z >= 0 || z < -500))
+            return "Maskinens Z vid materialytan måste vara negativ (under Z-brytaren efter homing), högst −500 mm.";
+        return null;
+    }
 }
 
 public sealed class StockPlacement
@@ -124,6 +209,23 @@ public static class MachineSetupValidation
         if (!double.IsFinite(m.WorkWidthMm) || !double.IsFinite(m.WorkLengthMm) ||
             m.WorkWidthMm <= 0 || m.WorkLengthMm <= 0 || m.WorkWidthMm > 10000 || m.WorkLengthMm > 10000)
             return "Maskinens arbetsområde måste ha giltiga mått.";
+        if (!double.IsFinite(m.ZTravelMm) || m.ZTravelMm <= 0 || m.ZTravelMm > 500)
+            return "Z-axelns rörelse måste vara större än 0 och högst 500 mm.";
+        if (!double.IsFinite(m.HomingPullOffMm) || m.HomingPullOffMm < 0 || m.HomingPullOffMm > 20)
+            return "Pull-off efter homing måste vara 0–20 mm.";
+        if (!double.IsFinite(m.LimitMarginMm) || m.LimitMarginMm < 0 || m.LimitMarginMm > 50)
+            return "Säkerhetsmarginalen till gränslägena måste vara 0–50 mm.";
+        if (m.LimitMarginMm < m.HomingPullOffMm)
+            return $"Marginalen till gränslägena ({m.LimitMarginMm:0.###} mm) måste vara minst pull-off ($27 = " +
+                   $"{m.HomingPullOffMm:0.###} mm). Annars kan rörelser komma närmare brytarna än där homing stannar.";
+        if (m.DirInvertMask < 0 || m.DirInvertMask > 7)
+            return "$3 (axelriktning) måste vara ett heltal 0–7.";
+        if (m.HomingDirInvertMask < 0 || m.HomingDirInvertMask > 7)
+            return "$23 (homingriktning) måste vara ett heltal 0–7.";
+        if ((m.HomingDirInvertMask & 4) != 0)
+            return "$23 har bit 4 (Z) satt, så Z homar nedåt. CNC Studio kräver att Z homar uppåt mot en brytare upptill.";
+        if (string.IsNullOrWhiteSpace(m.Name))
+            return "Ange ett namn på maskinprofilen.";
         if (!double.IsFinite(stock.X) || !double.IsFinite(stock.Y) || stock.X < 0 || stock.Y < 0 ||
             stock.X + d.MaterialWidth > m.WorkWidthMm + 0.00001 ||
             stock.Y + d.MaterialHeight > m.WorkLengthMm + 0.00001)
@@ -147,6 +249,7 @@ public sealed class CncDocument
     public string Name { get; set; } = "Nytt projekt";
     public MachineProfile Machine { get; set; } = new();
     public StockPlacement Stock { get; set; } = new();
+    public MotionSettings Motion { get; set; } = new();
     public List<FixtureBlock> Fixtures { get; set; } = new();
     public CameraSetup Camera { get; set; } = new();
     public double MaterialWidth { get; set; } = 600;
@@ -175,6 +278,9 @@ public static class DocumentStorage
             throw new InvalidDataException("Ogiltig geometri i projektfilen.");
         document.Machine ??= new MachineProfile();
         document.Stock ??= new StockPlacement();
+        document.Motion ??= new MotionSettings();
+        if (MotionValidation.GetError(document.Motion) is string motionError)
+            throw new InvalidDataException("Ogiltiga förflyttningsinställningar: " + motionError);
         document.Fixtures ??= new List<FixtureBlock>();
         document.Camera ??= new CameraSetup();
         if (MachineSetupValidation.Validate(document) is string setupError)

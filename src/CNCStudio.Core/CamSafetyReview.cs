@@ -31,10 +31,12 @@ public static class CamSafetyReview
                 "Ogiltig fräsdiameter – banan kan inte kontrolleras.", shape.Id));
             return result;
         }
-        // A tool's *entire diameter* must remain inside the machine envelope.
-        double minX = toolRadius, minY = toolRadius;
-        double maxX = document.Machine.WorkWidthMm - toolRadius;
-        double maxY = document.Machine.WorkLengthMm - toolRadius;
+        // A tool's *entire diameter* must remain inside the machine envelope, with the
+        // machine profile's safety margin to the limit switches.
+        double edge = toolRadius + Math.Max(0, document.Machine.LimitMarginMm);
+        double minX = edge, minY = edge;
+        double maxX = document.Machine.WorkWidthMm - edge;
+        double maxY = document.Machine.WorkLengthMm - edge;
 
         for (int pi = 0; pi < paths.Count; pi++)
         {
@@ -53,7 +55,7 @@ public static class CamSafetyReview
                 double bx = b.X + document.Stock.X, by = b.Y + document.Stock.Y;
                 if (!Inside(ax, ay, minX, minY, maxX, maxY) || !Inside(bx, by, minX, minY, maxX, maxY))
                     result.Add(new CamFinding(CamSeverity.Critical, "OutsideMachine",
-                        "Verktygets svepta XY-område går utanför maskinens planerade arbetsyta.",
+                        $"Verktygets svepta XY-område går utanför maskinens arbetsområde (inklusive {document.Machine.LimitMarginMm:0.##} mm marginal till gränslägena).",
                         shape.Id, null, pi, si - 1));
 
                 foreach (var f in document.Fixtures)

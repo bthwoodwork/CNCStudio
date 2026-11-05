@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.5.8)
+# CNC Studio – källkod (senaste: 0.5.10)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -100,3 +100,33 @@ Byggd i Windows (0 fel, 0 varningar), alla tester godkända. Användaren har god
 **Tester:** 69 tester (31 nya) för flikar, materialgränser, tunn botten, delar nära varandra, hål, ellipskontur och laddning av gamla projektfiler.
 
 Byggd i Windows (0 fel, 0 varningar), alla tester godkända. Användaren har verifierat flikarna i appen.
+
+## 0.5.9 – Säkra Z-rörelser och maskininställningar
+
+**Rörelseplan (`CNCStudio.Core/MotionPlanner.cs`)**
+- Planerar alla rörelser mellan skären: lyft till förflyttningshöjd, snabbt ned till höjd före nedmatning, nedmatning pass för pass, lyft över hållflikar (bara i pass under flikens topp) och lyft ur spåret.
+- Snabbförflyttningar över en fastspänning lyfts över blockets höjd + marginal (visas lila). Start och slut går till en höjd över alla fastspänningar, eftersom maskinens startläge är okänt.
+- Kontrollerar att ingen snabbförflyttning i sidled går i materialet.
+- Ordning: invändiga konturer före utvändiga, inre banor före yttre.
+
+**Z-gränser via homing**
+- Maskinen homas med `$H` vid start. Z-brytaren sitter upptill vid MPos Z 0, och efter `$H` står Z på −`$27`.
+- Användaren anger MPos Z vid materialytan. Kritiskt om någon planerad höjd kommer närmare Z-brytaren än marginalen, eller om djupaste skär går under −`$132` + marginal.
+
+**Maskininställningar (Maskin → Maskininställningar…)**
+- Arbetsområde X/Y/Z (`$130`–`$132`), homing vid start, axelriktning (`$3`), homingriktning (`$23`, visar hemhörnet), pull-off (`$27`), mjuka gränser (`$20`) och marginal till gränslägen (minst `$27`; gäller både XY och Z).
+- Grön HEM-markering i maskinvyn. Z måste homa uppåt.
+- Alla GRBL-koder är kontrollerade mot GRBL 1.1:s källkod. Se `docs/GRBL-verifierat.md`.
+
+## 0.5.10 – GRBL-anslutning, konsol, inställningsminne och brytartest
+
+- **Seriell anslutning** (115200 8-N-1) i Maskinkontroll-panelen med live-läge, MPos och WPos. Inget skickas automatiskt utom `?`, och programmet återställer aldrig GRBL på egen hand.
+- **GRBL-konsol:** rad för rad med väntan på `ok`/`error` (send-response). Realtidsknappar `?` `!` `~` Ctrl-X. `$H` med bekräftelse, `$X` med varning. Sena svar efter timeout förväxlas inte med nästa kommando.
+- **Inställningsminne:** läs hela `$$` med GRBL:s namn och enheter, jämför med maskinprofilen, skriv ändrade värden (bara i Idle/Alarm, ett i taget, stopp vid första fel, kontrolläsning efteråt) och använd maskinens värden i profilen.
+- **Test av gränslägesbrytare utan rörelse:** följer `Pn:` i statusrapporten. Varje axel godkänns när brytaren syns intryckt och sedan släppt. Varnar för brytare som är utlösta från start. Med `$21=1` kan hårda gränser tillfälligt stängas av efter bekräftelse; de slås alltid på igen och kontrolläses.
+- **Z-nolla från maskinen:** MPos Z vid materialytan = G54 Z + G92 Z + TLO via `$#`. Vägrar vid `$13=1` (tum) eller annat aktivt koordinatsystem än G54.
+- Nollning och jogg i panelen är fortfarande demo.
+
+**Tester:** 166 tester, varav 46 mot en simulerad GRBL.
+
+Byggd i Windows (0 fel, 0 varningar), alla tester godkända. **Inte testad mot riktig maskin ännu.**

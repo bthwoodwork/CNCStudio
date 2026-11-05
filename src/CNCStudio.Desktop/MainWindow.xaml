@@ -1,7 +1,7 @@
 ﻿<Window x:Class="CNCStudio.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="CNC Studio 0.5.8 – Hållflikar och materialkontroll" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.5.10 – GRBL-anslutning" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -19,7 +19,7 @@
  <MenuItem Header="_Objekt"><MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/><Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/></MenuItem>
  <MenuItem Header="_CAM"><MenuItem Header="V-carve inlay-inställningar" Click="OpenInlay_Click"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
  <MenuItem Header="_Visa"><MenuItem Header="Maskinvy" Click="MachineView_Click"/><MenuItem Header="Materialvy" Click="StockView_Click"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinkontroll" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Arbetsyta: Design" Click="DesignWorkspace_Click"/><MenuItem Header="Arbetsyta: CAM" Click="CamWorkspace_Click"/><MenuItem Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click"/></MenuItem>
- <MenuItem Header="_Maskin"><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Nolla X (demo)" Click="ZeroX_Click"/><MenuItem Header="Nolla Y (demo)" Click="ZeroY_Click"/><MenuItem Header="Nolla Z (demo)" Click="ZeroZ_Click"/><MenuItem Header="Nolla X + Y, behåll Z (demo)" Click="ZeroXY_Click"/></MenuItem>
+ <MenuItem Header="_Maskin"><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Nolla X (demo)" Click="ZeroX_Click"/><MenuItem Header="Nolla Y (demo)" Click="ZeroY_Click"/><MenuItem Header="Nolla Z (demo)" Click="ZeroZ_Click"/><MenuItem Header="Nolla X + Y, behåll Z (demo)" Click="ZeroXY_Click"/></MenuItem>
  <MenuItem Header="_Hjälp"><MenuItem Header="Om CNC Studio" Click="About_Click"/></MenuItem>
 </Menu>
  
@@ -121,12 +121,26 @@
           <Button Content="Uppdatera material" Click="UpdateMaterial_Click" Margin="3,8"/>
           <Expander Header="MASKIN OCH MATERIALPLACERING" IsExpanded="True" Margin="0,12,0,3">
            <StackPanel>
-            <TextBlock Text="Maskinens användbara bredd X (mm)"/><TextBox x:Name="MachineWidthBox" Text="750"/>
-            <TextBlock Text="Maskinens användbara längd Y (mm)"/><TextBox x:Name="MachineLengthBox" Text="750"/>
-            <TextBlock Text="Materialets X-position (maskinvy, mm)"/><TextBox x:Name="StockXBox" Text="50"/>
+            <Border Background="#1C2A39" Padding="8" CornerRadius="4" Margin="3,2,3,6">
+              <TextBlock x:Name="MachineSummaryText" Text="" TextWrapping="Wrap" FontSize="11.5" Foreground="#D5E3F0"/>
+            </Border>
+            <Button Content="Maskininställningar…" Click="MachineSettings_Click" Background="#24618C" ToolTip="Arbetsområde, Z-rörelse, homing, gränslägesbrytare och säkerhetsmarginal"/>
+            <TextBlock Text="Materialets X-position (maskinvy, mm)" Margin="0,8,0,0"/><TextBox x:Name="StockXBox" Text="50"/>
             <TextBlock Text="Materialets Y-position (maskinvy, mm)"/><TextBox x:Name="StockYBox" Text="50"/>
-            <Button Content="Spara maskin / materialplacering" Click="SaveMachineSetup_Click"/>
+            <Button Content="Spara materialplacering" Click="SaveMachineSetup_Click"/>
             <TextBlock Text="OBS: Dessa X/Y-värden är ritningskoordinater. GRBL-mappning är ännu inte kalibrerad." TextWrapping="Wrap" Foreground="#FFD39F" Margin="3,6"/>
+           </StackPanel>
+          </Expander>
+          <Expander Header="Z-HÖJDER OCH Z-BRYTARE" IsExpanded="True" Margin="0,8,0,3">
+           <StackPanel>
+            <TextBlock Text="Alla höjder i mm över materialytan (Z0 = materialets ovansida)." TextWrapping="Wrap" Foreground="#BDCEE0" Margin="3,2,3,6" FontSize="11"/>
+            <TextBlock Text="Förflyttningshöjd (snabbförflyttning)"/><TextBox x:Name="TravelHeightBox" Text="10" ToolTip="Höjd för snabbförflyttningar mellan skären. Höjs automatiskt över fastspänningar."/>
+            <TextBlock Text="Höjd före nedmatning"/><TextBox x:Name="PlungeClearanceBox" Text="2" ToolTip="Fräsen går snabbt ned hit och matar sedan långsamt in i materialet."/>
+            <TextBlock Text="Maskinens Z vid materialytan (MPos Z)" TextWrapping="Wrap"/><TextBox x:Name="ZMaxBox" Text="" ToolTip="Efter homing är Z-brytaren MPos Z 0. Sätt Z-nollan på materialytan och läs av MPos Z i gSender (negativt värde, t.ex. -45.2). Lämna tomt om okänt (ger varning)."/>
+            <Button Content="Läs från maskinen ($#)" Click="ReadZeroFromMachine_Click" ToolTip="Läser G54-offset, G92 och verktygslängd från maskinen. Kräver att Z-nollan är satt på materialytan."/>
+            <TextBlock x:Name="ZHeadroomText" Text="" TextWrapping="Wrap" Foreground="#9FD8A8" FontSize="11" Margin="3,2,3,4"/>
+            <Button Content="Spara Z-höjder" Click="SaveMotion_Click"/>
+            <TextBlock Text="Maskinen homas med $H vid start. Z-brytaren sitter högst upp vid MPos Z 0 (efter $H står Z på −$27). Läs av MPos Z igen när Z-nollan sätts om (nytt material eller ny fräs)." TextWrapping="Wrap" Foreground="#FFD39F" Margin="3,6" FontSize="11"/>
            </StackPanel>
           </Expander>
           <Expander Header="FASTSPÄNNING / HINDER" IsExpanded="True" Margin="0,9,0,3">
@@ -167,7 +181,27 @@
   </StackPanel><TextBlock Text="MASKINKONTROLL" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
  </DockPanel></Border><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
           
-          <Border Background="#533C34" CornerRadius="5" Padding="12" Margin="0,0,0,12"><TextBlock Text="OFFLINE – DEMOLÄGE" FontWeight="Bold" Foreground="#FFD0A8" HorizontalAlignment="Center"/></Border>
+          <Border x:Name="ConnectionBanner" Background="#533C34" CornerRadius="5" Padding="10" Margin="0,0,0,8">
+            <StackPanel>
+              <TextBlock x:Name="ConnectionStateText" Text="EJ ANSLUTEN" FontWeight="Bold" Foreground="#FFD0A8" HorizontalAlignment="Center"/>
+              <TextBlock x:Name="ConnectionDetailText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="#E8DCD0" HorizontalAlignment="Center" TextAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <DockPanel Margin="0,0,0,4">
+            <Button DockPanel.Dock="Right" Content="⟳" Click="RefreshPorts_Click" ToolTip="Uppdatera listan med COM-portar" Padding="8,4"/>
+            <ComboBox x:Name="PortPicker" Margin="3" ToolTip="COM-port för GRBL-kontrollern (115200 baud, 8-N-1)"/>
+          </DockPanel>
+          <Button x:Name="ConnectButton" Content="Anslut" Click="Connect_Click" Background="#24618C"/>
+          <Grid Margin="0,6,0,2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+            <TextBlock Text="Läge" Foreground="#B8CADC" Margin="3,1,10,1"/><TextBlock x:Name="LiveStateText" Grid.Column="1" Text="–" FontWeight="Bold"/>
+            <TextBlock Grid.Row="1" Text="MPos" Foreground="#B8CADC" Margin="3,1,10,1"/><TextBlock x:Name="LiveMPosText" Grid.Row="1" Grid.Column="1" Text="–" FontFamily="Consolas"/>
+            <TextBlock Grid.Row="2" Text="WPos" Foreground="#B8CADC" Margin="3,1,10,1"/><TextBlock x:Name="LiveWPosText" Grid.Row="2" Grid.Column="1" Text="–" FontFamily="Consolas"/>
+          </Grid>
+          <Button Content="GRBL-konsol…" Click="OpenConsole_Click" ToolTip="Skicka enskilda kommandon till maskinen"/>
+          <Button Content="Testa gränslägesbrytare…" Click="OpenLimitTest_Click" ToolTip="Tryck in brytarna för hand och se att de fungerar – gör detta före homing. Maskinen rör sig inte."/>
+          <Separator Margin="0,12"/>
           <TextBlock Text="Arbetskoordinater G54 (endast demonstration)" Foreground="#B8CADC" TextWrapping="Wrap" Margin="0,0,0,8"/>
           <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0"><TextBlock Text="X" HorizontalAlignment="Center" FontSize="18"/><TextBlock x:Name="XPosition" Text="125.000" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><Button Content="Nolla X" Click="ZeroX_Click"/></StackPanel>
@@ -186,7 +220,7 @@
           </UniformGrid>
           <WrapPanel HorizontalAlignment="Center" Margin="0,7"><Button Content="Z+" Tag="Z+" Click="Jog_Click"/><Button Content="Z-" Tag="Z-" Click="Jog_Click"/></WrapPanel>
           <TextBlock Text="Steg (mm)"/><ComboBox x:Name="StepPicker" SelectedIndex="2" Margin="3"><ComboBoxItem Content="0.1"/><ComboBoxItem Content="1"/><ComboBoxItem Content="10"/><ComboBoxItem Content="100"/></ComboBox>
-          <TextBlock Text="Ingen seriell kommunikation ingår ännu. Knapptryck ändrar bara demonstrationsvärden." TextWrapping="Wrap" Foreground="#FFCE96" Margin="0,15,0,0"/>
+          <TextBlock Text="Nollning och jogg här är fortfarande DEMO och skickar inget till maskinen. Använd GRBL-konsolen för riktiga kommandon." TextWrapping="Wrap" Foreground="#FFCE96" Margin="0,15,0,0"/>
         </StackPanel>
       </Border></ScrollViewer></DockPanel>
    </Border>

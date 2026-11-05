@@ -48,6 +48,36 @@ public class DocumentStorageTests
     }
 
     [Fact]
+    public void Machine_profile_from_older_project_gets_new_defaults()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, """
+            { "Name": "x", "MaterialWidth": 600, "MaterialHeight": 600, "MaterialThickness": 18,
+              "Machine": { "Name": "X-Carve", "WorkWidthMm": 750, "WorkLengthMm": 750, "CalibratedToGrbl": false } }
+            """);
+            var m = DocumentStorage.Load(path).Machine;
+            Assert.Equal("X-Carve", m.Name);
+            Assert.True(m.HomeOnStartup);
+            Assert.Equal(65, m.ZTravelMm);
+            Assert.Equal(3, m.LimitMarginMm);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData(0, 1, 3)]
+    [InlineData(65, -1, 3)]
+    [InlineData(65, 1, -1)]
+    public void Invalid_machine_limits_are_rejected(double zTravel, double pullOff, double margin)
+    {
+        var doc = new CncDocument();
+        doc.Machine.ZTravelMm = zTravel; doc.Machine.HomingPullOffMm = pullOff; doc.Machine.LimitMarginMm = margin;
+        Assert.NotNull(MachineSetupValidation.Validate(doc));
+    }
+
+    [Fact]
     public void Example_project_still_loads()
     {
         var dir = AppContext.BaseDirectory;

@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.5.8";
+    private const string AppTitle = "CNC Studio 0.5.10";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -31,9 +31,66 @@ public partial class MainWindow
     /// <summary>Cheap shapes are recomputed if changed; heavy shapes are marked stale.</summary>
     private void RefreshCamReport() => _camReport = _camPlanner.Review(_document);
 
+    private void RefreshMotionFields()
+    {
+        if (TravelHeightBox is null) return;
+        var m = _document.Motion;
+        TravelHeightBox.Text = F(m.TravelHeightMm);
+        PlungeClearanceBox.Text = F(m.PlungeClearanceMm);
+        ZMaxBox.Text = m.StockTopMachineZ is double z ? F(z) : "";
+        double margin = _document.Machine.LimitMarginMm;
+        ZHeadroomText.Text = m.ZMaxAboveStockMm is double h
+            ? $"= {F(h)} mm fritt över materialet upp till Z-brytaren (tillåtet {F(h - margin)} mm med " +
+              $"{F(margin)} mm marginal). Djupast tillåtna: {F(_document.Machine.ZTravelMm - h - margin)} mm under ytan."
+            : "Ej angivet – Z-brytaren kan inte kontrolleras.";
+    }
+
+    private void SaveMotion_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Parse(TravelHeightBox, out var travel) || !Parse(PlungeClearanceBox, out var plunge))
+        { Error("Ange giltiga Z-höjder."); return; }
+        double margin = _document.Machine.LimitMarginMm;
+        double? stockTop = null;
+        if (!string.IsNullOrWhiteSpace(ZMaxBox.Text))
+        {
+            if (!Parse(ZMaxBox, out var z)) { Error("Ogiltig MPos Z. Lämna fältet tomt om värdet är okänt."); return; }
+            stockTop = z;
+        }
+        var candidate = new MotionSettings { TravelHeightMm = travel, PlungeClearanceMm = plunge,
+            StockTopMachineZ = stockTop };
+        if (MotionValidation.GetError(candidate) is string error) { Error(error); return; }
+        RememberChange();
+        _document.Motion = candidate;
+        RefreshMotionFields();
+        Render();
+        StatusText.Text = candidate.ZMaxAboveStockMm is double h
+            ? $"Z-höjder sparade. {F(h)} mm upp till Z-brytaren; rörelser kontrolleras mot {F(h - margin)} mm över materialet."
+            : "Z-höjder sparade. MPos Z vid materialytan är inte angiven – Z-brytaren kan inte kontrolleras.";
+    }
+
+    private static readonly Brush RapidBrush = new SolidColorBrush(Color.FromRgb(70, 170, 255));
+    private static readonly Brush RaisedRapidBrush = new SolidColorBrush(Color.FromRgb(214, 70, 214));
+
+    /// <summary>Rapid XY moves as thin dashed lines; moves raised over a fixture in magenta.</summary>
+    private void DrawRapids(Canvas canvas, double offsetX, double offsetY)
+    {
+        foreach (var move in _camReport.Motion.Moves)
+        {
+            if (move.Kind != MoveKind.Rapid || !move.MovesXY) continue;
+            bool raised = move.FixtureName is not null;
+            canvas.Children.Add(new Line {
+                X1 = move.X0 + offsetX, Y1 = move.Y0 + offsetY, X2 = move.X1 + offsetX, Y2 = move.Y1 + offsetY,
+                Stroke = raised ? RaisedRapidBrush : RapidBrush,
+                StrokeThickness = (raised ? 2.2 : 1.4) / _zoom,
+                StrokeDashArray = new DoubleCollection { 2, 3 },
+                IsHitTestVisible = false });
+        }
+    }
+
     /// <summary>Draws toolpaths, conflict marks and failed/stale operations on a canvas.</summary>
     private void DrawCamResults(Canvas canvas, double offsetX, double offsetY)
     {
+        DrawRapids(canvas, offsetX, offsetY);
         foreach (var result in _camReport.Operations)
         {
             if (result.Preview is ContourPreview preview)
@@ -157,6 +214,10 @@ public partial class MainWindow
                               Text: $"{ShapeLabel(o.Shape, o.Operation.ShapeId)}: {g.First().Message}" +
                                     (g.Count() > 1 && g.First().HasSegment ? $" ({g.Count()} delsträckor)" : ""))))
             .ToList();
+        // Program-wide findings (Z limit, moves over fixtures): problems first, info last.
+        var global = r.GlobalFindings.Select(f => (Severity: f.Severity, Text: "Förflyttningar: " + f.Message)).ToList();
+        lines.InsertRange(0, global.Where(g => g.Severity != CamSeverity.Info));
+        lines.AddRange(global.Where(g => g.Severity == CamSeverity.Info));
         if (lines.Count == 0)
             CamHealthText.Inlines.Add(new Run("Inga problem hittades i de kontroller som finns."));
         foreach (var (severity, text) in lines.Take(8))
@@ -174,8 +235,8 @@ public partial class MainWindow
         }
         CamHealthText.Inlines.Add(new LineBreak());
         CamHealthText.Inlines.Add(new Run("Kontrolleras: inställningar, djup, materialgränser, hållflikar, XY mot " +
-            "fastspänningar, maskinens gränser och andra delar. " +
-            "Ej kontrollerat: Z-rörelser, snabbförflyttningar, hållare/spännhylsa. Detta är inget säkerhetsgodkännande.")
+            "fastspänningar, maskinens gränser, andra delar, Z-höjder och snabbförflyttningar. " +
+            "Ej kontrollerat: hållare/spännhylsa, matningshastigheter, nedre Z-gräns. Detta är inget säkerhetsgodkännande.")
             { Foreground = new SolidColorBrush(Color.FromRgb(160, 178, 196)) });
     }
 
@@ -222,13 +283,15 @@ public partial class MainWindow
             foreach (var g in o.Findings.GroupBy(f => (f.Severity, f.Code, f.FixtureId)).OrderBy(g => g.Key.Severity))
                 lines.Add($"{SeverityName(g.Key.Severity)} – {ShapeLabel(o.Shape, o.Operation.ShapeId)}: {g.First().Message}" +
                           (g.First().HasSegment ? $" ({g.Count()} delsträckor)" : ""));
+        foreach (var f in r.GlobalFindings.OrderBy(f => f.Severity))
+            lines.Add($"{SeverityName(f.Severity)} – Förflyttningar: {f.Message}");
         if (r.Operations.Count == 0) lines.Add("Inga CAM-operationer är sparade.");
         else if (lines.Count == 0) lines.Add("Inga problem hittades i de kontroller som finns.");
         var header = $"{r.Operations.Count} operationer · {r.CriticalCount} kritiska · {r.WarningCount} varningar · " +
                      $"{r.InfoCount} info · {r.NotAnalyzedCount} ej kontrollerade.\n\n";
         var limitations = "\n\nKONTROLLERAS: CAM-inställningar, djup och kvarvarande botten, materialgränser, " +
-            "hållflikar, skärande XY-banor mot fastspänningar, maskinens XY-gränser och andra delar med CAM.\n" +
-            "KONTROLLERAS INTE: Z-rörelser, snabbförflyttningar, hållare/spännhylsa, " +
+            "hållflikar, skärande XY-banor mot fastspänningar, maskinens XY-gränser, andra delar med CAM, Z-höjder mot fastspänningar och Z-brytaren samt att snabbförflyttningar aldrig går i materialet.\n" +
+            "KONTROLLERAS INTE: hållare/spännhylsa, matningshastigheter, nedre Z-gräns, " +
             "materialets verkliga läge och maskinens verkliga inställningar. Detta är INTE ett säkerhetsgodkännande.";
         _showContourPreview = true;
         Render();

@@ -78,6 +78,19 @@ public class CamSafetyReviewTests
             f => f.Severity == CamSeverity.Critical && f.Code == "OutsideMachine");
     }
 
+    [Fact]
+    public void Path_within_the_limit_margin_is_outside_the_machine()
+    {
+        // Path's left edge at machine X ≈ 1.59 + 10 = 11.6 → tool edge at 10. Fine with margin 3, not with 12.
+        var (doc, shape, op, _) = Setup();
+        doc.Stock.X = 10; shape.X = 1.5875 + 1.5875;
+        var preview = ContourToolpaths.Generate(shape, op, doc.MaterialThickness);
+        doc.Machine.LimitMarginMm = 3;
+        Assert.DoesNotContain(CamSafetyReview.Analyze(doc, shape, op, preview), f => f.Code == "OutsideMachine");
+        doc.Machine.LimitMarginMm = 12;
+        Assert.Contains(CamSafetyReview.Analyze(doc, shape, op, preview), f => f.Code == "OutsideMachine");
+    }
+
     [Theory]
     [InlineData(0, 25, 100, 25, 40, 0, 60, 50, true, 0.4, 0.6)]   // passes through
     [InlineData(10, 10, 10, 160, 0, 0, 60, 50, true, 0, 0.2667)]  // starts inside

@@ -101,24 +101,75 @@ public partial class MainWindow
             MachineCanvas.Children.Add(block);
             AddFixtureLabel(f);
         }
+        AddHomeMarker();
         // Deliberately do not show a 'live' toolhead here. Homing/GRBL mapping is not implemented.
+    }
+
+    /// <summary>Marks the X/Y homing corner (top of the view = back of the machine).</summary>
+    private void AddHomeMarker()
+    {
+        var m = _document.Machine;
+        bool right = m.HomeCorner is HomeCorner.BackRight or HomeCorner.FrontRight;
+        bool front = m.HomeCorner is HomeCorner.FrontLeft or HomeCorner.FrontRight;
+        double size = 14 / _zoom;
+        var dot = new Ellipse { Width = size, Height = size, Fill = Brushes.MediumSeaGreen,
+            Stroke = Brushes.White, StrokeThickness = 1.5 / _zoom, IsHitTestVisible = false };
+        double cx = right ? m.WorkWidthMm : 0, cy = front ? m.WorkLengthMm : 0;
+        Canvas.SetLeft(dot, cx - size / 2); Canvas.SetTop(dot, cy - size / 2);
+        MachineCanvas.Children.Add(dot);
+        var label = new TextBlock { Text = "HEM", FontSize = 11 / _zoom, FontWeight = FontWeights.Bold,
+            Foreground = Brushes.MediumSeaGreen, IsHitTestVisible = false };
+        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Canvas.SetLeft(label, right ? cx - label.DesiredSize.Width - size : cx + size);
+        Canvas.SetTop(label, front ? cy - label.DesiredSize.Height - size / 2 : cy + size / 2);
+        MachineCanvas.Children.Add(label);
     }
 
     private void SaveMachineSetup_Click(object sender, RoutedEventArgs e)
     {
-        if (!Parse(MachineWidthBox, out var w) || !Parse(MachineLengthBox, out var h) ||
-            !Parse(StockXBox, out var x) || !Parse(StockYBox, out var y))
-        { Error("Ange giltiga maskin- och materialkoordinater."); return; }
-        var candidate = new MachineProfile { WorkWidthMm = w, WorkLengthMm = h,
-            Name = _document.Machine.Name, CalibratedToGrbl = false };
-        var oldMachine = _document.Machine; var oldStock = _document.Stock;
-        _document.Machine = candidate; _document.Stock = new StockPlacement { X = x, Y = y };
+        if (!Parse(StockXBox, out var x) || !Parse(StockYBox, out var y))
+        { Error("Ange giltiga materialkoordinater."); return; }
+        var oldStock = _document.Stock;
+        _document.Stock = new StockPlacement { X = x, Y = y };
         var error = MachineSetupValidation.Validate(_document);
-        _document.Machine = oldMachine; _document.Stock = oldStock;
+        _document.Stock = oldStock;
         if (error is not null) { Error(error); return; }
-        RememberChange(); _document.Machine = candidate; _document.Stock = new StockPlacement { X = x, Y = y };
+        RememberChange(); _document.Stock = new StockPlacement { X = x, Y = y };
         _selectedFixture = null; Render(); FitToMaterial();
-        StatusText.Text = "Maskin-/materialplacering sparad i projektet (ej GRBL-kalibrerad).";
+        StatusText.Text = "Materialplacering sparad i projektet (ej GRBL-kalibrerad).";
+    }
+
+    private void MachineSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new MachineSettingsWindow(_document.Machine, d =>
+        {
+            // Validate the candidate against the current stock and fixtures before accepting.
+            var old = _document.Machine;
+            _document.Machine = d;
+            var error = MachineSetupValidation.Validate(_document);
+            _document.Machine = old;
+            return error;
+        }, Grbl) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Result is null) return;
+        RememberChange();
+        _document.Machine = dialog.Result;
+        RefreshMachineSummary(); RefreshMotionFields();
+        _selectedFixture = null; Render();
+        StatusText.Text = $"Maskininställningar sparade: {dialog.Result.Name} (ej GRBL-kalibrerad).";
+    }
+
+    private void RefreshMachineSummary()
+    {
+        if (MachineSummaryText is null) return;
+        var m = _document.Machine;
+        string corner = m.HomeCorner switch
+        {
+            HomeCorner.BackLeft => "bak vänster", HomeCorner.BackRight => "bak höger",
+            HomeCorner.FrontLeft => "fram vänster", _ => "fram höger"
+        };
+        MachineSummaryText.Text = $"{m.Name}\nX {F(m.WorkWidthMm)} × Y {F(m.WorkLengthMm)} × Z {F(m.ZTravelMm)} mm · " +
+            $"hem {corner} ($23={m.HomingDirInvertMask}) · Z-brytare upptill · marginal {F(m.LimitMarginMm)} mm" +
+            (m.HomeOnStartup ? "" : "\nVARNING: homing vid start är avstängd.");
     }
 
     private void StartFixture_Click(object sender, RoutedEventArgs e)
