@@ -68,6 +68,16 @@ public sealed class GrblClient : IDisposable
     public string? Version { get; private set; }
     public bool IsConnected => _transport.IsOpen;
 
+    /// <summary>
+    /// True after "[MSG:Reset to continue]": GRBL waits for a soft reset (Ctrl-X) and answers nothing
+    /// else (verified: interface.md, protocol.c critical events). Cleared by the welcome after the reset.
+    /// </summary>
+    public bool ResetRequired { get; private set; }
+
+    public const string ResetRequiredMessage =
+        "GRBL väntar på återställning efter ett larm (Reset to continue) och tar inte emot något annat. " +
+        "Klicka Återställ (Ctrl-X), sedan homing ($H) – eller $X om du bara ska testa riktningar.";
+
     public TimeSpan CommandTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
@@ -140,6 +150,7 @@ public sealed class GrblClient : IDisposable
     {
         if (GrblProtocol.CheckCommandLine(line) is string problem) throw new ArgumentException(problem);
         if (!_transport.IsOpen) throw new InvalidOperationException("Inte ansluten.");
+        if (ResetRequired) throw new InvalidOperationException(ResetRequiredMessage);
         var limit = timeout ?? CommandTimeout;
         await _sendLock.WaitAsync(ct);
         try
@@ -274,7 +285,16 @@ public sealed class GrblClient : IDisposable
             lock (_sync) { w = _welcomeWaiter; _welcomeWaiter = null; }
             w?.TrySetResult(line);
             lock (_sync) _lateCompletions = 0; // a reset clears GRBL's buffers: nothing more will be answered
+            ResetRequired = false;
             FailPending("GRBL startade om (välkomstmeddelande mottogs).");
+            return;
+        }
+        if (line.Kind == GrblLineKind.Message && line.Raw.Contains("Reset to continue", StringComparison.OrdinalIgnoreCase))
+        {
+            // After a critical alarm (e.g. a limit switch with $21=1) GRBL ignores everything except a
+            // soft reset (Ctrl-X): do not send lines that can never be answered.
+            ResetRequired = true;
+            FailPending(ResetRequiredMessage);
             return;
         }
         if (line.Kind == GrblLineKind.Alarm)

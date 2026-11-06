@@ -455,6 +455,15 @@ public partial class MainWindow : Window
         if (_path is null) _path = previous;
     }
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
+    private LogViewerWindow? _logViewer;
+
+    private void ShowLogs_Click(object sender, RoutedEventArgs e)
+    {
+        if (_logViewer is { IsLoaded: true }) { _logViewer.Activate(); return; }
+        _logViewer = new LogViewerWindow { Owner = this };
+        _logViewer.Show();
+    }
+
     private void About_Click(object sender, RoutedEventArgs e)
         => AppDialog.Show(this, AppTitle + "\n\n2D-CAD, DXF/SVG-import, kontur- och fickfräsning med automatisk CAM-kontroll, 3D-vy, G-code för GRBL 1.1 och maskinstyrning (jogg, nollning, inställningar, konsol).\n\nInte testad mot riktig maskin ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
 

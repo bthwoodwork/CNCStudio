@@ -237,3 +237,12 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Övningsläge: välj DEMO som port; brytarna kan tryckas in i brytarsteget.
 
 **Tester:** 303 tester. Inte testad mot riktig maskin ännu.
+## 0.8.2 – Säkrare test och loggar
+- **Larm som kräver återställning** ("Reset to continue", t.ex. en brytare med hårda gränser på): CNC Studio känner igen det, skickar inget mer som aldrig kan besvaras och visar "LARM – ÅTERSTÄLL KRÄVS". Ny knapp **Återställ (Ctrl-X)** i maskinstyrningen, i brytartestet och i första testet.
+- **Brytartestet** leder i rätt ordning: med $21=1 är steg 1 att stänga av hårda gränser för testet (rutorna är spärrade tills dess). $21=1 skrivs tillbaka och kontrolläses när testet stängs. Rättat: krasch när fönstret stängdes efter att hårda gränser varit av.
+- **Första test:** riktningssteget har Återställ, "Lås upp för test ($X)" och "gå till homing"; en levande karta över maskinbordet visar fräsen efter homing; sista knappen heter "Avsluta testet" och skriver sammanfattningen i loggen. Knappar kraschar inte längre programmet.
+- **Hjälp → Loggar och fellogg:** fellogg (senaste först, med detaljer), loggar från första test och säkerhetskopior av $$. Sök, kopiera, öppna mappen, rensa.
+- **Skyddsnät:** oväntade fel visas och loggas i stället för att stänga programmet.
+- Demomaskinen svarar inte heller på status medan den väntar på återställning, som riktig GRBL.
+
+**Tester:** 306 tester. Inte testad mot riktig maskin ännu.

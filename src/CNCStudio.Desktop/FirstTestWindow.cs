@@ -62,7 +62,7 @@ public sealed class FirstTestWindow : Window
         _log = new StreamWriter(LogPath, append: false) { AutoFlush = true };
         Log("Första test startat.");
         Content = BuildLayout();
-        _next.Click += (_, _) => Go(_step + 1);
+        _next.Click += (_, _) => { if (_step == _titles.Length - 1) Finish(); else Go(_step + 1); };
         _back.Click += (_, _) => Go(_step - 1);
         Closing += OnClosing;
         Go(0);
@@ -75,7 +75,7 @@ public sealed class FirstTestWindow : Window
         var stop = new Button { Content = "■  STOPP", Background = B(0xB0, 0x2A, 0x22), Foreground = Brushes.White, FontSize = 18,
             FontWeight = FontWeights.Bold, Padding = new Thickness(24, 10, 24, 10), Margin = new Thickness(0, 0, 8, 0),
             ToolTip = "Stoppar all rörelse: avbryter jogg, bromsar in (feed hold) och återställer sedan GRBL. Positionen behålls om maskinen hann stanna." };
-        stop.Click += async (_, _) => await StopAll();
+        stop.Click += async (_, _) => await Guard(StopAll);
         var reset = new Button { Content = "Återställ (Ctrl-X)", Padding = new Thickness(12, 6, 12, 6),
             ToolTip = "Mjuk återställning – behövs efter ett larm från en brytare (\"Reset to continue\")." };
         reset.Click += (_, _) => { if (_g is { IsConnected: true } g) { Log("Användaren: återställ (Ctrl-X)."); g.SendRealtime(GrblProtocol.SoftReset); } };
@@ -88,8 +88,16 @@ public sealed class FirstTestWindow : Window
             new TextBlock { Text = "Ett steg i taget. Inget rör sig utan att du klickar. Håll handen nära strömbrytaren.", Foreground = Soft },
             _live } });
 
+        var map = new StackPanel { Margin = new Thickness(0, 16, 0, 0), Children =
+        {
+            new TextBlock { Text = "MASKINBORDET", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = B(0xA5, 0xC0, 0xD9), Margin = new Thickness(0, 0, 0, 4) },
+            new Border { Background = B(0x10, 0x1B, 0x27), CornerRadius = new CornerRadius(4), Padding = new Thickness(6), Child = _map },
+            _mapText
+        } };
+        var leftStack = new DockPanel();
+        DockPanel.SetDock(map, Dock.Bottom); leftStack.Children.Add(map); leftStack.Children.Add(_stepList);
         var left = new Border { Background = Panel, CornerRadius = new CornerRadius(6), Padding = new Thickness(10), Width = 230,
-            Margin = new Thickness(16, 0, 10, 0), Child = _stepList };
+            Margin = new Thickness(16, 0, 10, 0), Child = leftStack };
         var right = new Border { Background = Panel, CornerRadius = new CornerRadius(6), Padding = new Thickness(20, 16, 20, 16),
             Child = new ScrollViewer { Content = _content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } };
         var middle = new DockPanel { Margin = new Thickness(0, 0, 16, 0) };
@@ -146,8 +154,12 @@ public sealed class FirstTestWindow : Window
     private void UpdateNav()
     {
         _back.IsEnabled = _step > 0 && _runner is null;
-        _next.IsEnabled = _step < _titles.Length - 1 && _done[_step] && _runner is null;
-        _next.Content = _step == _titles.Length - 2 ? "Sammanfattning →" : "Nästa →";
+        bool last = _step == _titles.Length - 1;
+        _next.IsEnabled = _runner is null && (last || _done[_step]);
+        _next.Content = last ? "✓  Avsluta testet" : _step == _titles.Length - 2 ? "Sammanfattning →" : "Nästa →";
+        _next.FontWeight = last ? FontWeights.Bold : FontWeights.Normal;
+        _next.Background = last ? B(0x2E, 0x7A, 0x4A) : null;
+        _next.Foreground = last ? Brushes.White : null;
     }
 
     private void Complete(string result)
@@ -219,7 +231,7 @@ public sealed class FirstTestWindow : Window
     {
         Para("CNC Studio läser maskinens hela inställningsminne ($$), sparar en säkerhetskopia och kontrollerar det viktigaste. Inget skrivs utan att du godkänner.");
         var read = Btn("Läs inställningar ($$)", Accent);
-        read.Click += async (_, _) => { await ReadSettings(); };
+        read.Click += async (_, _) => await Guard(ReadSettings);
         _content.Children.Add(read);
         if (_settings is not null) ShowSettingsReview();
     }
@@ -252,13 +264,13 @@ public sealed class FirstTestWindow : Window
         if (fixes.Count > 0)
         {
             var fix = Btn("Rätta " + string.Join(", ", fixes.Select(f => $"${f.Item1}={f.Item2}")) + "…", Warn);
-            fix.Click += async (_, _) =>
+            fix.Click += async (_, _) => await Guard(async () =>
             {
                 if (Ask($"Skriva {string.Join(", ", fixes.Select(f => $"${f.Item1}={f.Item2}"))} till maskinens minne? Värdena kontrolläses efteråt.") != true) return;
                 var r = await _g!.WriteSettingsAsync(fixes);
                 Log(r.Message);
                 if (!r.Success) Note(r.Message, Bad); else await ReadSettings();
-            };
+            });
             _content.Children.Add(fix);
         }
         var apply = Btn("Använd maskinens värden i projektets maskinprofil", null);
@@ -306,7 +318,21 @@ public sealed class FirstTestWindow : Window
     private void StepDirections()
     {
         Para("Nu kontrolleras att varje axel går åt rätt håll ($3) – före homing, eftersom homingen bygger på det. Rätt: X+ åt HÖGER, Y+ BORT från dig, Z+ UPPÅT.");
-        Para("Maskinen är låst efter start. Första rörelsen låser upp den med $X (efter fråga). Positionen är då okänd, så bara korta rörelser.", Muted);
+        Para("Maskinen är låst efter start (larm tills homing). För testet låses den upp med $X – positionen är då okänd, så bara korta rörelser. Homing kommer i nästa steg.", Muted);
+        // What to do first depends on the machine's state: reset after a critical alarm, unlock, or test directly.
+        var reset = Btn("Återställ (Ctrl-X)", Warn);
+        reset.Click += async (_, _) => await Guard(async () =>
+        {
+            if (!Connected()) return;
+            Log("Användaren: återställ (Ctrl-X).");
+            _g!.SendRealtime(GrblProtocol.SoftReset);
+            await Task.Delay(800);
+            Note("Återställd. Lås nu upp med $X för testet.", Soft);
+        });
+        var unlock = Btn("Lås upp för test ($X)", Accent);
+        unlock.Click += async (_, _) => await Guard(Unlock);
+        _content.Children.Add(new WrapPanel { Children = { reset, unlock } });
+        Para("Står det \"väntar på återställning\" i loggen (t.ex. efter brytartestet): klicka Återställ först, sedan Lås upp.", Muted);
         var dist = new TextBox { Text = "5", Width = 60, Margin = new Thickness(6, 0, 0, 0) };
         _content.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 8),
             Children = { new TextBlock { Text = "Sträcka (mm, högst 20):", VerticalAlignment = VerticalAlignment.Center }, dist } });
@@ -320,7 +346,7 @@ public sealed class FirstTestWindow : Window
             foreach (var sign in new[] { -1, 1 })
             {
                 var b = Btn($"{name}{(sign > 0 ? "+" : "−")}", null);
-                b.Click += async (_, _) => await TestMove(axis, sign, dist.Text);
+                b.Click += async (_, _) => await Guard(() => TestMove(axis, sign, dist.Text));
                 row.Children.Add(b);
             }
             var right = Btn("Rätt håll", Good); var wrong = Btn("Fel håll", Bad);
@@ -330,12 +356,33 @@ public sealed class FirstTestWindow : Window
                 right.Content = "✓ Rätt håll";
                 if (ok.All(x => x)) Complete("X, Y och Z går åt rätt håll.");
             };
-            wrong.Click += async (_, _) => await FlipDirection(axis);
+            wrong.Click += async (_, _) => await Guard(() => FlipDirection(axis));
             row.Children.Add(new Border { Width = 20 });
             row.Children.Add(right); row.Children.Add(wrong);
             _content.Children.Add(row);
         }
         Para("Använd MINUS-knapparna: X− ska gå åt VÄNSTER, Y− MOT dig, Z− NEDÅT. Före homing räknar GRBL med att maskinen står på 0 (högsta punkten i området), så med mjuka gränser på ($20=1) stoppas alla plusrörelser med error:15 – det är normalt.", Warn);
+        SkipButton("Riktningarna är redan kända – gå till homing");
+    }
+
+    /// <summary>$X: leaves the homing alarm lock without homing – only for the short direction test.</summary>
+    private async Task Unlock()
+    {
+        if (!Connected()) return;
+        if (_g!.ResetRequired) { Note(GrblClient.ResetRequiredMessage, Warn); return; }
+        var s = await _g.RequestStatusAsync(TimeSpan.FromSeconds(2));
+        if (s is null) { Note("GRBL svarar inte på status. Klicka Återställ (Ctrl-X) och försök igen.", Warn); return; }
+        if (s.State != "Alarm") { Note($"Maskinen är redan upplåst (läge {s.State}). Testa riktningarna.", Good); return; }
+        if (Ask("Låsa upp med $X för riktningstestet? Positionen är okänd tills homing – bara korta rörelser.") != true) return;
+        var u = await _g.SendLineAsync("$X");
+        Note(u.IsOk ? "Upplåst. Testa nu med minus-knapparna." : "$X: " + u.Describe(), u.IsOk ? Good : Bad);
+    }
+
+    /// <summary>Runs a button action; any failure is shown in the guide instead of crashing the program.</summary>
+    private async Task Guard(Func<Task> action)
+    {
+        try { await action(); }
+        catch (Exception ex) { Note(ex.Message, Bad); }
     }
 
     private async Task TestMove(int axis, int sign, string distText)
@@ -343,14 +390,11 @@ public sealed class FirstTestWindow : Window
         if (!Connected()) return;
         if (!double.TryParse(distText.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var mm) || mm <= 0 || mm > 20)
         { Note("Ange en sträcka mellan 0 och 20 mm.", Warn); return; }
-        var s = await _g!.RequestStatusAsync(TimeSpan.FromSeconds(2));
-        if (s?.State == "Alarm")
-        {
-            if (Ask("Maskinen är låst (inte homad). Låsa upp med $X för att testa riktningen? Positionen är okänd – bara korta rörelser.") != true) return;
-            var u = await _g.SendLineAsync("$X");
-            if (!u.IsOk) { Note("$X: " + u.Describe(), Bad); return; }
-        }
-        else if (!GrblMachineCommands.StateAllowsJog(s?.State)) { Note($"Maskinen är i läge {s?.State ?? "okänt"} – vänta på Idle.", Warn); return; }
+        if (_g!.ResetRequired) { Note(GrblClient.ResetRequiredMessage, Warn); return; }
+        var s = await _g.RequestStatusAsync(TimeSpan.FromSeconds(2));
+        if (s is null) { Note("GRBL svarar inte på status. Klicka Återställ (Ctrl-X) och försök igen.", Warn); return; }
+        if (s.State == "Alarm") { Note("Maskinen är låst (larm). Klicka \"Lås upp för test ($X)\" först.", Warn); return; }
+        if (!GrblMachineCommands.StateAllowsJog(s?.State)) { Note($"Maskinen är i läge {s?.State ?? "okänt"} – vänta på Idle.", Warn); return; }
         double d = sign * mm;
         var line = GrblMachineCommands.Jog(axis == 0 ? d : 0, axis == 1 ? d : 0, axis == 2 ? d : 0, axis == 2 ? 200 : 500);
         try
@@ -421,14 +465,14 @@ public sealed class FirstTestWindow : Window
         foreach (var (label, dx, dy, dz) in new[] { ("X−", -10.0, 0.0, 0.0), ("X+", 10, 0, 0), ("Y−", 0, -10, 0), ("Y+", 0, 10, 0), ("Z−", 0, 0, -5), ("Z+", 0, 0, 5) })
         {
             var b = Btn(label, null);
-            b.Click += async (_, _) =>
+            b.Click += async (_, _) => await Guard(async () =>
             {
                 if (!Connected()) return;
                 var s = await _g!.RequestStatusAsync(TimeSpan.FromSeconds(2));
                 if (GrblMachineCommands.CheckJog(s, _profile, dx, dy, dz) is string problem) { Note(problem, Warn); return; }
                 var r = await _g.SendLineAsync(GrblMachineCommands.Jog(dx, dy, dz, dz != 0 ? 200 : 1000));
                 if (!r.IsOk) Note(r.Describe(), Warn);
-            };
+            });
             grid.Children.Add(b);
         }
         _content.Children.Add(grid);
@@ -450,7 +494,7 @@ public sealed class FirstTestWindow : Window
         pause.Click += (_, _) => { if (_g is { } g) g.SendRealtime(g.LastStatus?.State == "Hold" ? GrblProtocol.CycleStartResume : GrblProtocol.FeedHold); };
         minus.Click += (_, _) => _g?.SendRealtime(GrblProtocol.FeedOverrideCoarseMinus);
         plus.Click += (_, _) => _g?.SendRealtime(GrblProtocol.FeedOverrideCoarsePlus);
-        start.Click += async (_, _) =>
+        start.Click += async (_, _) => await Guard(async () =>
         {
             if (!Connected()) return;
             if (_g!.LastStatus?.State != "Idle") { Note("Maskinen måste vara Idle (homad).", Warn); return; }
@@ -464,7 +508,7 @@ public sealed class FirstTestWindow : Window
             _g.SendRealtime(GrblProtocol.FeedOverrideReset);
             if (result.Outcome == JobOutcome.Finished) Complete("Luftkörningen gick klart.");
             else Note(result.Message + " Du kan starta igen.", result.Outcome == JobOutcome.Stopped ? Warn : Bad);
-        };
+        });
         _content.Children.Add(new WrapPanel { Children = { start, pause, minus, plus } });
         SkipButton("Hoppa över");
     }
@@ -472,10 +516,11 @@ public sealed class FirstTestWindow : Window
     private void StepSummary()
     {
         for (int i = 0; i < _titles.Length - 1; i++)
-            Para($"{(_done[i] ? "✓" : "–")}  {i + 1}. {_titles[i]}: {_results[i] ?? "inte gjort"}", _done[i] ? Good : Warn);
+            Para($"{(_done[i] && _results[i] != "Överhoppat." ? "✓" : "–")}  {i + 1}. {_titles[i]}: {_results[i] ?? "inte gjort"}", _done[i] && _results[i] != "Överhoppat." ? Good : Warn);
         Para(_transport is SimulatedGrbl
             ? "Det här var en övning mot demomaskinen. Gör samma sak mot den riktiga maskinen."
             : "Nästa steg: spänn fast material, nolla X, Y och Z på materialet och kör ett enkelt program med låg matning. Stå kvar vid maskinen.", Soft);
+        Para("Loggen och säkerhetskopiorna av $$ sparas löpande. Klicka \"Avsluta testet\" nere till höger – sammanfattningen skrivs i loggen och anslutningen stängs. Loggen finns sedan under Hjälp → Loggar och fellogg.", Soft);
         Para("Logg: " + LogPath, Muted);
         var open = Btn("Öppna loggmappen", null);
         open.Click += (_, _) => System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(LogPath)!);
@@ -501,6 +546,20 @@ public sealed class FirstTestWindow : Window
         }
     }
 
+    /// <summary>
+    /// Ends the test: the summary is written to the log, then the window closes. OnClosing disconnects
+    /// and closes the log file; the log and the $$ backups are already on disk (written as they happen).
+    /// </summary>
+    private void Finish()
+    {
+        if (_runner is not null) { Note("Vänta tills luftkörningen är klar eller stoppa den.", Warn); return; }
+        Log("SAMMANFATTNING");
+        for (int i = 0; i < _titles.Length - 1; i++)
+            Log($"  {(!_done[i] ? "-- " : _results[i] == "Överhoppat." ? "HOPP" : "OK ")} {i + 1}. {_titles[i]}: {_results[i] ?? "inte gjort"}");
+        Log(_transport is SimulatedGrbl ? "Övning mot demomaskinen." : "Test mot riktig maskin.");
+        Close();
+    }
+
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         if (_runner is not null) { e.Cancel = true; Note("Stoppa luftkörningen först.", Warn); return; }
@@ -523,6 +582,50 @@ public sealed class FirstTestWindow : Window
         string V(double[]? v) => v is null ? "–" : string.Join("  ", v.Take(3).Select(x => x.ToString("0.000", CultureInfo.InvariantCulture).PadLeft(9)));
         _live.Text = $"Läge: {s.State}{(s.SubState is null ? "" : ":" + s.SubState)}   MPos {V(s.MPos)}   Brytare: {(string.IsNullOrEmpty(s.Pins) ? "–" : s.Pins)}";
         _live.Foreground = s.State == "Alarm" ? Bad : s.State == "Idle" ? Good : Warn;
+        // Home → Idle means a homing cycle finished; an alarm means the position may be lost.
+        if (_lastState == "Home" && s.State == "Idle") _homed = true;
+        if (s.State == "Alarm") _homed = false;
+        _lastState = s.State;
+        DrawMap(s);
+    }
+
+    private readonly Canvas _map = new() { Width = 194, Height = 194, ClipToBounds = true };
+    private readonly TextBlock _mapText = new() { FontSize = 11, Foreground = B(0x8C, 0xA3, 0xBA), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
+    private bool _homed;
+    private string? _lastState;
+
+    /// <summary>
+    /// Live map of the table seen from above (back at the top). Machine space is −$13x…0 whatever
+    /// the homing direction (limits.c), so with +X right and +Y back the tool is at
+    /// (W + MPos X, −MPos Y) from the back-left corner. Only drawn after homing.
+    /// </summary>
+    private void DrawMap(GrblStatus s)
+    {
+        _map.Children.Clear();
+        double w = _settings?.GetValueOrDefault(130) ?? _profile.WorkWidthMm, l = _settings?.GetValueOrDefault(131) ?? _profile.WorkLengthMm;
+        if (w <= 0 || l <= 0) return;
+        double k = Math.Min(_map.Width / w, _map.Height / l), ox = (_map.Width - w * k) / 2, oy = (_map.Height - l * k) / 2;
+        var table = new System.Windows.Shapes.Rectangle { Width = w * k, Height = l * k, Fill = B(0x1B, 0x27, 0x34), Stroke = B(0x5D, 0x7A, 0x96), StrokeThickness = 1 };
+        Canvas.SetLeft(table, ox); Canvas.SetTop(table, oy); _map.Children.Add(table);
+        void Label(string text, double x, double y) { var tb = new TextBlock { Text = text, FontSize = 9, Foreground = Muted }; Canvas.SetLeft(tb, x); Canvas.SetTop(tb, y); _map.Children.Add(tb); }
+        Label("BAK", ox + w * k / 2 - 9, oy + 1); Label("FRAM", ox + w * k / 2 - 12, oy + l * k - 13);
+        int mask = (int)(_settings?.GetValueOrDefault(23) ?? _profile.HomingDirInvertMask);
+        double hx = ox + ((mask & 1) != 0 ? 0 : w * k), hy = oy + ((mask & 2) != 0 ? l * k : 0);
+        var home = new System.Windows.Shapes.Ellipse { Width = 9, Height = 9, Fill = Good };
+        Canvas.SetLeft(home, hx - 4.5); Canvas.SetTop(home, hy - 4.5); _map.Children.Add(home);
+        if (!_homed || s.MPos is not { Length: >= 3 } m)
+        {
+            _mapText.Text = "Grön prick = brytarna (HEM). Fräsens position visas här efter homing.";
+            return;
+        }
+        double tx = ox + (w + m[0]) * k, ty = oy + (-m[1]) * k;
+        var ring = new System.Windows.Shapes.Ellipse { Width = 14, Height = 14, Stroke = Bad, StrokeThickness = 2, Fill = B(0x5A, 0x22, 0x2A) };
+        Canvas.SetLeft(ring, tx - 7); Canvas.SetTop(ring, ty - 7); _map.Children.Add(ring);
+        _map.Children.Add(new System.Windows.Shapes.Line { X1 = tx - 10, X2 = tx + 10, Y1 = ty, Y2 = ty, Stroke = Bad, StrokeThickness = 1 });
+        _map.Children.Add(new System.Windows.Shapes.Line { X1 = tx, X2 = tx, Y1 = ty - 10, Y2 = ty + 10, Stroke = Bad, StrokeThickness = 1 });
+        // Distance from the switch corner, like the table coordinates in the machine view.
+        double fromX = (mask & 1) != 0 ? w + m[0] : -m[0], fromY = (mask & 2) != 0 ? l + m[1] : -m[1];
+        _mapText.Text = $"Rött sikte = fräsen: {fromX:0} mm i X och {fromY:0} mm i Y från brytarna, Z {Math.Abs(m[2]):0.0} mm under Z-brytaren. Grön prick = HEM.";
     }
 
     private void Log(string text)
@@ -537,10 +640,21 @@ public sealed class FirstTestWindow : Window
         });
     }
 
-    private void Para(string text, Brush? color = null) =>
-        _content.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = color ?? Ink, FontSize = 13.5, Margin = new Thickness(0, 3, 0, 6) });
+    private TextBlock Para(string text, Brush? color = null)
+    {
+        var block = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = color ?? Ink, FontSize = 13.5, Margin = new Thickness(0, 3, 0, 6) };
+        _content.Children.Add(block);
+        return block;
+    }
 
-    private void Note(string text, Brush color) { Para(text, color); Log(text); }
+    /// <summary>Feedback after an action: shown at the bottom of the step and scrolled into view.</summary>
+    private void Note(string text, Brush color)
+    {
+        var block = Para(text, color);
+        block.FontWeight = FontWeights.SemiBold;
+        Log(text);
+        Dispatcher.BeginInvoke(() => block.BringIntoView(), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
 
     private static Button Btn(string text, Brush? color)
     {

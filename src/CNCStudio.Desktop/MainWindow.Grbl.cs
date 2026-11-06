@@ -52,6 +52,8 @@ public partial class MainWindow
             // An alarm or a reset (welcome) means the position may be lost: hide the tool until homed again.
             if (line.Kind is GrblLineKind.Alarm or GrblLineKind.Welcome)
                 Dispatcher.BeginInvoke(() => { _homedThisSession = false; if (_machineView) RenderMachine(refreshCam: false); });
+            if (line.Kind is GrblLineKind.Message or GrblLineKind.Welcome)
+                Dispatcher.BeginInvoke(() => ShowResetState(client));
         };
         client.Sent += text => Log("→ " + text);
         client.StatusChanged += s => Dispatcher.BeginInvoke(() => ShowStatus(s));
@@ -60,7 +62,9 @@ public partial class MainWindow
             var hello = await client.ConnectAsync();
             _grbl = client;
             client.StartStatusPolling(TimeSpan.FromMilliseconds(250));
-            SetConnectionBanner(demo ? "ANSLUTEN – DEMOMASKIN" : "ANSLUTEN", $"{port} · {hello}", demo ? Color.FromRgb(92, 60, 140) : Color.FromRgb(36, 98, 63));
+            _connectedBanner = (demo ? "ANSLUTEN – DEMOMASKIN" : "ANSLUTEN", $"{port} · {hello}", demo ? Color.FromRgb(92, 60, 140) : Color.FromRgb(36, 98, 63));
+            SetConnectionBanner(_connectedBanner.Title, _connectedBanner.Detail, _connectedBanner.Color);
+            ResetGrblButton.IsEnabled = true;
             ConnectButton.Content = "Koppla från";
             Log($"Ansluten till {port}: {hello}");
             StatusText.Text = $"Ansluten till GRBL på {port}. Inga kommandon skickas utan att du väljer det.";
@@ -87,6 +91,7 @@ public partial class MainWindow
             client.Dispose();
         }
         ConnectButton.Content = "Anslut";
+        ResetGrblButton.IsEnabled = false; ResetGrblButton.ClearValue(BackgroundProperty);
         _homedThisSession = false; _lastLiveState = null;
         UpdateJobButtons();
         if (_machineView) RenderMachine(refreshCam: false);
@@ -95,6 +100,41 @@ public partial class MainWindow
         _jogHeld = false;
         SetMachineControlsEnabled(false);
         Log(reason);
+    }
+
+    private (string Title, string Detail, Color Color) _connectedBanner;
+
+    /// <summary>
+    /// After "Reset to continue" GRBL answers nothing but a soft reset: say so clearly and point at the
+    /// Återställ button. The welcome after the reset restores the normal banner.
+    /// </summary>
+    private void ShowResetState(GrblClient client)
+    {
+        if (_grbl != client) return;
+        if (client.ResetRequired)
+        {
+            SetConnectionBanner("LARM – ÅTERSTÄLL KRÄVS", "GRBL har stannat (t.ex. en brytare) och svarar inte förrän efter återställning. Klicka Återställ (Ctrl-X), kör sedan homing.",
+                Color.FromRgb(150, 46, 38));
+            ResetGrblButton.Background = new SolidColorBrush(Color.FromRgb(176, 42, 34));
+            LiveStateText.Text = "Larm – återställ";               // GRBL sends no status until the reset
+            LiveStateText.Foreground = Brushes.OrangeRed;
+            JogStatusText.Text = GrblClient.ResetRequiredMessage;
+        }
+        else
+        {
+            SetConnectionBanner(_connectedBanner.Title, _connectedBanner.Detail, _connectedBanner.Color);
+            ResetGrblButton.ClearValue(BackgroundProperty);
+        }
+    }
+
+    private void ResetGrbl_Click(object sender, RoutedEventArgs e)
+    {
+        if (_grbl is not { IsConnected: true } g) return;
+        if (_runner is not null && AppDialog.Show(this, "Ett program körs. Återställning stoppar det direkt (positionen kan gå förlorad om maskinen rör sig).\n\nÅterställ ändå?",
+                "Återställ", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
+        Log("Användaren: återställ (Ctrl-X).");
+        g.SendRealtime(GrblProtocol.SoftReset);
+        JogStatusText.Text = "GRBL återställd. Maskinen är låst tills homing ($H) körts.";
     }
 
     private void SetConnectionBanner(string title, string detail, Color color)

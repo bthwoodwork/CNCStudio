@@ -31,21 +31,32 @@ public partial class LimitSwitchTestWindow : Window
         InitializeComponent();
         _grbl = grbl;
         _grbl.StatusChanged += OnStatus;
-        Closed += (_, _) => _grbl.StatusChanged -= OnStatus;
+        _grbl.LineReceived += OnLine;
+        Closed += (_, _) => { _grbl.StatusChanged -= OnStatus; _grbl.LineReceived -= OnLine; };
         Closing += OnClosing;
         Loaded += async (_, _) => await ReadSettingsAsync();
         Render();
     }
 
+    /// <summary>True while hard limits are on and not yet switched off for the test: pressing would alarm.</summary>
+    private bool HardLimitsBlockTest => HardLimitBox.Visibility == Visibility.Visible && !_restoreHardLimits;
+
     private async Task ReadSettingsAsync()
     {
+        if (_grbl.ResetRequired)
+        {
+            SettingsText.Text = "GRBL väntar på återställning – klicka Återställ (Ctrl-X) nedan.";
+            return;
+        }
         try
         {
             var s = await _grbl.ReadSettingsAsync();
             int Get(int n) => s.TryGetValue(n, out var v) ? (int)v : -1;
             SettingsText.Text = $"Maskinens inställningar: $5={Get(5)} (inverterade brytaringångar), " +
                 $"$21={Get(21)} (hårda gränser), $22={Get(22)} (homing).";
-            HardLimitBox.Visibility = Get(21) == 1 ? Visibility.Visible : Visibility.Collapsed;
+            HardLimitBox.Visibility = Get(21) == 1 && !_restoreHardLimits ? Visibility.Visible : Visibility.Collapsed;
+            DisableHardLimitsButton.IsEnabled = true;
+            Render();
         }
         catch (Exception ex) { SettingsText.Text = "Kunde inte läsa $$: " + ex.Message; }
     }
@@ -54,15 +65,36 @@ public partial class LimitSwitchTestWindow : Window
     {
         _test.Update(s);
         LiveText.Text = $"Läge {s.State}  ·  Pn: {(s.Pins ?? "(ingen utlöst)")}";
-        if (s.State == "Alarm" && HardLimitBox.Visibility == Visibility.Visible && !_restoreHardLimits)
-            ResultText.Text = "GRBL är i larm. Om det kom av en brytare (hårda gränser) krävs återställning (Ctrl-X i konsolen).";
         Render();
     });
+
+    /// <summary>GRBL sends no status while it waits for a reset, so the alarm is shown from its message.</summary>
+    private void OnLine(GrblLine line)
+    {
+        if (line.Kind is not (GrblLineKind.Alarm or GrblLineKind.Message)) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!_grbl.ResetRequired) return;
+            ResultText.Foreground = Brushes.OrangeRed;
+            ResultText.Text = "En brytare löste ut medan hårda gränser var på: GRBL har stannat (ALARM:1) och svarar inte förrän efter återställning. " +
+                "Klicka Återställ (Ctrl-X), stäng sedan av hårda gränser för testet (steg 1) och tryck brytarna igen.";
+        });
+    }
 
     private void Render()
     {
         Show('X', LedX, TextX); Show('Y', LedY, TextY); Show('Z', LedZ, TextZ);
-        if (_test.ActiveAtStart.Count > 0)
+        if (_grbl.ResetRequired)
+        {
+            ResultText.Foreground = Brushes.OrangeRed;
+            ResultText.Text = "GRBL har stannat efter ett larm och svarar inte förrän efter återställning. Klicka Återställ (Ctrl-X).";
+        }
+        else if (HardLimitsBlockTest)
+        {
+            ResultText.Foreground = B(0xFF, 0xD3, 0x9F);
+            ResultText.Text = "Stäng först av hårda gränser för testet (steg 1 ovan). Annars stoppar GRBL vid första tryckningen.";
+        }
+        else if (_test.ActiveAtStart.Count > 0)
         {
             ResultText.Foreground = Brushes.OrangeRed;
             ResultText.Text = $"{string.Join(", ", _test.ActiveAtStart)} visar utlöst utan att du rör brytaren. " +
@@ -73,7 +105,7 @@ public partial class LimitSwitchTestWindow : Window
             ResultText.Foreground = Brushes.LightGreen;
             ResultText.Text = "Alla tre brytarna fungerar. Nu kan homing ($H) köras.";
         }
-        else if (ResultText.Text.Length == 0 || ResultText.Foreground == Brushes.OrangeRed)
+        else
         {
             ResultText.Foreground = Brushes.White;
             ResultText.Text = "Tryck in och släpp brytarna en i taget.";
@@ -85,8 +117,10 @@ public partial class LimitSwitchTestWindow : Window
         bool stuck = _test.ActiveAtStart.Contains(axis);
         bool on = _test.CurrentlyTriggered.Contains(axis);
         var state = _test.States[axis];
+        bool blocked = HardLimitsBlockTest || _grbl.ResetRequired;
+        led.Opacity = blocked ? 0.45 : 1;
         led.Background = stuck ? Stuck : state == SwitchTestState.Passed ? Passed : on ? Pressed : Waiting;
-        text.Text = stuck ? "utlöst från start!" :
+        text.Text = blocked ? "vänta – se nedan" : stuck ? "utlöst från start!" :
             state == SwitchTestState.Passed ? (on ? "OK ✓ (intryckt)" : "OK ✓") :
             state == SwitchTestState.Pressed ? "intryckt – släpp" : "tryck in brytaren";
     }
@@ -98,7 +132,9 @@ public partial class LimitSwitchTestWindow : Window
                 "Maskinen ska inte köras medan hårda gränser är av.", "Hårda gränser", MessageBoxButton.OKCancel,
                 MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         DisableHardLimitsButton.IsEnabled = false;
-        var r = await _grbl.WriteSettingsAsync(new[] { (21, 0.0) });
+        SettingWriteResult r;
+        try { r = await _grbl.WriteSettingsAsync(new[] { (21, 0.0) }); }
+        catch (Exception ex) { r = new SettingWriteResult(false, ex.Message); }
         if (r.Success)
         {
             _restoreHardLimits = true;
@@ -111,6 +147,25 @@ public partial class LimitSwitchTestWindow : Window
             AppDialog.Show(this, r.Message, "Kunde inte ändra $21", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
+
+    /// <summary>Soft reset after a switch alarm; then the settings are read again and the test starts over.</summary>
+    private async void Reset_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ResetButton.IsEnabled = false;
+            _grbl.SendRealtime(GrblProtocol.SoftReset);
+            await Task.Delay(800);
+            _test.Reset();
+            ResultText.Text = "";
+            await ReadSettingsAsync();
+            Render();
+        }
+        catch (Exception ex) { ResultText.Foreground = Brushes.OrangeRed; ResultText.Text = "Återställningen misslyckades: " + ex.Message; }
+        finally { ResetButton.IsEnabled = true; }
+    }
+
+    private static SolidColorBrush B(byte r, byte g, byte b) => new(Color.FromRgb(r, g, b));
 
     private void Restart_Click(object sender, RoutedEventArgs e) { _test.Reset(); ResultText.Text = ""; Render(); }
 
@@ -131,14 +186,17 @@ public partial class LimitSwitchTestWindow : Window
         {
             _restoreHardLimits = false;
             _closingAfterRestore = true;
-            Close();
+            // The answer can arrive synchronously (e.g. the demo machine) while WPF is still inside
+            // this Closing event; Close() is not allowed then. Close once the event has finished.
+            Dispatcher.BeginInvoke(new Action(Close), System.Windows.Threading.DispatcherPriority.Background);
             return;
         }
         DoneButton.IsEnabled = true;
         ResultText.Foreground = Brushes.OrangeRed;
         ResultText.Text = "HÅRDA GRÄNSER ÄR FORTFARANDE AV. " + r.Message;
-        AppDialog.Show(this, "Kunde inte slå på hårda gränser igen ($21=1):\n\n" + r.Message +
-            "\n\nSkriv $21=1 i GRBL-konsolen innan maskinen körs.", "Hårda gränser är av", MessageBoxButton.OK, MessageBoxImage.Error);
-        _closingAfterRestore = true; // let the user close; the warning has been shown
+        _closingAfterRestore = true; // let the user close; the warning is shown
+        Dispatcher.BeginInvoke(new Action(() => AppDialog.Show(this, "Kunde inte slå på hårda gränser igen ($21=1):\n\n" + r.Message +
+            "\n\nSkriv $21=1 i GRBL-konsolen innan maskinen körs.", "Hårda gränser är av", MessageBoxButton.OK, MessageBoxImage.Error)),
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 }

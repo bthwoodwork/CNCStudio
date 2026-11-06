@@ -125,7 +125,7 @@ public sealed class SimulatedGrbl : IGrblTransport
             if (!IsOpen) return;
             switch (value)
             {
-                case GrblProtocol.StatusReport: Emit(StatusReport()); break;
+                case GrblProtocol.StatusReport: if (!_critical) Emit(StatusReport()); break; // silent until reset, like GRBL
                 case GrblProtocol.SoftReset: SoftReset(); break;
                 case GrblProtocol.FeedHold: FeedHold(); break;
                 case GrblProtocol.CycleStartResume: Resume(); break;
