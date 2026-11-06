@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -139,7 +139,8 @@ public partial class MainWindow
         if (_machineView)
         {
             var p = e.GetPosition(MachineCanvas);
-            CursorText.Text = $"Bord X {F1(p.X)}  Y {F1(p.Y)}";
+            var (tx, ty) = ToTable(p.X, p.Y, 0, 0);
+            CursorText.Text = $"Bord X {F1(tx)}  Y {F1(ty)}";
         }
         else
         {

@@ -210,3 +210,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Felaktiga fältvärden: markören hamnar i fältet som ska rättas.
 
 **Tester:** 284 tester. Inte testad mot riktig maskin ännu.
+## 0.7.5 – Homing, nollpunkt och demomaskin
+- Demomaskin: välj "DEMO (simulerad X-Carve 750)" i portlistan. En simulerad GRBL 1.1 med brytare fram till vänster och Z-brytaren upptill: larmlås, homing, jogg, nollning, mjuka och hårda gränser, $$/$#/$G. Förenklad: ingen acceleration, inga bågar, ingen probe. Inget bevis för att något fungerar på den riktiga maskinen.
+- Homing-knapp ($H) bland nollningsknapparna i maskinstyrningen.
+- Maskininställningar: klicka i hörnet där X/Y-brytarna sitter. Det sätter $23 och blir bordets nollpunkt; materialets och fastspänningarnas position räknas därifrån.
+- Testknappar per axel (−/+) med valbart avstånd för att kontrollera axelriktningen ($3) före homing.
+- Fräsens position visas i maskinvyn efter homing (kan slås av).
+- "Arbetsområde hit…": jogga till yttersta punkten efter homing och sätt $130/$131 (mjuka gränser) därifrån.
+- Verifierat i GRBL-källan: maskinkoordinaterna är alltid −$13x…0; en axel som homar åt minus står på −$13x + $27 efter homing.
+
+**Tester:** 285 tester. Inte testad mot riktig maskin ännu.

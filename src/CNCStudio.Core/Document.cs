@@ -167,7 +167,7 @@ public sealed class MachineProfile
     /// by default ($23=0) every axis homes in the positive direction; a set bit makes that axis home
     /// negative. Z must home positive (up), so bit 4 must be clear.
     /// </summary>
-    public int HomingDirInvertMask { get; set; } = 0;
+    public int HomingDirInvertMask { get; set; } = 3; // X/Y switches front-left (SW), as on the user's machine
 
     /// <summary>
     /// Corner where X/Y homing ends up, derived from $23. Assumes the usual orientation:

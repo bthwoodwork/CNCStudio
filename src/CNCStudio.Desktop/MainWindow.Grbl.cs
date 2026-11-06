@@ -13,6 +13,9 @@ public partial class MainWindow
 {
     private GrblClient? _grbl;
     private GrblConsoleWindow? _console;
+    /// <summary>Simulated GRBL 1.1 machine (X-Carve 750). One instance per session so its "EEPROM" survives reconnects.</summary>
+    private const string DemoPort = "DEMO (simulerad X-Carve 750)";
+    private SimulatedGrbl? _demoMachine;
     private readonly List<string> _grblLog = new();
 
     internal GrblClient? Grbl => _grbl is { IsConnected: true } ? _grbl : null;
@@ -27,7 +30,7 @@ public partial class MainWindow
     {
         if (PortPicker is null) return;
         var selected = PortPicker.SelectedItem as string;
-        var ports = SerialGrblTransport.AvailablePorts();
+        var ports = SerialGrblTransport.AvailablePorts().Append(DemoPort).ToArray();
         PortPicker.ItemsSource = ports;
         PortPicker.SelectedItem = ports.Contains(selected) ? selected : ports.FirstOrDefault();
         if (_grbl is null)
@@ -40,8 +43,16 @@ public partial class MainWindow
         if (PortPicker.SelectedItem is not string port) { Error("Välj en COM-port först."); return; }
         ConnectButton.IsEnabled = false;
         SetConnectionBanner("ANSLUTER…", $"{port}, {GrblProtocol.BaudRate} baud", Color.FromRgb(70, 80, 40));
-        var client = new GrblClient(new SerialGrblTransport(port));
-        client.LineReceived += line => Log("← " + GrblSettings.Describe(line));
+        bool demo = port == DemoPort;
+        IGrblTransport transport = demo ? (_demoMachine ??= new SimulatedGrbl()) : new SerialGrblTransport(port);
+        var client = new GrblClient(transport);
+        client.LineReceived += line =>
+        {
+            Log("← " + GrblSettings.Describe(line));
+            // An alarm or a reset (welcome) means the position may be lost: hide the tool until homed again.
+            if (line.Kind is GrblLineKind.Alarm or GrblLineKind.Welcome)
+                Dispatcher.BeginInvoke(() => { _homedThisSession = false; if (_machineView) RenderMachine(refreshCam: false); });
+        };
         client.Sent += text => Log("→ " + text);
         client.StatusChanged += s => Dispatcher.BeginInvoke(() => ShowStatus(s));
         try
@@ -49,7 +60,7 @@ public partial class MainWindow
             var hello = await client.ConnectAsync();
             _grbl = client;
             client.StartStatusPolling(TimeSpan.FromMilliseconds(250));
-            SetConnectionBanner("ANSLUTEN", $"{port} · {hello}", Color.FromRgb(36, 98, 63));
+            SetConnectionBanner(demo ? "ANSLUTEN – DEMOMASKIN" : "ANSLUTEN", $"{port} · {hello}", demo ? Color.FromRgb(92, 60, 140) : Color.FromRgb(36, 98, 63));
             ConnectButton.Content = "Koppla från";
             Log($"Ansluten till {port}: {hello}");
             StatusText.Text = $"Ansluten till GRBL på {port}. Inga kommandon skickas utan att du väljer det.";
@@ -75,6 +86,8 @@ public partial class MainWindow
             client.Dispose();
         }
         ConnectButton.Content = "Anslut";
+        _homedThisSession = false; _lastLiveState = null;
+        if (_machineView) RenderMachine(refreshCam: false);
         SetConnectionBanner("EJ ANSLUTEN", reason, Color.FromRgb(83, 60, 52));
         LiveStateText.Text = "–";
         _jogHeld = false;
@@ -96,6 +109,10 @@ public partial class MainWindow
     {
         if (_grbl is null) return;
         if (s.Wco is not null) _lastWco = s.Wco;
+        // Home → Idle means a homing cycle finished (also when $H was sent from the console).
+        if (_lastLiveState == "Home" && s.State == "Idle" && !_homedThisSession)
+        { _homedThisSession = true; if (_machineView) RenderMachine(refreshCam: false); }
+        _lastLiveState = s.State;
         LiveStateText.Text = s.SubState is null ? s.State : $"{s.State}:{s.SubState}";
         LiveStateText.Foreground = s.State switch
         {
@@ -108,7 +125,10 @@ public partial class MainWindow
         // Keep the computed MPos on the status so the jog travel check works whatever $10 reports.
         s.MPos ??= mpos;
         ShowDro(mpos, wpos);
+        UpdateToolMarker();
     }
+
+    private string? _lastLiveState;
 
     private static double[] Sub(double[] a, double[] b, bool add) =>
         a.Select((v, i) => i < b.Length ? (add ? v + b[i] : v - b[i]) : v).ToArray();

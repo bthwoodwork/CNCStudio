@@ -100,7 +100,7 @@ public partial class MainWindow
             AddFixtureLabel(f);
         }
         AddHomeMarker();
-        // Deliberately do not show a 'live' toolhead here. Homing/GRBL mapping is not implemented.
+        AddToolMarker(); // live tool position, only after homing
     }
 
     /// <summary>Marks the X/Y homing corner (top of the view = back of the machine).</summary>
@@ -115,7 +115,7 @@ public partial class MainWindow
         double cx = right ? m.WorkWidthMm : 0, cy = front ? m.WorkLengthMm : 0;
         Canvas.SetLeft(dot, cx - size / 2); Canvas.SetTop(dot, cy - size / 2);
         MachineCanvas.Children.Add(dot);
-        var label = new TextBlock { Text = "HEM", FontSize = 11 / _zoom, FontWeight = FontWeights.Bold,
+        var label = new TextBlock { Text = "HEM · 0,0", FontSize = 11 / _zoom, FontWeight = FontWeights.Bold,
             Foreground = CanvasTheme.AxisY, IsHitTestVisible = false };
         label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         Canvas.SetLeft(label, right ? cx - label.DesiredSize.Width - size : cx + size);
@@ -125,8 +125,9 @@ public partial class MainWindow
 
     private void SaveMachineSetup_Click(object sender, RoutedEventArgs e)
     {
-        if (!Parse(StockXBox, out var x) || !Parse(StockYBox, out var y))
+        if (!Parse(StockXBox, out var tx) || !Parse(StockYBox, out var ty))
         { Error("Ange giltiga materialkoordinater (X och Y i mm).", StockXBox); return; }
+        var (x, y) = FromTable(tx, ty, _document.MaterialWidth, _document.MaterialHeight);
         var oldStock = _document.Stock;
         _document.Stock = new StockPlacement { X = x, Y = y };
         var error = MachineSetupValidation.Validate(_document);
@@ -151,7 +152,7 @@ public partial class MainWindow
         if (dialog.ShowDialog() != true || dialog.Result is null) return;
         RememberChange();
         _document.Machine = dialog.Result;
-        RefreshMachineSummary(); RefreshMotionFields();
+        RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields();
         _selectedFixture = null; Render();
         StatusText.Text = $"Maskininställningar sparade: {dialog.Result.Name} (ej GRBL-kalibrerad).";
     }
@@ -234,7 +235,8 @@ public partial class MainWindow
         FixtureSelectionLabel.Text = f is null ? "Ingen vald – klicka på en på bordet" : f.Name;
         if (f is null) return;
         FixtureNameBox.Text = f.Name;
-        FixtureXBox.Text = F(f.X); FixtureYBox.Text = F(f.Y);
+        var (fx, fy) = ToTable(f.X, f.Y, f.Width, f.Length);
+        FixtureXBox.Text = F(fx); FixtureYBox.Text = F(fy);
         FixtureWidthBox.Text = F(f.Width); FixtureLengthBox.Text = F(f.Length);
         FixtureHeightBox.Text = F(f.HeightAboveStockMm);
         FixtureClearanceBox.Text = F(f.ClearanceMm);
@@ -244,11 +246,12 @@ public partial class MainWindow
     private void SaveFixture_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedFixture is null) { Error("Klicka på en fastspänning på maskinbordet först."); return; }
-        if (!Parse(FixtureXBox, out var x) || !Parse(FixtureYBox, out var y) ||
+        if (!Parse(FixtureXBox, out var tx) || !Parse(FixtureYBox, out var ty) ||
             !Parse(FixtureWidthBox, out var width) || !Parse(FixtureLengthBox, out var length) ||
             !Parse(FixtureHeightBox, out var height) || !Parse(FixtureClearanceBox, out var clearance))
         { Error("Ogiltiga mått för fastspänningen – alla fält ska innehålla tal i mm.", FixtureWidthBox); return; }
         var f = _selectedFixture;
+        var (x, y) = FromTable(tx, ty, width, length);
         var clone = new FixtureBlock { Id = f.Id, Name = FixtureNameBox.Text,
             X = x, Y = y, Width = width, Length = length,
             HeightAboveStockMm = height, ClearanceMm = clearance,
@@ -306,7 +309,7 @@ public partial class MainWindow
                 Math.Max(0, _document.Machine.WorkWidthMm - _document.MaterialWidth));
             _document.Stock.Y = Clamp(_machineDragOriginal.Y + dy, 0,
                 Math.Max(0, _document.Machine.WorkLengthMm - _document.MaterialHeight));
-            StockXBox.Text = F(_document.Stock.X); StockYBox.Text = F(_document.Stock.Y);
+            ShowStockFields();
             RenderMachine();
         }
         else if (_movingFixture && _selectedFixture is FixtureBlock f)

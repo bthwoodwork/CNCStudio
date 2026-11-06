@@ -1399,7 +1399,7 @@ public partial class MainWindow : Window
     private void SyncMetadata()
     { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
       RefreshMachineSummary();
-      StockXBox.Text = F(_document.Stock.X); StockYBox.Text = F(_document.Stock.Y);
+      ShowStockFields();
       RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); SyncWorkZero(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {

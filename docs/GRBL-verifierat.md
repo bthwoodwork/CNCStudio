@@ -39,7 +39,11 @@ Kontrollerat 2026-11-05 mot:
 - När `$22=1` startar GRBL i **ALARM** tills `$H` har körts. Det styrs av `HOMING_INIT_LOCK` i `config.h`, som är på som standard.
 - Ordningen i homing-cykeln: först **Z**, sedan **X och Y** samtidigt (`HOMING_CYCLE_0 = Z`, `HOMING_CYCLE_1 = X|Y` i `config.h`).
 - Position efter homing (`limits.c`, `HOMING_FORCE_SET_ORIGIN` är av som standard): en axel som homar positivt får **MPos = −$27**. Brytaren ligger alltså vid **MPos 0**, och maskinen står strax under den efter pull-off.
-- Mjuka gränser (`system.c`, `system_check_travel_limits`): tillåtet område är **−$13x ≤ MPos ≤ 0** för varje axel.
+- En axel som homar **negativt** (biten satt i `$23`) får **MPos = −$13x + $27** (`limits.c`: `set_axis_position = (max_travel + homing_pulloff)`, där `max_travel` lagras negativt enligt `settings.c`). Kontrollerat 2026-11-06.
+- Mjuka gränser (`system.c`, `system_check_travel_limits`): tillåtet område är **−$13x ≤ MPos ≤ 0** för varje axel, **oberoende av `$23`** (när `HOMING_FORCE_SET_ORIGIN` är av, vilket är standard). Kontrollerat 2026-11-06.
+- Homingens sökväg är högst **1,5 × $13x** (`HOMING_AXIS_SEARCH_SCALAR 1.5` i `limits.c`). Hittas ingen brytare blir det `ALARM:9`.
+- **Följd för maskinvyn i CNC Studio:** med +X åt höger och +Y bakåt (kontrollerat med `$3`) står fräsen på bordet vid X = $130 + MPos X och Y = −MPos Y räknat från bakre vänstra hörnet, oavsett homingriktning. Bordets koordinater visas räknat från hörnet där X/Y-brytarna sitter.
+- **Arbetsområde hit:** avståndet från brytaränden till fräsens position blir `$13x` (plus-homad: −MPos, minus-homad: MPos + $13x). En minus-homad axel måste homas om efteråt, eftersom dess MPos efter homing beror på `$13x`.
 - **Följder i CNC Studio:**
   - Z-brytaren = MPos Z 0. Lägsta Z = −$132.
   - Avståndet från materialytan upp till brytaren = −(MPos Z vid materialytan).

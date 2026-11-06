@@ -2,7 +2,7 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
- Title="CNC Studio 0.7.4 – tydliga dialoger" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.7.5 – homing, nollpunkt och demomaskin" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -387,9 +387,12 @@
             </Grid>
             <TextBlock Text="Stora siffror = arbetskoordinater, små = maskinkoordinater (MPos)." FontSize="10.5" Foreground="#8CA3BA" Margin="3,0,3,4"/>
             <UniformGrid Columns="2">
+              <Button x:Name="HomeButton" Content="⌂  Homing ($H)" Click="Home_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Kör homing: först Z upp mot brytaren, sedan X och Y mot sina brytare. Därefter är maskinkoordinaterna kända."/>
               <Button Content="Nolla X + Y" Tag="XY" Click="Zero_Click" Background="#24618C" ToolTip="Nollar X och Y – Z ändras inte (G10 L20 P0 X0 Y0)"/>
               <Button Content="Gå till X0 Y0" Tag="XY" Click="GoTo_Click" ToolTip="Lyfter Z till nära överkanten (G53) och går till X0 Y0"/>
+              <Button Content="Arbetsområde hit…" Click="SetTravelHere_Click" ToolTip="Efter homing: jogga till yttersta punkten maskinen får nå och klicka här. Avståndet från brytarna blir maskinens rörelse ($130/$131) – de mjuka gränserna."/>
             </UniformGrid>
+            <CheckBox x:Name="ShowToolBox" Content="Visa fräsens position i maskinvyn" IsChecked="True" Foreground="#E8F1FA" Margin="4,6,3,2" Checked="ShowTool_Changed" Unchecked="ShowTool_Changed"/>
             <DockPanel Margin="0,4,0,0">
               <Button DockPanel.Dock="Right" Content="Sätt" Click="SetWork_Click" ToolTip="Nuvarande position får detta värde på vald axel (G10 L20 P0)"/>
               <ComboBox x:Name="AxisPicker" DockPanel.Dock="Left" Width="52" SelectedIndex="0" Margin="3"><ComboBoxItem Content="X"/><ComboBoxItem Content="Y"/><ComboBoxItem Content="Z"/></ComboBox>

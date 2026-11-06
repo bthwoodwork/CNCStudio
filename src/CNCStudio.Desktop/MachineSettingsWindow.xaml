@@ -63,12 +63,29 @@
     <GroupBox Header="AXELRIKTNING ($3)">
       <StackPanel>
         <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#BDCEE0" Margin="3,0,3,4"
-                   Text="Jogga varje axel i plusriktning. Rätt är: X+ åt höger, Y+ bort från dig (bakåt), Z+ uppåt. Kryssa i de axlar som går åt fel håll. Gör detta FÖRE homing."/>
-        <StackPanel Orientation="Horizontal" Margin="0,2">
-          <CheckBox x:Name="InvertXBox" Content="Invertera X" Margin="3,4,18,4" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
-          <CheckBox x:Name="InvertYBox" Content="Invertera Y" Margin="3,4,18,4" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
-          <CheckBox x:Name="InvertZBox" Content="Invertera Z" Margin="3,4,18,4" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
-        </StackPanel>
+                   Text="Testa varje axel med knapparna. Rätt är: X+ åt höger, Y+ bort från dig (bakåt), Z+ uppåt. Kryssa i de axlar som går åt fel håll och skriv $3 till maskinen. Gör detta FÖRE homing – testet kräver ingen homing."/>
+        <Grid Margin="0,2">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="56"/><ColumnDefinition Width="56"/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+          <CheckBox x:Name="InvertXBox" Content="Invertera X" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
+          <Button Grid.Column="1" Content="X−" Tag="X-" Click="TestAxis_Click" Padding="6,3" ToolTip="Flytta X åt minus (ska gå åt vänster)"/>
+          <Button Grid.Column="2" Content="X+" Tag="X+" Click="TestAxis_Click" Padding="6,3" ToolTip="Flytta X åt plus (ska gå åt höger)"/>
+          <TextBlock Grid.Column="3" Text="X+ = åt höger" Foreground="#8CA3BA" FontSize="11"/>
+          <CheckBox x:Name="InvertYBox" Grid.Row="1" Content="Invertera Y" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
+          <Button Grid.Row="1" Grid.Column="1" Content="Y−" Tag="Y-" Click="TestAxis_Click" Padding="6,3" ToolTip="Flytta Y åt minus (ska gå mot dig)"/>
+          <Button Grid.Row="1" Grid.Column="2" Content="Y+" Tag="Y+" Click="TestAxis_Click" Padding="6,3" ToolTip="Flytta Y åt plus (ska gå bort från dig)"/>
+          <TextBlock Grid.Row="1" Grid.Column="3" Text="Y+ = bort från dig (bakåt)" Foreground="#8CA3BA" FontSize="11"/>
+          <CheckBox x:Name="InvertZBox" Grid.Row="2" Content="Invertera Z" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
+          <Button Grid.Row="2" Grid.Column="1" Content="Z−" Tag="Z-" Click="TestAxis_Click" Padding="6,3" ToolTip="Flytta Z åt minus (ska gå nedåt)"/>
+          <Button Grid.Row="2" Grid.Column="2" Content="Z+" Tag="Z+" Click="TestAxis_Click" Padding="6,3" ToolTip="Flytta Z åt plus (ska gå uppåt)"/>
+          <TextBlock Grid.Row="2" Grid.Column="3" Text="Z+ = uppåt" Foreground="#8CA3BA" FontSize="11"/>
+          <StackPanel Grid.Row="3" Grid.ColumnSpan="4" Orientation="Horizontal" Margin="0,4,0,0">
+            <TextBlock Text="Testavstånd (mm)"/>
+            <TextBox x:Name="TestDistanceBox" Text="10" Width="64" ToolTip="Hur långt axeln flyttas vid testet. Börja kort."/>
+            <TextBlock Text="Hastighet XY 1000, Z 300 mm/min" Foreground="#8CA3BA" FontSize="11" Margin="10,3,3,3"/>
+          </StackPanel>
+        </Grid>
+        <TextBlock x:Name="AxisTestText" TextWrapping="Wrap" FontSize="11.5" Foreground="#FFD39F" Margin="3,2,3,4"/>
         <TextBlock x:Name="DirInvertText" TextWrapping="Wrap" FontSize="11" Foreground="#9FD8A8" Margin="3,0,3,2"/>
       </StackPanel>
     </GroupBox>
@@ -80,12 +97,26 @@
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition/></Grid.ColumnDefinitions>
           <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-          <TextBlock Text="Homingriktning ($23)"/>
+          <TextBlock Text="Hörn där X/Y-brytarna sitter&#x0a;= bordets nollpunkt ($23)" TextWrapping="Wrap" VerticalAlignment="Top"/>
           <StackPanel Grid.Column="1">
             <StackPanel Orientation="Horizontal">
-              <CheckBox x:Name="HomeXNegBox" Content="X homar åt minus" Margin="3,4,14,4" Checked="Mask_Changed" Unchecked="Mask_Changed" ToolTip="Kryssa i om X-brytaren sitter åt vänster (minus)."/>
-              <CheckBox x:Name="HomeYNegBox" Content="Y homar åt minus" Margin="3,4,3,4" Checked="Mask_Changed" Unchecked="Mask_Changed" ToolTip="Kryssa i om Y-brytaren sitter framtill (minus)."/>
+              <!-- The machine table seen from above: top = back, bottom = front (where you stand). -->
+              <Grid Width="170" Height="112" Margin="3,4,10,4">
+                <Border Margin="11" Background="#1B2734" BorderBrush="#5D7A96" BorderThickness="1.5">
+                  <Grid>
+                    <TextBlock Text="BAK" FontSize="9.5" Foreground="#8CA3BA" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,3,0,0"/>
+                    <TextBlock Text="FRAM (du)" FontSize="9.5" Foreground="#8CA3BA" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,3"/>
+                  </Grid>
+                </Border>
+                <Button x:Name="CornerBL" Tag="BL" Click="Corner_Click" Width="22" Height="22" Padding="0" Margin="0" HorizontalAlignment="Left" VerticalAlignment="Top" ToolTip="Bak vänster (NV)"/>
+                <Button x:Name="CornerBR" Tag="BR" Click="Corner_Click" Width="22" Height="22" Padding="0" Margin="0" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="Bak höger (NO)"/>
+                <Button x:Name="CornerFL" Tag="FL" Click="Corner_Click" Width="22" Height="22" Padding="0" Margin="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Fram vänster (SV)"/>
+                <Button x:Name="CornerFR" Tag="FR" Click="Corner_Click" Width="22" Height="22" Padding="0" Margin="0" HorizontalAlignment="Right" VerticalAlignment="Bottom" ToolTip="Fram höger (SO)"/>
+              </Grid>
+              <TextBlock Text="Klicka i hörnet där brytarna sitter. Materialets position på bordet räknas därifrån." TextWrapping="Wrap" Width="150" FontSize="11" Foreground="#BDCEE0"/>
             </StackPanel>
+            <CheckBox x:Name="HomeXNegBox" Visibility="Collapsed" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
+            <CheckBox x:Name="HomeYNegBox" Visibility="Collapsed" Checked="Mask_Changed" Unchecked="Mask_Changed"/>
             <TextBlock x:Name="DirMaskText" TextWrapping="Wrap" FontSize="11" Foreground="#9FD8A8"/>
           </StackPanel>
           <TextBlock Grid.Row="1" Text="Z-brytare"/>

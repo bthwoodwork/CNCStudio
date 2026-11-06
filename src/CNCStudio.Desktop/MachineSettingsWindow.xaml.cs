@@ -281,13 +281,87 @@ public partial class MachineSettingsWindow : Window
             HomeCorner.BackLeft => "bak vänster", HomeCorner.BackRight => "bak höger",
             HomeCorner.FrontLeft => "fram vänster", _ => "fram höger"
         };
-        DirMaskText.Text = $"Ska stå $23={home} i GRBL. X homar {((home & 1) != 0 ? "− (vänster)" : "+ (höger)")}, " +
-            $"Y homar {((home & 2) != 0 ? "− (fram)" : "+ (bak)")}, Z homar + (upp). Hem: {corner}. " +
+        DirMaskText.Text = $"Brytarna sitter {corner}: ska stå $23={home} i GRBL. X homar {((home & 1) != 0 ? "− (vänster)" : "+ (höger)")}, " +
+            $"Y homar {((home & 2) != 0 ? "− (fram)" : "+ (bak)")}, Z homar + (upp). " +
+            "Maskinkoordinaterna går alltid från −$13x till 0 (limits.c); en axel som homar åt minus står på −$13x + $27 efter homing. " +
             "Ställ in $3 först så att plusriktningarna stämmer.";
+        var selected = new Dictionary<string, Button> { ["BL"] = CornerBL, ["BR"] = CornerBR, ["FL"] = CornerFL, ["FR"] = CornerFR };
+        string key = ((home & 2) != 0 ? "F" : "B") + ((home & 1) != 0 ? "L" : "R");
+        foreach (var (k, b) in selected)
+        {
+            bool on = k == key;
+            b.Background = new SolidColorBrush(on ? Color.FromRgb(0x4C, 0xE0, 0x7A) : Color.FromRgb(0x34, 0x47, 0x5A));
+            b.BorderBrush = new SolidColorBrush(on ? Colors.White : Color.FromRgb(0x50, 0x67, 0x83));
+            b.Content = on ? "0" : "";
+            b.Foreground = Brushes.Black;
+            b.FontWeight = FontWeights.Bold;
+        }
     }
 
-    private void Show(string message) =>
+    /// <summary>The corner with the X/Y switches: left = X homes minus ($23 bit 1), front = Y homes minus (bit 2).</summary>
+    private void Corner_Click(object sender, RoutedEventArgs e)
+    {
+        var tag = (string)((Button)sender).Tag;
+        HomeYNegBox.IsChecked = tag[0] == 'F';
+        HomeXNegBox.IsChecked = tag[1] == 'L';
+        UpdateMaskTexts();
+    }
+
+    /// <summary>
+    /// Moves one axis a short distance so the direction can be checked by eye. Needs no homing:
+    /// a locked machine (Alarm) is unlocked with $X first, after confirmation – $J is only accepted in
+    /// Idle/Jog (verified). Uses the machine's CURRENT $3, not the unsaved checkboxes.
+    /// </summary>
+    private async void TestAxis_Click(object sender, RoutedEventArgs e)
+    {
+        if (_grbl is null) { Show("Anslut till maskinen först (Maskinkontroll-panelen)."); return; }
+        var tag = (string)((Button)sender).Tag;
+        char axis = tag[0]; int sign = tag[1] == '+' ? 1 : -1;
+        if (!Num(TestDistanceBox, out var mm) || mm <= 0 || mm > 50)
+        { Show("Ange ett testavstånd mellan 0 och 50 mm.", TestDistanceBox); return; }
+        try
+        {
+            var status = await _grbl.RequestStatusAsync(TimeSpan.FromSeconds(2));
+            if (status is null) { AxisTestText.Text = "Fick ingen status från maskinen."; return; }
+            if (status.State == "Alarm")
+            {
+                if (AppDialog.Show(this, "Maskinen är låst (larm) eftersom den inte är homad.\n\n" +
+                        "För att testa riktningen låses den upp med $X. Positionen är då okänd, så testa bara korta sträckor " +
+                        "och håll handen nära nödstoppet. Kör homing ($H) när riktningarna stämmer.\n\nLåsa upp med $X?",
+                        "Testa axelriktning", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
+                var unlock = await _grbl.SendLineAsync("$X");
+                if (!unlock.IsOk) { AxisTestText.Text = "$X: " + unlock.Describe(); return; }
+            }
+            else if (!GrblMachineCommands.StateAllowsJog(status.State))
+            { AxisTestText.Text = $"Maskinen är i läge {status.State} – vänta tills den är Idle."; return; }
+
+            double d = sign * mm;
+            double feed = axis == 'Z' ? 300 : 1000;
+            var line = GrblMachineCommands.Jog(axis == 'X' ? d : 0, axis == 'Y' ? d : 0, axis == 'Z' ? d : 0, feed);
+            var r = await _grbl.SendLineAsync(line);
+            string expected = (axis, sign) switch
+            {
+                ('X', 1) => "åt HÖGER", ('X', _) => "åt VÄNSTER", ('Y', 1) => "BORT från dig", ('Y', _) => "MOT dig",
+                ('Z', 1) => "UPPÅT", _ => "NEDÅT"
+            };
+            string unsaved = _machineSettings is not null && _machineSettings.TryGetValue(3, out var m3) && (int)m3 != DirMask()
+                ? $" OBS: kryssrutorna ($3={DirMask()}) är inte skrivna till maskinen (där står $3={(int)m3}) – testet använder maskinens värde." : "";
+            if (r.IsOk)
+                AxisTestText.Text = $"{line} skickat. {axis} ska ha rört sig {mm:0.#} mm {expected}. " +
+                    $"Gick den åt andra hållet? Kryssa i Invertera {axis} och skriv $3 till maskinen.{unsaved}";
+            else if (r.Completion.Code == 15)
+                AxisTestText.Text = $"{line}: GRBL stoppade rörelsen – den skulle gå utanför arbetsområdet (error:15, mjuka gränser). " +
+                    "Före homing räknas området från där maskinen startade. Testa åt andra hållet, eller jogga först åt minus.";
+            else AxisTestText.Text = $"{line}: {r.Describe()}";
+        }
+        catch (Exception ex) { AxisTestText.Text = "Testet avbröts: " + ex.Message; }
+    }
+
+    private void Show(string message, TextBox? focus = null)
+    {
         AppDialog.Show(this, message, "Maskininställningar", MessageBoxButton.OK, MessageBoxImage.Warning);
+        if (focus is not null) { focus.Focus(); focus.SelectAll(); }
+    }
 
     private static bool Num(TextBox box, out double value) =>
         double.TryParse(box.Text.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value)

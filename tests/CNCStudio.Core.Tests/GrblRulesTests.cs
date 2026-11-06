@@ -21,11 +21,14 @@ public class GrblRulesTests
     }
 
     [Fact]
-    public void Default_23_is_zero_all_axes_positive()
+    public void Default_profile_has_switches_front_left_and_z_homing_up()
     {
+        // GRBL's own default is $23=0 (all positive); CNC Studio's default profile matches the
+        // user's machine: X/Y switches front-left (SW), Z at the top.
         var m = new MachineProfile();
-        Assert.Equal(0, m.HomingDirInvertMask);
-        Assert.Equal(HomeCorner.BackRight, m.HomeCorner);
+        Assert.Equal(3, m.HomingDirInvertMask);
+        Assert.Equal(0, m.HomingDirInvertMask & 4);
+        Assert.Equal(HomeCorner.FrontLeft, m.HomeCorner);
     }
 
     [Theory]
