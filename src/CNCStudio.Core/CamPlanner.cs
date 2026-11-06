@@ -65,6 +65,13 @@ public static class CamOperationChecks
     {
         var list = new List<CamFinding>();
         var id = shape.Id;
+        if (op.ToolKind == ToolKind.VBit)
+            list.Add(new CamFinding(CamSeverity.Critical, "VBitNotSupported",
+                "En V-fräs kan inte användas för kontur eller ficka – den skär inte med full diameter. " +
+                "Välj en rak fräs (V-carving kommer i en senare version).", id));
+        if (op.ToolKind == ToolKind.BallNose)
+            list.Add(new CamFinding(CamSeverity.Info, "BallNoseFloor",
+                "Kulfräs: botten och väggens nederkant blir rundade, inte plana.", id));
         if (op.DepthPerPass > op.ToolDiameter + 1e-9)
             list.Add(new CamFinding(CamSeverity.Warning, "DeepPass",
                 $"Djup per pass ({F(op.DepthPerPass)} mm) är större än fräsdiametern ({F(op.ToolDiameter)} mm). " +
@@ -186,6 +193,7 @@ public sealed class CamPlanner
             findings.AddRange(CamSafetyReview.Analyze(document, shape, op, entry.Preview));
             findings.AddRange(CamGeometryChecks.MaterialBounds(document, shape, op, entry.Preview));
             findings.AddRange(PartClearance(document, shape, op, entry.Preview, geometryKeys));
+            if (entry.Preview.IsPocket) findings.AddRange(PocketFindings(entry.Preview, op, shape));
             var tabs = CamTabs.Plan(entry.Preview, op, document.MaterialThickness);
             findings.AddRange(TabFindings(op, shape, entry.Preview, tabs, document.MaterialThickness));
             results.Add(new CamOperationResult(op, shape, entry.Preview, findings, Tabs: tabs));
@@ -217,7 +225,7 @@ public sealed class CamPlanner
         if (known && !mayCompute) return null;
         CacheEntry entry;
         GenerationCount++;
-        try { entry = new CacheEntry(key, shape.X, shape.Y, _generator(shape, op, thickness), null); }
+        try { entry = new CacheEntry(key, shape.X, shape.Y, CamDirection.Apply(_generator(shape, op, thickness), shape, op), null); }
         catch (Exception ex) { entry = new CacheEntry(key, shape.X, shape.Y, null, ex.Message); } // fail closed
         _cache[op.ShapeId] = entry;
         return entry;
@@ -263,6 +271,27 @@ public sealed class CamPlanner
                 $"Färre än {op.TabCount} flikar fick plats på en eller flera korta banor.", shape.Id);
     }
 
+    /// <summary>
+    /// Rest material: uncut area between the loops is a warning (stepover too large for the shape);
+    /// inside corners keep the tool's radius, which is reported as information.
+    /// </summary>
+    private static IEnumerable<CamFinding> PocketFindings(ContourPreview p, CamOperation op, DesignShape shape)
+    {
+        // Small tolerance for polygon approximation of arcs.
+        double tolerance = Math.Max(0.5, 0.0005 * shape.Width * shape.Height);
+        if (p.PocketRestArea > tolerance)
+            yield return new CamFinding(CamSeverity.Warning, "PocketRest",
+                $"Det blir kvar ca {p.PocketRestArea:0.#} mm² material mellan varven i fickan. Minska stegningen " +
+                $"(nu {op.StepoverPercent:0.#} % av Ø {op.ToolDiameter:0.###} mm).", shape.Id);
+        if (p.PocketCornerArea > 0.05)
+            yield return new CamFinding(CamSeverity.Info, "PocketCorners",
+                $"Inre hörn i fickan blir rundade med fräsens radie {op.ToolDiameter / 2:0.###} mm " +
+                $"(ca {p.PocketCornerArea:0.#} mm² kvar i hörnen).", shape.Id);
+        if (op.StepoverPercent > 50)
+            yield return new CamFinding(CamSeverity.Info, "PocketStepover",
+                $"Stegning {op.StepoverPercent:0.#} % är hög; i trä används ofta 30–50 % av diametern.", shape.Id);
+    }
+
     /// <summary>Human-readable name used in messages, e.g. "Rektangel 2".</summary>
     public static string Label(CncDocument doc, DesignShape shape)
     {
@@ -295,8 +324,13 @@ public sealed class CamPlanner
     {
         static IReadOnlyList<CamPoint> Shift(IReadOnlyList<CamPoint> path, double dx, double dy) =>
             path.Select(pt => new CamPoint(pt.X + dx, pt.Y + dy)).ToList();
-        return new ContourPreview(Shift(p.Centerline, dx, dy), p.PassDepths, p.Warning)
-        { Centerlines = p.Centerlines.Select(c => Shift(c, dx, dy)).ToList() };
+        // 'with' keeps every other property (pocket flags and areas); only geometry is shifted.
+        return p with
+        {
+            Centerline = Shift(p.Centerline, dx, dy),
+            Centerlines = p.Centerlines.Select(c => Shift(c, dx, dy)).ToList(),
+            PocketCenterRegion = p.PocketCenterRegion.Select(c => Shift(c, dx, dy)).ToList()
+        };
     }
 
     /// <summary>
@@ -308,7 +342,7 @@ public sealed class CamPlanner
         return string.Join("|", shape.Kind, R(shape.Width), R(shape.Height),
             shape.Contours?.Count ?? -1, ContourHash(shape),
             op.Kind, R(op.ToolDiameter), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
-            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(thickness));
+            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, R(thickness));
     }
 
     private static string R(double v) => v.ToString("R", CultureInfo.InvariantCulture);

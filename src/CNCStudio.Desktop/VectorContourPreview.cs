@@ -25,7 +25,7 @@ internal static class VectorContourPreview
         var error = CamValidation.GetError(operation, materialThickness);
         if (error is not null) throw new ArgumentException(error);
         if (operation.Kind == CamOperationKind.Pocket)
-            throw new NotSupportedException("Fickfräsning har ännu ingen beräknad verktygsbana.");
+            return PocketToolpaths.Generate(shape, operation, materialThickness); // Clipper2, handles holes/islands
         if (shape.Contours is null || shape.Contours.Count == 0 ||
             shape.Contours.Any(c => !c.Closed || c.Points.Count < 3))
             throw new ArgumentException("Konturfräsning kräver slutna konturer med minst tre punkter.");

@@ -85,6 +85,7 @@ public partial class MainWindow
         // This is a VISUAL PREVIEW only: no Z routing, tabs, holder collision or executable G-code.
         if (_showContourPreview)
             DrawCamResults(MachineCanvas, _document.Stock.X, _document.Stock.Y);
+        DrawWorkZeroMarker(MachineCanvas, _document.Stock.X, _document.Stock.Y);
 
         foreach (var f in _document.Fixtures)
         {

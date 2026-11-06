@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.6";
+    private const string AppTitle = "CNC Studio 0.7.1";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -236,6 +236,12 @@ public partial class MainWindow
             CamHealthText.Inlines.Add(new LineBreak());
         }
         CamHealthText.Inlines.Add(new LineBreak());
+        if (RunTimeText() is { Length: > 0 } time)
+        {
+            CamHealthText.Inlines.Add(new Run(time) { Foreground = new SolidColorBrush(Color.FromRgb(200, 220, 240)) });
+            CamHealthText.Inlines.Add(new LineBreak());
+            CamHealthText.Inlines.Add(new LineBreak());
+        }
         CamHealthText.Inlines.Add(new Run("Kontrolleras: inställningar, djup, materialgränser, hållflikar, XY mot " +
             "fastspänningar, maskinens gränser, andra delar, Z-höjder och snabbförflyttningar. " +
             "Ej kontrollerat: hållare/spännhylsa, matningshastigheter, nedre Z-gräns. Detta är inget säkerhetsgodkännande.")

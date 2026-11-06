@@ -55,9 +55,9 @@ public class ContourToolpathsTests
     }
 
     [Fact]
-    public void Pocket_is_not_supported_yet()
+    public void Pocket_operations_are_delegated_to_the_pocket_generator()
     {
-        Assert.Throws<NotSupportedException>(() => ContourToolpaths.Generate(Rect(),
-            new CamOperation { Kind = CamOperationKind.Pocket, UseTabs = false }, 18));
+        var p = ContourToolpaths.Generate(Rect(), new CamOperation { Kind = CamOperationKind.Pocket, UseTabs = false }, 18);
+        Assert.True(p.IsPocket);
     }
 }

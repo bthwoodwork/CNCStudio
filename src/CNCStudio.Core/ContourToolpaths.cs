@@ -13,6 +13,16 @@ public sealed record ContourPreview(IReadOnlyList<CamPoint> Centerline, IReadOnl
     // Keep Centerline for existing elementary shapes and expose all contours for rendering.
     public IReadOnlyList<IReadOnlyList<CamPoint>> Centerlines { get; init; } =
         Array.Empty<IReadOnlyList<CamPoint>>();
+
+    /// <summary>True for a pocket: Centerlines are loops in cutting order (inside out).</summary>
+    public bool IsPocket { get; init; }
+    /// <summary>Pocket only: where the tool centre may go (the pocket shrunk by the tool radius).</summary>
+    public IReadOnlyList<IReadOnlyList<CamPoint>> PocketCenterRegion { get; init; } =
+        Array.Empty<IReadOnlyList<CamPoint>>();
+    /// <summary>Pocket only: uncut area left between the loops (mm²) – should be ~0.</summary>
+    public double PocketRestArea { get; init; }
+    /// <summary>Pocket only: area in inside corners the round tool cannot reach (mm²).</summary>
+    public double PocketCornerArea { get; init; }
 }
 
 public static class ContourToolpaths
@@ -22,7 +32,7 @@ public static class ContourToolpaths
         var problem = CamValidation.GetError(operation, materialThickness);
         if (problem != null) throw new ArgumentException(problem);
         if (operation.Kind == CamOperationKind.Pocket)
-            throw new NotSupportedException("Fickfräsning är ännu inte implementerad. Ingen verktygsbana kan visas.");
+            return PocketToolpaths.Generate(shape, operation, materialThickness);
         if (shape.Kind == ShapeKind.VectorPath)
             throw new NotSupportedException("Konturer med importerade/Boolean-former kräver en robust polygon-offsetmotor. Ej implementerat ännu.");
         if (!double.IsFinite(shape.X) || !double.IsFinite(shape.Y) ||

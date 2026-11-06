@@ -200,7 +200,7 @@ public partial class MainWindow : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         FitToMaterial(); InitGrblUi();
-        RefreshMachineSummary(); RefreshMotionFields();
+        RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);
     }
     private static double Clamp(double n, double lo, double hi) => Math.Max(lo, Math.Min(hi, n));
@@ -258,6 +258,7 @@ public partial class MainWindow : Window
     }
     private void Viewport_MouseMove(object sender, MouseEventArgs e)
     {
+        UpdateCursorText(e);
         if (!_panning) return;
         var p = e.GetPosition(Viewport);
         DesignOffset.X = _panOrigin.X + p.X - _panStart.X;
@@ -832,6 +833,7 @@ public partial class MainWindow : Window
         // Recalculate after MouseUp; transient drags show only their geometry.
         if (_showContourPreview && !geometryGesture)
             DrawCamResults(DesignCanvas, 0, 0);
+        if (!geometryGesture) DrawWorkZeroMarker(DesignCanvas, 0, 0);
         UpdateCamHealth();
         if (_marqueeActive)
         {
@@ -1347,7 +1349,7 @@ public partial class MainWindow : Window
     { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
       RefreshMachineSummary();
       StockXBox.Text = F(_document.Stock.X); StockYBox.Text = F(_document.Stock.Y);
-      RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); }
+      RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); SyncWorkZero(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000) { Error("Kontrollera materialmåtten innan du sparar."); return; }
@@ -1412,16 +1414,32 @@ public partial class MainWindow : Window
             CamTabCount.Text = (operation?.TabCount ?? defaults.TabCount).ToString(CultureInfo.InvariantCulture);
             CamTabWidth.Text = F(operation?.TabWidth ?? defaults.TabWidth);
             CamTabHeight.Text = F(operation?.TabHeight ?? defaults.TabHeight);
-            TabSettingsPanel.Visibility = CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            CamStepover.Text = F(operation?.StepoverPercent ?? defaults.StepoverPercent);
+            CamPlungeMode.SelectedIndex = (int)(operation?.Plunge ?? defaults.Plunge);
+            CamRampAngle.Text = F(operation?.RampAngleDeg ?? defaults.RampAngleDeg);
+            CamDirectionPicker.SelectedIndex = (int)(operation?.Direction ?? defaults.Direction);
+            SelectTool(operation?.ToolName);
+            UpdateCamPanels();
         }
         finally { _loadingCam = false; }
         UpdateCamSummary();
     }
     private void CamInput_Changed(object sender, RoutedEventArgs e)
     {
-        if (TabSettingsPanel is not null && CamTabs is not null)
-            TabSettingsPanel.Visibility = CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        UpdateCamPanels();
         if (!_loadingCam) UpdateCamSummary();
+    }
+
+    /// <summary>Pocket: show stepover, hide tabs (they do not apply). Contour: the opposite.</summary>
+    private void UpdateCamPanels()
+    {
+        if (CamKind is null || PocketSettingsPanel is null || CamTabs is null || TabSettingsPanel is null) return;
+        bool pocket = CamKind.SelectedIndex == (int)CamOperationKind.Pocket;
+        PocketSettingsPanel.Visibility = pocket ? Visibility.Visible : Visibility.Collapsed;
+        CamTabs.Visibility = pocket ? Visibility.Collapsed : Visibility.Visible;
+        TabSettingsPanel.Visibility = !pocket && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (RampAnglePanel is not null && CamPlungeMode is not null)
+            RampAnglePanel.Visibility = CamPlungeMode.SelectedIndex == (int)PlungeMode.Ramp ? Visibility.Visible : Visibility.Hidden;
     }
     private CamOperation? ReadCam()
     {
@@ -1429,8 +1447,16 @@ public partial class MainWindow : Window
             return null;
         if (!Parse(CamDiameter, out var diameter) || !Parse(CamDepth, out var depth) || !Parse(CamPass, out var step))
             return null;
-        bool useTabs = CamTabs.IsChecked == true;
+        var kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex);
+        bool pocket = kind == CamOperationKind.Pocket;
+        bool useTabs = !pocket && CamTabs.IsChecked == true; // tabs never apply to pockets
         var defaults = new CamOperation();
+        double stepover = defaults.StepoverPercent;
+        if (CamStepover is not null && !Parse(CamStepover, out stepover))
+        {
+            if (pocket) return null;
+            stepover = defaults.StepoverPercent;
+        }
         int tabCount = defaults.TabCount; double tabWidth = defaults.TabWidth, tabHeight = defaults.TabHeight;
         if (CamTabCount is not null && CamTabWidth is not null && CamTabHeight is not null)
         {
@@ -1445,11 +1471,25 @@ public partial class MainWindow : Window
         if (CamFeed is null || CamPlunge is null || CamRpm is null ||
             !Parse(CamFeed, out var feed) || !Parse(CamPlunge, out var plunge) || !Parse(CamRpm, out var rpm))
             return null;
+        var plungeMode = CamPlungeMode is not null && CamPlungeMode.SelectedIndex == (int)PlungeMode.Ramp ? PlungeMode.Ramp : PlungeMode.Vertical;
+        double rampAngle = defaults.RampAngleDeg;
+        if (CamRampAngle is not null && !Parse(CamRampAngle, out rampAngle))
+        {
+            if (plungeMode == PlungeMode.Ramp) return null;
+            rampAngle = defaults.RampAngleDeg;
+        }
+        // The tool keeps its name and kind only while its diameter is unchanged; otherwise it is a custom cutter.
+        var tool = SelectedTool;
+        bool fromLibrary = tool is not null && Math.Abs(tool.Diameter - diameter) < 1e-9;
         return new CamOperation { ShapeId = _selected.Id,
-            Kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex), ToolDiameter = diameter,
+            Kind = kind, ToolDiameter = diameter,
             TotalDepth = depth, DepthPerPass = step, UseTabs = useTabs,
             TabCount = tabCount, TabWidth = tabWidth, TabHeight = tabHeight,
-            FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm };
+            FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm, StepoverPercent = stepover,
+            ToolName = fromLibrary ? tool!.Name : null,
+            ToolKind = fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
+            Plunge = plungeMode, RampAngleDeg = rampAngle,
+            Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
     }
     private void UpdateCamSummary()
     {
@@ -1457,12 +1497,18 @@ public partial class MainWindow : Window
         var op = ReadCam();
         if (op is null) { CamSummary.Text = "Markera ett objekt och ange numeriska värden."; return; }
         var error = CamValidation.GetError(op, _document.MaterialThickness);
-        CamSummary.Text = error ?? $"{op.Kind} · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm djup · " +
-            $"{Math.Ceiling(op.TotalDepth / op.DepthPerPass):0} pass · Hållflikar: " +
-            (!op.UseTabs ? "Nej"
-             : op.TotalDepth >= _document.MaterialThickness - 1e-6
-                ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"
-                : "används först vid genomskärning");
+        string kind = op.Kind switch
+        {
+            CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur", _ => "Ficka"
+        };
+        CamSummary.Text = error ?? $"{kind} · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm djup · " +
+            $"{Math.Ceiling(op.TotalDepth / op.DepthPerPass):0} pass · " +
+            (op.Kind == CamOperationKind.Pocket
+                ? $"stegning {F(op.StepoverPercent)} % ({F(op.ToolDiameter * op.StepoverPercent / 100)} mm)"
+                : "Hållflikar: " + (!op.UseTabs ? "Nej"
+                    : op.TotalDepth >= _document.MaterialThickness - 1e-6
+                        ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"
+                        : "används först vid genomskärning"));
     }
     private void SaveCam_Click(object sender, RoutedEventArgs e)
     {

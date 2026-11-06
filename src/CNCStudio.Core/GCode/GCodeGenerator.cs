@@ -27,7 +27,7 @@ public sealed record GCodeResult(bool Success, IReadOnlyList<string> Lines, IRea
 /// </summary>
 public static class GCodeGenerator
 {
-    public const string Generator = "CNC Studio 0.6";
+    public const string Generator = "CNC Studio 0.7.1";
 
     public static IReadOnlyList<string> BlockingReasons(CncDocument doc, CamReport report)
     {
@@ -57,7 +57,7 @@ public static class GCodeGenerator
             return new GCodeResult(false, Array.Empty<string>(), blocking, warnings, Array.Empty<string>());
 
         var plan = report.Motion;
-        double H = doc.MaterialHeight;
+        string XY(double dx, double dy) { var (wx, wy) = doc.ToWork(dx, dy); return $"X{F(wx)} Y{F(wy)}"; }
         var lines = new List<string>();
         void Comment(string text)
         {
@@ -67,12 +67,17 @@ public static class GCodeGenerator
         Comment($"{Generator} - {doc.Name}");
         Comment($"Skapad {(now ?? DateTime.Now):yyyy-MM-dd HH:mm}");
         Comment($"Material {F(doc.MaterialWidth)} x {F(doc.MaterialHeight)} x {F(doc.MaterialThickness)} mm");
-        Comment("Nollpunkt G54: X0 Y0 = materialets framre vanstra horn, Z0 = materialets ovansida");
+        Comment(doc.WorkZero == WorkZero.Center
+            ? "Nollpunkt G54: X0 Y0 = materialets MITT, Z0 = materialets ovansida"
+            : "Nollpunkt G54: X0 Y0 = materialets framre vanstra horn, Z0 = materialets ovansida");
         Comment("Krav: maskinen homad med $H, laserlage av ($32=0), Z-nollan satt pa materialytan");
         bool manual = doc.Machine.Spindle == SpindleControl.Manual;
         Comment(manual
             ? "Fras: MANUELL. Programmet pausar med M0 - starta frasen, stall varvtalet och fortsatt med ~"
             : "Fras: styrs av GRBL med M3/M5");
+        foreach (var o in report.Operations.Select(o => o.Operation)
+                     .GroupBy(o => (o.ToolName, o.ToolDiameter)).Select(g => g.First()))
+            Comment($"Verktyg: {(string.IsNullOrWhiteSpace(o.ToolName) ? "fras" : o.ToolName)}, diameter {F(o.ToolDiameter)} mm");
         foreach (var w in warnings) Comment("VARNING: " + w);
 
         // Modal setup: mm, absolute, feed per minute, XY plane, work coordinate system G54.
@@ -119,7 +124,7 @@ public static class GCodeGenerator
                 // then go to the first path start.
                 lines.Add($"G0 Z{F(m.Z1)}"); z = m.Z1;
                 EnsureSpindle(plan.Moves.FirstOrDefault(n => n.OperationIndex >= 0)?.OperationIndex ?? -1);
-                lines.Add($"G0 X{F(m.X1)} Y{F(H - m.Y1)}"); x = m.X1; y = m.Y1;
+                lines.Add($"G0 {XY(m.X1, m.Y1)}"); x = m.X1; y = m.Y1;
                 continue;
             }
             if (m.Kind == MoveKind.Rapid)
@@ -128,7 +133,7 @@ public static class GCodeGenerator
                 // the tool moves over to it – not down near the material.
                 if (m.MovesXY)
                     EnsureSpindle(plan.Moves.Skip(i + 1).FirstOrDefault(n => n.OperationIndex >= 0)?.OperationIndex ?? -1);
-                if (m.MovesXY) { lines.Add($"G0 X{F(m.X1)} Y{F(H - m.Y1)}" + (Same(z, m.Z1) ? "" : $" Z{F(m.Z1)}")); x = m.X1; y = m.Y1; z = m.Z1; }
+                if (m.MovesXY) { lines.Add($"G0 {XY(m.X1, m.Y1)}" + (Same(z, m.Z1) ? "" : $" Z{F(m.Z1)}")); x = m.X1; y = m.Y1; z = m.Z1; }
                 else if (!Same(z, m.Z1)) { lines.Add($"G0 Z{F(m.Z1)}"); z = m.Z1; }
                 continue;
             }
@@ -137,17 +142,36 @@ public static class GCodeGenerator
             var op = ops[m.OperationIndex].Operation;
             if (!m.FollowsPath)
             {
-                if (!Same(z, m.Z1)) { lines.Add($"G1 Z{F(m.Z1)}" + Feed(op.PlungeRate)); z = m.Z1; }
+                if (m.MovesXY)
+                {
+                    // Straight link at depth (inside a pocket): cutting feed.
+                    lines.Add($"G1 {XY(m.X1, m.Y1)}" + (Same(z, m.Z1) ? "" : $" Z{F(m.Z1)}") + Feed(op.FeedRate));
+                    x = m.X1; y = m.Y1; z = m.Z1;
+                }
+                else if (!Same(z, m.Z1)) { lines.Add($"G1 Z{F(m.Z1)}" + Feed(op.PlungeRate)); z = m.Z1; }
                 continue;
             }
             var preview = ops[m.OperationIndex].Preview!;
             var path = preview.Centerlines.Count > 0 ? preview.Centerlines[m.PathIndex] : preview.Centerline;
-            foreach (var p in PathMath.Slice(path, m.S0, m.S1).Skip(1))
+            var slice = PathMath.Slice(path, m.S0, m.S1);
+            bool ramp = !Same(m.Z0, m.Z1);
+            double total = ramp ? PathMath.Length(slice) : 0, run = 0;
+            for (int k = 1; k < slice.Count; k++)
             {
+                var p = slice[k];
+                run += PathMath.Distance(slice[k - 1], p);
                 if (Same(x, p.X) && Same(y, p.Y)) continue;
-                lines.Add($"G1 X{F(p.X)} Y{F(H - p.Y)}" + Feed(op.FeedRate));
+                if (ramp)
+                {
+                    // Ramped plunge: Z falls linearly with distance along the path.
+                    double pz = k == slice.Count - 1 || total <= 0 ? m.Z1 : m.Z0 + (m.Z1 - m.Z0) * run / total;
+                    lines.Add($"G1 {XY(p.X, p.Y)} Z{F(pz)}" + Feed(op.FeedRate));
+                    z = pz;
+                }
+                else lines.Add($"G1 {XY(p.X, p.Y)}" + Feed(op.FeedRate));
                 x = p.X; y = p.Y;
             }
+            if (ramp) z = m.Z1;
         }
         if (manual) Comment("Klart - stang av frasen for hand");
         else lines.Add("M5");

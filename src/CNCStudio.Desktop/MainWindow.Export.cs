@@ -42,13 +42,16 @@ public partial class MainWindow
         var ops = _camReport.Operations;
         var summary = new StringBuilder()
             .AppendLine($"{ops.Count} operation(er), {result.Lines.Count} rader G-code.")
+            .AppendLine(RunTimeText())
             .AppendLine($"Djupast: {F(ops.Max(o => o.Operation.TotalDepth))} mm. Högsta Z: {F(plan.MaxZ)} mm över materialet.")
             .AppendLine($"Matning {string.Join("/", ops.Select(o => F(o.Operation.FeedRate)).Distinct())} mm/min, " +
                         $"varvtal {string.Join("/", ops.Select(o => F(o.Operation.SpindleRpm)).Distinct())} varv/min.")
             .AppendLine()
             .AppendLine("FÖRE KÖRNING:")
             .AppendLine("• Homa maskinen med $H.")
-            .AppendLine("• Sätt X0 Y0 i materialets FRÄMRE VÄNSTRA hörn och Z0 på materialets ovansida (G54).")
+            .AppendLine(_document.WorkZero == WorkZero.Center
+                ? "• Sätt X0 Y0 i materialets MITT och Z0 på materialets ovansida (G54)."
+                : "• Sätt X0 Y0 i materialets FRÄMRE VÄNSTRA hörn och Z0 på materialets ovansida (G54).")
             .AppendLine("• Kontrollera att laserläget är av ($32=0).")
             .AppendLine("• Kontrollera att fastspänningarna sitter där de är ritade.")
             .AppendLine(_document.Machine.Spindle == SpindleControl.Manual

@@ -37,8 +37,28 @@ public sealed class DesignShape
 
 public enum CamOperationKind { Outside, Inside, Pocket }
 
+public enum PlungeMode { Vertical, Ramp }
+
+/// <summary>
+/// Climb: with a clockwise spindle (M3) the finished wall is on the tool's right in the direction
+/// of travel. Conventional: on the left. Default: keep the generated direction.
+/// </summary>
+public enum MillingDirection { Default, Climb, Conventional }
+
+public enum ToolKind { FlatEndMill, BallNose, VBit }
+
+/// <summary>Where G54 X0 Y0 lies on the material. Z0 is always the top surface.</summary>
+public enum WorkZero { FrontLeft, Center }
+
 public sealed class CamOperation
 {
+    /// <summary>Name of the tool from the library (for the file header and the user); informational.</summary>
+    public string? ToolName { get; set; }
+    public ToolKind ToolKind { get; set; } = ToolKind.FlatEndMill;
+    public PlungeMode Plunge { get; set; } = PlungeMode.Vertical;
+    /// <summary>Ramp angle in degrees from horizontal.</summary>
+    public double RampAngleDeg { get; set; } = 3;
+    public MillingDirection Direction { get; set; } = MillingDirection.Default;
     public Guid ShapeId { get; set; }
     public CamOperationKind Kind { get; set; } = CamOperationKind.Outside;
     public double ToolDiameter { get; set; } = 3.175;
@@ -57,6 +77,9 @@ public sealed class CamOperation
     public double PlungeRate { get; set; } = 300;
     /// <summary>Spindle speed for M3 S, in RPM. Mapped by GRBL to PWM via $30/$31.</summary>
     public double SpindleRpm { get; set; } = 18000;
+
+    /// <summary>Pocket only: distance between neighbouring loops, as % of the tool diameter.</summary>
+    public double StepoverPercent { get; set; } = 40;
 
     /// <summary>A copy with every setting, for another shape (used when duplicating).</summary>
     public CamOperation CopyFor(Guid shapeId)
@@ -77,8 +100,14 @@ public static class CamValidation
             return "Totalt djup måste vara större än 0 och får inte överstiga materialtjockleken.";
         if (!double.IsFinite(operation.DepthPerPass) || operation.DepthPerPass <= 0 || operation.DepthPerPass > operation.TotalDepth)
             return "Djup per pass måste vara större än 0 och får inte överstiga totalt djup.";
+        if (operation.Plunge == PlungeMode.Ramp &&
+            (!double.IsFinite(operation.RampAngleDeg) || operation.RampAngleDeg < 1 || operation.RampAngleDeg > 45))
+            return "Rampvinkeln måste vara 1–45 grader.";
         if (operation.Kind == CamOperationKind.Pocket && operation.UseTabs)
             return "Hållflikar används inte för fickfräsning.";
+        if (operation.Kind == CamOperationKind.Pocket &&
+            (!double.IsFinite(operation.StepoverPercent) || operation.StepoverPercent < 5 || operation.StepoverPercent > 90))
+            return "Stegningen för fickfräsning måste vara 5–90 % av fräsdiametern.";
         if (!double.IsFinite(operation.FeedRate) || operation.FeedRate < 1 || operation.FeedRate > 20000)
             return "Matningen måste vara 1–20000 mm/min.";
         if (!double.IsFinite(operation.PlungeRate) || operation.PlungeRate < 1 || operation.PlungeRate > 20000)
@@ -296,6 +325,18 @@ public sealed class CncDocument
     public MachineProfile Machine { get; set; } = new();
     public StockPlacement Stock { get; set; } = new();
     public MotionSettings Motion { get; set; } = new();
+    public WorkZero WorkZero { get; set; } = WorkZero.FrontLeft;
+
+    /// <summary>
+    /// Converts design coordinates (Y down from the back edge) to work coordinates (G54, Y up),
+    /// with X0 Y0 at the front-left corner or the centre of the material.
+    /// </summary>
+    public (double X, double Y) ToWork(double x, double y)
+    {
+        double wx = x, wy = MaterialHeight - y;
+        if (WorkZero == WorkZero.Center) { wx -= MaterialWidth / 2; wy -= MaterialHeight / 2; }
+        return (wx, wy);
+    }
     public List<FixtureBlock> Fixtures { get; set; } = new();
     public CameraSetup Camera { get; set; } = new();
     public double MaterialWidth { get; set; } = 600;

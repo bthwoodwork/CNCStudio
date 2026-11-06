@@ -71,10 +71,73 @@ public static class MotionPlanner
         double startHeight = Math.Max(m.TravelHeightMm, fixtures.Count == 0 ? 0 : fixtures.Max(f => f.SafeZ));
 
         var moves = new List<MotionMove>();
+        // Pockets and inside contours never free the part, so they go before outside contours.
         var order = analyzed
-            .OrderBy(x => x.Result.Operation.Kind == CamOperationKind.Inside ? 0 : 1)
+            .OrderBy(x => x.Result.Operation.Kind == CamOperationKind.Outside ? 1 : 0)
             .ThenBy(x => x.Index).ToList();
         CamPoint? at = null; double z = startHeight;
+
+        // Travel to a start point at a height that clears every fixture on the way, then rapid
+        // down to just above the surface.
+        void TravelTo(CamPoint start)
+        {
+            if (at is null)
+            {
+                moves.Add(new MotionMove(MoveKind.Rapid, start.X, start.Y, startHeight, start.X, start.Y, startHeight,
+                    $"Programstart: lyft till Z {F(startHeight)} före första XY-förflyttning"));
+                z = startHeight;
+            }
+            else
+            {
+                var (travelZ, over) = TravelHeight(at, start, toolRadius, m.TravelHeightMm, fixtures);
+                if (z < travelZ - 1e-9)
+                {
+                    moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, at.X, at.Y, travelZ,
+                        over is null ? "Lyft till förflyttningshöjd" : $"Lyft över fastspänningen '{over}'",
+                        FixtureName: over));
+                    z = travelZ;
+                }
+                moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, start.X, start.Y, z,
+                    over is null ? "Förflyttning" : $"Förflyttning över fastspänningen '{over}'", FixtureName: over));
+            }
+            moves.Add(new MotionMove(MoveKind.Rapid, start.X, start.Y, z, start.X, start.Y, m.PlungeClearanceMm,
+                "Snabbt ned till höjd före nedmatning"));
+            z = m.PlungeClearanceMm;
+        }
+
+        // Plunge at the start of a closed loop and cut the whole loop at cutZ. With ramping the tool
+        // descends along the path itself (only through material not yet cut: from clearedZ), cuts the
+        // rest of the loop at depth and then the ramp section again at full depth.
+        void PlungeAndCutLoop(IReadOnlyList<CamPoint> path, int opIndex, int pi, double length,
+            double cutZ, double clearedZ, CamOperation op, string purpose, double depth)
+        {
+            var s = path[0];
+            if (op.Plunge == PlungeMode.Ramp && length > 1e-6)
+            {
+                double fromZ = Math.Min(z, clearedZ);
+                if (z > fromZ + 1e-9)
+                {
+                    moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, fromZ,
+                        fromZ >= -1e-9 ? "Ned till materialytan" : "Ned till föregående djup", opIndex));
+                    z = fromZ;
+                }
+                double drop = fromZ - cutZ;
+                if (drop > 1e-9)
+                {
+                    double rampLength = Math.Min(length, drop / Math.Tan(op.RampAngleDeg * Math.PI / 180));
+                    var e = PathMath.PointAt(path, rampLength);
+                    moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, fromZ, e.X, e.Y, cutZ,
+                        $"Rampad nedmatning till {F(depth)} mm", opIndex, pi, 0, rampLength));
+                    z = cutZ;
+                    AddCut(moves, path, opIndex, pi, rampLength, length, cutZ, purpose);
+                    AddCut(moves, path, opIndex, pi, 0, rampLength, cutZ, "Efter rampen");
+                    return;
+                }
+            }
+            moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, cutZ, $"Nedmatning till {F(depth)} mm", opIndex));
+            z = cutZ;
+            AddCut(moves, path, opIndex, pi, 0, length, cutZ, purpose);
+        }
 
         foreach (var (result, opIndex) in order)
         {
@@ -82,6 +145,11 @@ public static class MotionPlanner
             var op = result.Operation;
             var paths = preview.Centerlines.Count > 0 ? preview.Centerlines :
                 new IReadOnlyList<CamPoint>[] { preview.Centerline };
+            if (preview.IsPocket)
+            {
+                PlanPocket(preview, paths, opIndex, op);
+                continue;
+            }
             var pathOrder = Enumerable.Range(0, paths.Count).OrderBy(i => BoxArea(paths[i])).ToList();
             foreach (int pi in pathOrder)
             {
@@ -89,39 +157,25 @@ public static class MotionPlanner
                 if (path.Count < 2) continue;
                 var start = path[0];
                 double length = PathMath.Length(path);
-
-                // 1. Travel to the path start at a height that clears every fixture on the way.
-                if (at is null)
-                {
-                    moves.Add(new MotionMove(MoveKind.Rapid, start.X, start.Y, startHeight, start.X, start.Y, startHeight,
-                        $"Programstart: lyft till Z {F(startHeight)} före första XY-förflyttning"));
-                    z = startHeight;
-                }
-                else
-                {
-                    var (travelZ, over) = TravelHeight(at, start, toolRadius, m.TravelHeightMm, fixtures);
-                    if (z < travelZ - 1e-9)
-                    {
-                        moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, at.X, at.Y, travelZ,
-                            over is null ? "Lyft till förflyttningshöjd" : $"Lyft över fastspänningen '{over}'",
-                            FixtureName: over));
-                        z = travelZ;
-                    }
-                    moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, start.X, start.Y, z,
-                        over is null ? "Förflyttning" : $"Förflyttning över fastspänningen '{over}'", FixtureName: over));
-                }
-                // 2. Rapid down to just above the surface, then feed into the material.
-                moves.Add(new MotionMove(MoveKind.Rapid, start.X, start.Y, z, start.X, start.Y, m.PlungeClearanceMm,
-                    "Snabbt ned till höjd före nedmatning"));
-                z = m.PlungeClearanceMm;
+                TravelTo(start);
 
                 var tabs = result.TabSpans.Where(t => t.PathIndex == pi).OrderBy(t => t.Start).ToList();
+                double cleared = 0;
                 foreach (var depth in preview.PassDepths)
                 {
                     double cutZ = -depth;
+                    // Over tabs the tool lifts and drops along the path; ramping there could run into a
+                    // tab, so passes that reach the tabs use a straight plunge.
+                    if (!tabs.Any(t => cutZ < -t.TopDepth - 1e-9))
+                    {
+                        PlungeAndCutLoop(path, opIndex, pi, length, cutZ, cleared, op, "Skär längs konturen", depth);
+                        cleared = cutZ;
+                        continue;
+                    }
                     moves.Add(new MotionMove(MoveKind.Feed, start.X, start.Y, z, start.X, start.Y, cutZ,
                         $"Nedmatning till {F(depth)} mm", opIndex));
                     z = cutZ;
+                    cleared = cutZ;
                     double s = 0;
                     foreach (var tab in tabs)
                     {
@@ -142,6 +196,66 @@ public static class MotionPlanner
                 z = m.TravelHeightMm; at = start;
             }
         }
+
+        // Pocket: level by level (the whole area at one depth before going deeper), loops inside out.
+        // Between loops the tool feeds across at depth only if the straight link stays inside the
+        // pocket's centre region; otherwise it lifts above the surface and plunges again.
+        void PlanPocket(ContourPreview preview, IReadOnlyList<IReadOnlyList<CamPoint>> loops, int opIndex, CamOperation op)
+        {
+            var first = loops[0][0];
+            TravelTo(first);
+            var pos = first;
+            double cleared = 0; // the whole pocket is cleared down to this Z after each level
+            foreach (var depth in preview.PassDepths)
+            {
+                double cutZ = -depth;
+                for (int k = 0; k < loops.Count; k++)
+                {
+                    var loop = loops[k];
+                    if (loop.Count < 2) continue;
+                    var start = loop[0];
+                    bool needPlunge;
+                    if (k == 0 && z < m.PlungeClearanceMm - 1e-9)
+                    {
+                        // Next depth level: back to the innermost loop above the surface.
+                        moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.PlungeClearanceMm,
+                            "Lyft inför nästa djup"));
+                        moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, m.PlungeClearanceMm, start.X, start.Y,
+                            m.PlungeClearanceMm, "Till fickans mitt"));
+                        z = m.PlungeClearanceMm;
+                        needPlunge = true;
+                    }
+                    else if (k == 0) needPlunge = true;
+                    else if (PocketToolpaths.SegmentInside(pos, start, preview.PocketCenterRegion))
+                    {
+                        moves.Add(new MotionMove(MoveKind.Feed, pos.X, pos.Y, cutZ, start.X, start.Y, cutZ,
+                            "Länk inom fickan", opIndex));
+                        needPlunge = false;
+                    }
+                    else
+                    {
+                        moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.PlungeClearanceMm,
+                            "Lyft – länken skulle korsa fickans kant eller en ö"));
+                        moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, m.PlungeClearanceMm, start.X, start.Y,
+                            m.PlungeClearanceMm, "Till nästa varv"));
+                        z = m.PlungeClearanceMm;
+                        needPlunge = true;
+                    }
+                    if (needPlunge)
+                        PlungeAndCutLoop(loop, opIndex, k, PathMath.Length(loop), cutZ, cleared, op, "Fickfräsning", depth);
+                    else
+                    {
+                        z = cutZ;
+                        AddCut(moves, loop, opIndex, k, 0, PathMath.Length(loop), cutZ, "Fickfräsning");
+                    }
+                    pos = start; // loops are closed
+                }
+                cleared = cutZ;
+            }
+            moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.TravelHeightMm, "Lyft ur fickan"));
+            z = m.TravelHeightMm; at = pos;
+        }
+
         if (at is not null && z < startHeight - 1e-9)
             moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, at.X, at.Y, startHeight,
                 $"Programslut: lyft till Z {F(startHeight)}"));

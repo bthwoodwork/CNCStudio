@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.6)
+# CNC Studio – källkod (senaste: 0.7.1)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -163,3 +163,24 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Maxhastigheterna `$110`–`$112` läses in från maskinen och ger en varning om matningen är högre.
 
 **Tester:** 199 tester. Programmet är inte kört på en riktig maskin än – kontrollera filen i gSender och kör gärna i luften första gången.
+
+## 0.7 – Fickfräsning
+
+- **Fickfräsning** för rektanglar, ellipser och DXF/SVG/Boolean-former, även med hål och öar. Offset-banor beräknas med Clipper2 (Boost-licens).
+- Fickan fräses inifrån och ut, och sista varvet följer väggen (finfräsning). Den fräses ett djup i taget.
+- Mellan varven matar fräsen över på djupet om den raka länken ligger helt inom fickan; annars lyfts den. Länkarna skrivs som `G1 X Y` i G-coden.
+- **Stegning** i % av fräsdiametern (standard 40 %).
+- **Kontroll av kvarvarande material:** varning om material blir kvar mellan varven, information om rundade inre hörn (fräsens radie).
+- Fickor och invändiga konturer fräses före utvändiga konturer.
+- Varje varv förenklas (avvikelse 0,005 mm), så att stora fickor beräknas snabbt (en ellipsficka gick från 47 s till 0,4 s).
+
+## 0.7.1 – Fräsar, nollpunkt, körtid och rampning
+
+- **Verktygsbibliotek** (CAM-panelen → Fräsar…) med typ, diameter, vinkel, antal skär och standardvärden. Det gäller alla projekt och sparas i `%APPDATA%\CNCStudio\tools.json`. Fräsens namn skrivs i G-codens filhuvud. En V-fräs för kontur eller ficka ger ett kritiskt fel, och en kulfräs ger information om rundad botten.
+- **Nollpunkt X0 Y0:** främre vänstra hörnet eller materialets mitt. En röd markering visar nollpunkten i båda vyerna, och G-code, filhuvud och exportdialog följer valet.
+- **Uppskattad körtid** i CAM-kontrollen och exportdialogen. Den räknas från matningar och `$110`–`$112`; acceleration ingår inte.
+- **Rampad nedmatning** längs banan (standard 3°), bara genom material som inte redan är fräst. Hela varvet fräses ändå på fullt djup. Pass som når hållflikarna använder rak nedmatning.
+- **Fräsriktning:** medfräsning eller motfräsning (för medurs spindel, M3), med rätt riktning för utvändiga och invändiga konturer, fickor och öar.
+- **Markörens koordinater** i arbetskoordinater visas i statusraden.
+
+**Tester:** 247 tester.
