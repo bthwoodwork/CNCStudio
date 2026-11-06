@@ -57,6 +57,9 @@ public static class CamGeometryChecks
         foreach (var (other, label) in otherParts)
         {
             if (other.Id == shape.Id) continue;
+            // A pocket or inside contour placed within another part is a feature OF that part
+            // (e.g. a recess in a board that is cut out afterwards) – cutting into it is intended.
+            if (op.Kind is CamOperationKind.Pocket or CamOperationKind.Inside && LiesWithin(shape, other)) continue;
             // Quick reject: the tool band cannot reach the other part's bounding box.
             if (other.X > pMaxX + r || other.Y > pMaxY + r ||
                 other.X + other.Width < pMinX - r || other.Y + other.Height < pMinY - r) continue;
@@ -87,6 +90,18 @@ public static class CamGeometryChecks
             }
         }
         return list;
+    }
+
+    /// <summary>True if <paramref name="inner"/> lies inside <paramref name="outer"/>'s filled region (not in a hole).</summary>
+    public static bool LiesWithin(DesignShape inner, DesignShape outer)
+    {
+        if (inner.X < outer.X - 1e-6 || inner.Y < outer.Y - 1e-6 ||
+            inner.X + inner.Width > outer.X + outer.Width + 1e-6 || inner.Y + inner.Height > outer.Y + outer.Height + 1e-6)
+            return false;
+        var polygons = Outline(outer);
+        var innerOutline = Outline(inner);
+        // Every vertex of the inner shape's outline must be inside the outer region.
+        return innerOutline.SelectMany(p => p).All(v => Inside(v, polygons));
     }
 
     /// <summary>True if the segment's tool band (radius r) overlaps the filled even-odd region.</summary>

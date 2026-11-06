@@ -2,6 +2,7 @@
   <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>CNCStudio.Desktop</AssemblyName></PropertyGroup>
   <ItemGroup><ProjectReference Include="..\CNCStudio.Core\CNCStudio.Core.csproj" /></ItemGroup>
   <ItemGroup>
+    <PackageReference Include="HelixToolkit.Wpf" Version="3.1.2" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 </Project>

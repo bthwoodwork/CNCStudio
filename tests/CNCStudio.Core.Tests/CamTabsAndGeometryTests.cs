@@ -165,6 +165,36 @@ public class CamGeometryChecksTests
     }
 
     [Fact]
+    public void Pocket_inside_a_part_is_not_reported_as_cutting_into_it()
+    {
+        // The case from the user's screenshot: a board cut out around an elliptical pocket.
+        var doc = new CncDocument();
+        var board = new DesignShape { Kind = ShapeKind.Rectangle, X = 30, Y = 30, Width = 240, Height = 140 };
+        var recess = new DesignShape { Kind = ShapeKind.Ellipse, X = 80, Y = 60, Width = 140, Height = 80 };
+        doc.Shapes.Add(board); doc.Shapes.Add(recess);
+        doc.CamOperations.Add(new CamOperation { ShapeId = board.Id, Kind = CamOperationKind.Outside });
+        doc.CamOperations.Add(new CamOperation { ShapeId = recess.Id, Kind = CamOperationKind.Pocket, UseTabs = false, ToolDiameter = 6 });
+        var report = new CamPlanner(ContourToolpaths.Generate).Review(doc);
+        Assert.DoesNotContain(report.AllFindings, f => f.Code == "CutsOtherPart");
+    }
+
+    [Fact]
+    public void Inside_contour_in_a_part_is_fine_but_overlapping_parts_still_warn()
+    {
+        var doc = new CncDocument();
+        var board = new DesignShape { Kind = ShapeKind.Rectangle, X = 30, Y = 30, Width = 200, Height = 100 };
+        var hole = new DesignShape { Kind = ShapeKind.Rectangle, X = 60, Y = 50, Width = 40, Height = 40 };
+        var neighbour = new DesignShape { Kind = ShapeKind.Rectangle, X = 231, Y = 30, Width = 50, Height = 50 };
+        doc.Shapes.Add(board); doc.Shapes.Add(hole); doc.Shapes.Add(neighbour);
+        doc.CamOperations.Add(new CamOperation { ShapeId = board.Id, Kind = CamOperationKind.Outside });
+        doc.CamOperations.Add(new CamOperation { ShapeId = hole.Id, Kind = CamOperationKind.Inside });
+        doc.CamOperations.Add(new CamOperation { ShapeId = neighbour.Id, Kind = CamOperationKind.Outside });
+        var findings = new CamPlanner(ContourToolpaths.Generate).Review(doc).AllFindings.Where(f => f.Code == "CutsOtherPart").ToList();
+        Assert.DoesNotContain(findings, f => f.ShapeId == hole.Id);  // the hole is part of the board
+        Assert.NotEmpty(findings);                                    // board and neighbour are 1 mm apart
+    }
+
+    [Fact]
     public void Shapes_without_cam_are_not_treated_as_parts() =>
         Assert.DoesNotContain(TwoParts(1, secondHasCam: false).AllFindings, f => f.Code == "CutsOtherPart");
 

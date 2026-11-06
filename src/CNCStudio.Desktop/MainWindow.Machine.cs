@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,9 +10,9 @@ namespace CNCStudio.Desktop;
 
 public partial class MainWindow
 {
-    private static readonly Brush StockFill = new SolidColorBrush(Color.FromRgb(222, 194, 149));
-    private static readonly Brush MachineGridStroke = new SolidColorBrush(Color.FromArgb(70, 88, 116, 139));
-    private static readonly Brush FixtureOutline = new SolidColorBrush(Color.FromRgb(126, 56, 25));
+    private static readonly Brush StockFill = CanvasTheme.MachineStock;
+    private static readonly Brush MachineGridStroke = CanvasTheme.MachineGrid;
+    private static readonly Brush FixtureOutline = CanvasTheme.FixtureEdge;
     private readonly Canvas _machineGridLayer = new() { IsHitTestVisible = false };
     private (double W, double H, double Zoom, double Step)? _machineGridCache;
 
@@ -23,6 +23,7 @@ public partial class MainWindow
         MachineCanvas.Visibility = machine ? Visibility.Visible : Visibility.Collapsed;
         TopRuler.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
         LeftRuler.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
+        RulerCorner.Visibility = LeftRuler.Visibility;
         SetFixtureDrawing(false);
         Render();
         Dispatcher.BeginInvoke(new Action(FitToMaterial), System.Windows.Threading.DispatcherPriority.Loaded);
@@ -48,25 +49,24 @@ public partial class MainWindow
         _machineGridLayer.Children.Clear();
         _machineGridLayer.Width = w;
         _machineGridLayer.Height = h;
-        for (double x = 0; x <= w && x / gridStep < 3000; x += gridStep)
-        {
-            var line = new Line { X1 = x, Y1 = 0, X2 = x, Y2 = h,
-                Stroke = MachineGridStroke, StrokeThickness = 0.7 / _zoom,
-                IsHitTestVisible = false };
-            _machineGridLayer.Children.Add(line);
-        }
-        for (double y = 0; y <= h && y / gridStep < 3000; y += gridStep)
-        {
-            var line = new Line { X1 = 0, Y1 = y, X2 = w, Y2 = y,
-                Stroke = MachineGridStroke, StrokeThickness = 0.7 / _zoom,
-                IsHitTestVisible = false };
-            _machineGridLayer.Children.Add(line);
-        }
+        // A machine table is large: 10 mm minor lines, stronger every 50 and 100 mm.
+        double step = Math.Max(gridStep, 10);
+        var c = CanvasTheme.GridColor;
+        Brush GridBrush(double v) => new SolidColorBrush(Color.FromArgb(
+            AtMultiple(v, 100) ? (byte)75 : AtMultiple(v, 50) ? (byte)45 : (byte)18, c.R, c.G, c.B));
+        for (double x = 0; x <= w && x / step < 3000; x += step)
+            _machineGridLayer.Children.Add(new Line { X1 = x, Y1 = 0, X2 = x, Y2 = h,
+                Stroke = GridBrush(x), StrokeThickness = 0.8 / _zoom, IsHitTestVisible = false });
+        for (double y = 0; y <= h && y / step < 3000; y += step)
+            _machineGridLayer.Children.Add(new Line { X1 = 0, Y1 = y, X2 = w, Y2 = y,
+                Stroke = GridBrush(y), StrokeThickness = 0.8 / _zoom, IsHitTestVisible = false });
+        _machineGridLayer.Children.Add(new Rectangle { Width = w, Height = h, Stroke = CanvasTheme.MachineBedEdge,
+            StrokeThickness = 1.2 / _zoom, IsHitTestVisible = false });
         }
         MachineCanvas.Children.Add(_machineGridLayer);
 
         var stock = new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
-            Fill = StockFill, Stroke = Brushes.SaddleBrown, StrokeThickness = 2 / _zoom,
+            Fill = StockFill, Stroke = CanvasTheme.StockEdge, StrokeThickness = 1.2 / _zoom,
             Cursor = Cursors.SizeAll, Tag = "stock", ToolTip = "Dra materialet eller ange X/Y i egenskaper" };
         Canvas.SetLeft(stock, _document.Stock.X); Canvas.SetTop(stock, _document.Stock.Y);
         MachineCanvas.Children.Add(stock);
@@ -74,8 +74,8 @@ public partial class MainWindow
         foreach (var sh in _document.Shapes)
         {
             var shape = new System.Windows.Shapes.Path { Data = ShapeGeometry(sh),
-                Stroke = Brushes.SteelBlue, StrokeThickness = 1.5 / _zoom,
-                Fill = new SolidColorBrush(Color.FromArgb(35, 50, 138, 201)),
+                Stroke = CanvasTheme.ShapeStroke, StrokeThickness = 1.1 / _zoom,
+                Fill = CanvasTheme.ShapeFill,
                 IsHitTestVisible = false };
             shape.RenderTransform = new TranslateTransform(_document.Stock.X, _document.Stock.Y);
             MachineCanvas.Children.Add(shape);
@@ -90,9 +90,9 @@ public partial class MainWindow
         foreach (var f in _document.Fixtures)
         {
             var block = new Rectangle { Width = f.Width, Height = f.Length,
-                Fill = _fixtureBrush,
-                Stroke = _selectedFixture?.Id == f.Id ? Brushes.Yellow : FixtureOutline,
-                StrokeThickness = (_selectedFixture?.Id == f.Id ? 3 : 1.5) / _zoom,
+                Fill = CanvasTheme.Fixture,
+                Stroke = _selectedFixture?.Id == f.Id ? CanvasTheme.FixtureSelected : FixtureOutline,
+                StrokeThickness = (_selectedFixture?.Id == f.Id ? 2 : 1.1) / _zoom,
                 Tag = f, Cursor = f.Locked ? Cursors.Arrow : Cursors.SizeAll,
                 ToolTip = $"{f.Name}: {f.HeightAboveStockMm:0.##} mm över material, marginal {f.ClearanceMm:0.##} mm" };
             Canvas.SetLeft(block, f.X); Canvas.SetTop(block, f.Y);
@@ -110,13 +110,13 @@ public partial class MainWindow
         bool right = m.HomeCorner is HomeCorner.BackRight or HomeCorner.FrontRight;
         bool front = m.HomeCorner is HomeCorner.FrontLeft or HomeCorner.FrontRight;
         double size = 14 / _zoom;
-        var dot = new Ellipse { Width = size, Height = size, Fill = Brushes.MediumSeaGreen,
-            Stroke = Brushes.White, StrokeThickness = 1.5 / _zoom, IsHitTestVisible = false };
+        var dot = new Ellipse { Width = size, Height = size, Fill = CanvasTheme.AxisY,
+            Stroke = CanvasTheme.GripFill, StrokeThickness = 1.5 / _zoom, IsHitTestVisible = false };
         double cx = right ? m.WorkWidthMm : 0, cy = front ? m.WorkLengthMm : 0;
         Canvas.SetLeft(dot, cx - size / 2); Canvas.SetTop(dot, cy - size / 2);
         MachineCanvas.Children.Add(dot);
         var label = new TextBlock { Text = "HEM", FontSize = 11 / _zoom, FontWeight = FontWeights.Bold,
-            Foreground = Brushes.MediumSeaGreen, IsHitTestVisible = false };
+            Foreground = CanvasTheme.AxisY, IsHitTestVisible = false };
         label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         Canvas.SetLeft(label, right ? cx - label.DesiredSize.Width - size : cx + size);
         Canvas.SetTop(label, front ? cy - label.DesiredSize.Height - size / 2 : cy + size / 2);
@@ -197,8 +197,8 @@ public partial class MainWindow
         }
         else
         {
-            text.Foreground = Brushes.DarkRed;
-            text.Background = new SolidColorBrush(Color.FromArgb(215, 255, 248, 236));
+            text.Foreground = CanvasTheme.FixtureEdge;
+            text.Background = new SolidColorBrush(Color.FromArgb(225, 0x10, 0x1B, 0x27));
             Canvas.SetLeft(text, f.X);
             // Above the block; below it if the block sits at the top edge of the table.
             double top = f.Y - size.Height - pad;
@@ -322,7 +322,7 @@ public partial class MainWindow
             RenderMachine();
             var r = new Rect(start, point);
             var outline = new Rectangle { Width = r.Width, Height = r.Height,
-                Stroke = Brushes.DarkRed, StrokeThickness = 2 / _zoom,
+                Stroke = CanvasTheme.FixtureEdge, StrokeThickness = 1.2 / _zoom,
                 StrokeDashArray = new DoubleCollection { 4, 3 },
                 IsHitTestVisible = false };
             Canvas.SetLeft(outline, r.Left); Canvas.SetTop(outline, r.Top);

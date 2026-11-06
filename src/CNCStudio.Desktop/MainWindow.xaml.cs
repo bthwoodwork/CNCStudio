@@ -201,6 +201,27 @@ public partial class MainWindow : Window
         FitToMaterial(); InitGrblUi();
         RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);
+        OpenFromCommandLine();
+    }
+
+    /// <summary>
+    /// "CNCStudio.Desktop.exe projekt.cncstudio.json [--3d]": opens the project (e.g. when a project file
+    /// is double-clicked) and optionally starts in the 3D view.
+    /// </summary>
+    private void OpenFromCommandLine()
+    {
+        var args = Environment.GetCommandLineArgs().Skip(1).ToList();
+        var file = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal) && File.Exists(a));
+        if (file is not null)
+        {
+            try
+            {
+                _document = DocumentStorage.Load(file); _path = file; _camPlanner.Clear(); View3DPanel.ResetView();
+                SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + file;
+            }
+            catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); }
+        }
+        if (args.Contains("--3d")) Set3D(true);
     }
     private static double Clamp(double n, double lo, double hi) => Math.Max(lo, Math.Min(hi, n));
     private void UpdateZoomLabel()
@@ -228,10 +249,11 @@ public partial class MainWindow : Window
         double areaWidth = _machineView ? _document.Machine.WorkWidthMm : _document.MaterialWidth;
         double areaHeight = _machineView ? _document.Machine.WorkLengthMm : _document.MaterialHeight;
         _zoom = Clamp(Math.Min((Viewport.ActualWidth - 60) / areaWidth,
-            (Viewport.ActualHeight - 60) / areaHeight), .1, 8);
+            (Viewport.ActualHeight - 110) / areaHeight), .1, 8);
         DesignScale.ScaleX = DesignScale.ScaleY = _zoom;
         DesignOffset.X = (Viewport.ActualWidth - areaWidth * _zoom) / 2;
-        DesignOffset.Y = (Viewport.ActualHeight - areaHeight * _zoom) / 2;
+        // Extra room at the bottom: the work-zero marker sits there and the hint bar overlays it.
+        DesignOffset.Y = (Viewport.ActualHeight - 30 - areaHeight * _zoom) / 2;
         MachineScale.ScaleX = MachineScale.ScaleY = _zoom;
         MachineOffset.X = DesignOffset.X; MachineOffset.Y = DesignOffset.Y;
         UpdateZoomLabel();
@@ -438,6 +460,7 @@ public partial class MainWindow : Window
         if (e.Key == Key.F1) { SetWorkspace(Workspace.Design); e.Handled = true; return; }
         if (e.Key == Key.F2) { SetWorkspace(Workspace.Cam); e.Handled = true; return; }
         if (e.Key == Key.F3) { SetWorkspace(Workspace.Machine); e.Handled = true; return; }
+        if (e.Key == Key.F4) { Set3D(!_show3D); e.Handled = true; return; }
         if (Keyboard.FocusedElement is TextBox) return;
         if (_fixtureDrawing && e.Key == Key.Escape)
         { SetFixtureDrawing(false); _machineDragStart = null;
@@ -636,8 +659,23 @@ public partial class MainWindow : Window
     private void RefreshViewportDecorations()
     {
         if (_machineView) RenderMachine();
-        else { RefreshAdaptiveGrid(); RefreshRulers(); }
+        else
+        {
+            RefreshAdaptiveGrid(); RefreshRulers();
+            // Line widths are in screen pixels (n / _zoom): redraw once zooming settles.
+            if (Math.Abs(_renderedZoom - _zoom) > 1e-9)
+            {
+                _zoomRedraw ??= new System.Windows.Threading.DispatcherTimer(
+                    TimeSpan.FromMilliseconds(80), System.Windows.Threading.DispatcherPriority.Background,
+                    (_, _) => { _zoomRedraw!.Stop(); if (!_moving && !_resizing && !_drawing) Render(); },
+                    Dispatcher);
+                _zoomRedraw.Stop(); _zoomRedraw.Start();
+            }
+        }
     }
+
+    private double _renderedZoom = double.NaN;
+    private System.Windows.Threading.DispatcherTimer? _zoomRedraw;
 
     private static double GridStep(double zoom) => zoom >= 1.5 ? 1 :
         zoom >= 0.75 ? 5 : zoom >= 0.3 ? 10 : 50;
@@ -669,12 +707,13 @@ public partial class MainWindow : Window
         {
             bool major50 = AtMultiple(v, 50);
             bool major10 = AtMultiple(v, 10);
-            byte alpha = major50 ? (byte)145 : major10 ? (byte)105 : (byte)53;
-            double stroke = (major50 ? 1.0 : major10 ? 0.75 : 0.48) / _zoom;
+            byte alpha = major50 ? (byte)70 : major10 ? (byte)42 : (byte)18;
+            double stroke = (major50 ? 1.0 : major10 ? 0.8 : 0.6) / _zoom;
             var line = vertical
                 ? new Line { X1 = v, X2 = v, Y1 = 0, Y2 = _document.MaterialHeight }
                 : new Line { X1 = 0, X2 = _document.MaterialWidth, Y1 = v, Y2 = v };
-            line.Stroke = new SolidColorBrush(Color.FromArgb(alpha, 126, 108, 84));
+            var c = CanvasTheme.GridColor;
+            line.Stroke = new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B));
             line.StrokeThickness = stroke;
             line.IsHitTestVisible = false;
             _gridLayer.Children.Add(line);
@@ -750,15 +789,19 @@ public partial class MainWindow : Window
         // Toolpaths are not recalculated while a shape is being moved, resized or drawn;
         // the review runs again (from cache where possible) when the gesture ends.
         bool geometryGesture = _moving || _resizing || _drawing;
-        if (!geometryGesture) RefreshCamReport();
+        if (!geometryGesture) { RefreshCamReport(); Update3D(); }
         // Never redraw the hidden machine view during CAD pointer movement.
         if (_machineView && MachineCanvas is not null) RenderMachine(refreshCam: false);
         UpdateToolButtonStates();
+        _renderedZoom = _zoom;
         DesignCanvas.Width = _document.MaterialWidth;
         DesignCanvas.Height = _document.MaterialHeight;
         DesignCanvas.Children.Clear();
         DesignCanvas.Children.Add(_gridLayer);
         RefreshAdaptiveGrid();
+        // Crisp material edge (constant 1 px on screen).
+        DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
+            Stroke = CanvasTheme.StockEdge, StrokeThickness = 1 / _zoom, IsHitTestVisible = false });
         foreach (var s in _document.Shapes)
         {
             Shape element;
@@ -769,10 +812,12 @@ public partial class MainWindow : Window
                 element = s.Kind == ShapeKind.Rectangle ? new Rectangle() : new Ellipse();
                 element.Width = s.Width; element.Height = s.Height;
             }
-            element.Stroke = _selection.Contains(s) ? Brushes.DarkOrange : Brushes.SteelBlue;
-            element.StrokeThickness = _selection.Contains(s) ? 3 / _zoom : 2 / _zoom;
+            bool isSelected = _selection.Contains(s);
+            element.Stroke = isSelected ? CanvasTheme.SelectedStroke : CanvasTheme.ShapeStroke;
+            element.StrokeThickness = (isSelected ? 1.8 : 1.2) / _zoom;
+            element.StrokeLineJoin = PenLineJoin.Round;
             element.Fill = s.Kind == ShapeKind.VectorPath && s.Contours.Any(c => !c.Closed)
-                ? Brushes.Transparent : new SolidColorBrush(Color.FromArgb(45, 45, 115, 190));
+                ? Brushes.Transparent : isSelected ? CanvasTheme.SelectedFill : CanvasTheme.ShapeFill;
             element.Tag = s;
             if (s.Kind != ShapeKind.VectorPath)
             { Canvas.SetLeft(element, s.X); Canvas.SetTop(element, s.Y); }
@@ -785,9 +830,9 @@ public partial class MainWindow : Window
                 {
                     Width = s.Width, Height = s.Height,
                     Fill = Brushes.Transparent,
-                    Stroke = new SolidColorBrush(Color.FromArgb(145, 255, 140, 0)),
+                    Stroke = CanvasTheme.SelectionFrame,
                     StrokeThickness = 1 / _zoom,
-                    StrokeDashArray = new DoubleCollection { 3, 3 },
+                    StrokeDashArray = new DoubleCollection { 4, 4 },
                     IsHitTestVisible = false
                 };
                 Canvas.SetLeft(frame, s.X);
@@ -809,15 +854,15 @@ public partial class MainWindow : Window
                     (s.X, s.Y + s.Height, "SW", Cursors.SizeNESW),
                     (s.X, halfY, "W", Cursors.SizeWE)
                 };
-                var gripSize = 8 / _zoom;
+                var gripSize = 7 / _zoom;
                 foreach (var grip in grips)
                 {
                     var handleElement = new Rectangle
                     {
                         Width = gripSize, Height = gripSize,
-                        Fill = Brushes.White,
-                        Stroke = Brushes.DarkOrange,
-                        StrokeThickness = 1 / _zoom,
+                        Fill = CanvasTheme.GripFill,
+                        Stroke = CanvasTheme.SelectedStroke,
+                        StrokeThickness = 1.2 / _zoom,
                         Tag = new ResizeHandle(s, grip.Side),
                         Cursor = grip.Pointer
                     };
@@ -838,12 +883,12 @@ public partial class MainWindow : Window
         {
             var box = WindowRect(_marqueeStart, _marqueeEnd);
             var crossing = _marqueeEnd.X < _marqueeStart.X;
-            var brush = crossing ? Color.FromRgb(42, 125, 215) : Color.FromRgb(46, 151, 91);
+            var brush = crossing ? Color.FromRgb(0x6F, 0xB6, 0xFF) : Color.FromRgb(0x3D, 0xD6, 0xF5);
             var outline = new Rectangle
             {
                 Width = box.Width, Height = box.Height,
-                Fill = new SolidColorBrush(Color.FromArgb(38, brush.R, brush.G, brush.B)),
-                Stroke = new SolidColorBrush(brush), StrokeThickness = 1.5 / _zoom,
+                Fill = new SolidColorBrush(Color.FromArgb(30, brush.R, brush.G, brush.B)),
+                Stroke = new SolidColorBrush(brush), StrokeThickness = 1 / _zoom,
                 StrokeDashArray = crossing ? new DoubleCollection { 5, 3 } : null,
                 IsHitTestVisible = false
             };
@@ -852,7 +897,7 @@ public partial class MainWindow : Window
         }
         if (_polyPoints.Count > 0)
         {
-            var preview = new Polyline { Stroke = Brushes.DarkOrange, StrokeThickness = 2 / _zoom,
+            var preview = new Polyline { Stroke = CanvasTheme.DraftStroke, StrokeThickness = 1.4 / _zoom,
                 StrokeDashArray = new DoubleCollection { 5, 3 }, IsHitTestVisible = false };
             foreach (var pt in _polyPoints) preview.Points.Add(pt);
             preview.Points.Add(_polyHover);
@@ -860,7 +905,7 @@ public partial class MainWindow : Window
             foreach (var pt in _polyPoints)
             {
                 var marker = new Ellipse { Width = 6 / _zoom, Height = 6 / _zoom,
-                    Fill = Brushes.DarkOrange, IsHitTestVisible = false };
+                    Fill = CanvasTheme.DraftStroke, IsHitTestVisible = false };
                 Canvas.SetLeft(marker, pt.X - marker.Width / 2);
                 Canvas.SetTop(marker, pt.Y - marker.Height / 2);
                 DesignCanvas.Children.Add(marker);
@@ -1343,7 +1388,7 @@ public partial class MainWindow : Window
     }
 
     private void New_Click(object sender, RoutedEventArgs e)
-    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = new CncDocument(); _camPlanner.Clear(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
+    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = new CncDocument(); _camPlanner.Clear(); View3DPanel?.ResetView(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
     private void SyncMetadata()
     { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
       RefreshMachineSummary();
@@ -1366,7 +1411,7 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json|JSON|*.json" };
         if (dialog.ShowDialog(this) != true) return;
-        try { var document = DocumentStorage.Load(dialog.FileName); _document = document; _camPlanner.Clear(); _path = dialog.FileName; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
+        try { var document = DocumentStorage.Load(dialog.FileName); _document = document; _camPlanner.Clear(); View3DPanel?.ResetView(); _path = dialog.FileName; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
         catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); }
     }
     private void CamPanel_Click(object sender, RoutedEventArgs e) => SetPanelVisible("Cam", !_camVisible);

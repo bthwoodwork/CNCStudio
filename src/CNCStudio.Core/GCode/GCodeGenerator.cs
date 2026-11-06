@@ -27,7 +27,7 @@ public sealed record GCodeResult(bool Success, IReadOnlyList<string> Lines, IRea
 /// </summary>
 public static class GCodeGenerator
 {
-    public const string Generator = "CNC Studio 0.7.2";
+    public const string Generator = "CNC Studio 0.7.3";
 
     public static IReadOnlyList<string> BlockingReasons(CncDocument doc, CamReport report)
     {

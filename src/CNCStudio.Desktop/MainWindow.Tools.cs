@@ -104,12 +104,29 @@ public partial class MainWindow
         double x = _document.WorkZero == WorkZero.Center ? _document.MaterialWidth / 2 : 0;
         double y = _document.WorkZero == WorkZero.Center ? _document.MaterialHeight / 2 : _document.MaterialHeight;
         x += offsetX; y += offsetY;
-        double len = 18 / _zoom, size = 9 / _zoom;
-        canvas.Children.Add(new Line { X1 = x, Y1 = y, X2 = x + len, Y2 = y, Stroke = Brushes.Red, StrokeThickness = 2 / _zoom, IsHitTestVisible = false });
-        canvas.Children.Add(new Line { X1 = x, Y1 = y, X2 = x, Y2 = y - len, Stroke = Brushes.LimeGreen, StrokeThickness = 2 / _zoom, IsHitTestVisible = false });
-        var dot = new Ellipse { Width = size, Height = size, Fill = Brushes.Red, Stroke = Brushes.White, StrokeThickness = 1 / _zoom, IsHitTestVisible = false,
-            ToolTip = "Nollpunkt X0 Y0 (G54)" };
-        Canvas.SetLeft(dot, x - size / 2); Canvas.SetTop(dot, y - size / 2);
+        double len = 22 / _zoom, head = 4 / _zoom, size = 8 / _zoom, w = 1.4 / _zoom;
+        void Axis(double x2, double y2, double hx, double hy, Brush brush, string name, double lx, double ly)
+        {
+            canvas.Children.Add(new Line { X1 = x, Y1 = y, X2 = x2, Y2 = y2, Stroke = brush, StrokeThickness = w, IsHitTestVisible = false });
+            var arrow = new Polygon { Fill = brush, IsHitTestVisible = false };
+            arrow.Points.Add(new Point(x2 + hx * head * 1.6, y2 + hy * head * 1.6));
+            arrow.Points.Add(new Point(x2 - hy * head, y2 + hx * head));
+            arrow.Points.Add(new Point(x2 + hy * head, y2 - hx * head));
+            canvas.Children.Add(arrow);
+            var label = new TextBlock { Text = name, FontSize = 9.5 / _zoom, FontWeight = FontWeights.SemiBold,
+                Foreground = brush, IsHitTestVisible = false };
+            Canvas.SetLeft(label, lx); Canvas.SetTop(label, ly);
+            canvas.Children.Add(label);
+        }
+        Axis(x + len, y, 1, 0, CanvasTheme.AxisX, "X", x + len + 8 / _zoom, y - 7 / _zoom);
+        Axis(x, y - len, 0, -1, CanvasTheme.AxisY, "Y", x - 3 / _zoom, y - len - 20 / _zoom);
+        var ring = new Ellipse { Width = size, Height = size, Fill = CanvasTheme.GripFill, Stroke = CanvasTheme.ZeroRing,
+            StrokeThickness = 1.4 / _zoom, IsHitTestVisible = false };
+        Canvas.SetLeft(ring, x - size / 2); Canvas.SetTop(ring, y - size / 2);
+        canvas.Children.Add(ring);
+        double core = 3 / _zoom;
+        var dot = new Ellipse { Width = core, Height = core, Fill = CanvasTheme.ZeroRing, IsHitTestVisible = false };
+        Canvas.SetLeft(dot, x - core / 2); Canvas.SetTop(dot, y - core / 2);
         canvas.Children.Add(dot);
     }
 

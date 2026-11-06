@@ -1,0 +1,28 @@
+<UserControl x:Class="CNCStudio.Desktop.View3DPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:h="http://helix-toolkit.org/wpf">
+  <Grid Background="#101B27">
+    <h:HelixViewport3D x:Name="Scene" Background="#101B27" ShowCoordinateSystem="True" ShowViewCube="True"
+                       ZoomExtentsWhenLoaded="False" IsHeadLightEnabled="True" RotateAroundMouseDownPoint="True"
+                       ModelUpDirection="0,0,1">
+      <h:DefaultLights/>
+    </h:HelixViewport3D>
+    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Padding="10,8" CornerRadius="5"
+            Background="#CC1C2A39" BorderBrush="#50657D" BorderThickness="1">
+      <StackPanel>
+        <TextBlock Text="3D-VY" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,0,0,6"/>
+        <CheckBox x:Name="ShowStock" Content="Simulerat material" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
+        <CheckBox x:Name="ShowCuts" Content="Skärande banor" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
+        <CheckBox x:Name="ShowRapids" Content="Snabbförflyttningar" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
+        <CheckBox x:Name="ShowFixtures" Content="Fastspänningar" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
+        <Button Content="Anpassa vy" Margin="0,8,0,0" Padding="8,3" Click="Fit_Click" Background="#34475A" Foreground="White" BorderBrush="#506783"/>
+        <TextBlock x:Name="InfoText" Text="" Foreground="#9FB3C8" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="220"/>
+      </StackPanel>
+    </Border>
+    <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,12" Padding="8,4" CornerRadius="4" Background="#CC1C2A39">
+      <TextBlock Foreground="#9FB3C8" FontSize="11"
+                 Text="Höger musknapp: rotera · Hjul: zoom · Mittenknapp: panorera · Blå = skär, gul = ned/upp, röd = snabbförflyttning"/>
+    </Border>
+  </Grid>
+</UserControl>

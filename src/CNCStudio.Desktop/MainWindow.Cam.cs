@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.7.2";
+    private const string AppTitle = "CNC Studio 0.7.3";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -70,10 +70,7 @@ public partial class MainWindow
             : "Z-höjder sparade. MPos Z vid materialytan är inte angiven – Z-brytaren kan inte kontrolleras.";
     }
 
-    private static readonly Brush RapidBrush = new SolidColorBrush(Color.FromRgb(70, 170, 255));
-    private static readonly Brush RaisedRapidBrush = new SolidColorBrush(Color.FromRgb(214, 70, 214));
-
-    /// <summary>Rapid XY moves as thin dashed lines; moves raised over a fixture in magenta.</summary>
+    /// <summary>Rapid XY moves as short thin dashes; moves raised over a fixture in violet.</summary>
     private void DrawRapids(Canvas canvas, double offsetX, double offsetY)
     {
         foreach (var move in _camReport.Motion.Moves)
@@ -82,29 +79,38 @@ public partial class MainWindow
             bool raised = move.FixtureName is not null;
             canvas.Children.Add(new Line {
                 X1 = move.X0 + offsetX, Y1 = move.Y0 + offsetY, X2 = move.X1 + offsetX, Y2 = move.Y1 + offsetY,
-                Stroke = raised ? RaisedRapidBrush : RapidBrush,
-                StrokeThickness = (raised ? 2.2 : 1.4) / _zoom,
-                StrokeDashArray = new DoubleCollection { 2, 3 },
+                Stroke = raised ? CanvasTheme.RaisedRapid : CanvasTheme.Rapid,
+                StrokeThickness = (raised ? 1.4 : 1.0) / _zoom,
+                StrokeDashArray = new DoubleCollection { 3, 4 },
                 IsHitTestVisible = false });
         }
     }
 
-    /// <summary>Draws toolpaths, conflict marks and failed/stale operations on a canvas.</summary>
+    /// <summary>
+    /// Draws toolpaths as a translucent band of the real tool width with a thin centre line,
+    /// direction arrows, tabs, conflict marks and failed/stale operations.
+    /// </summary>
     private void DrawCamResults(Canvas canvas, double offsetX, double offsetY)
     {
+        // Bands first (all operations) so every centre line, tab and mark stays on top.
+        foreach (var result in _camReport.Operations)
+        {
+            if (result.Preview is not ContourPreview preview) continue;
+            double width = Math.Max(result.Operation.ToolDiameter, 0.5 / _zoom);
+            foreach (var centerline in preview.Centerlines)
+                canvas.Children.Add(PathLine(centerline, offsetX, offsetY, CanvasTheme.ToolBand, width));
+        }
         DrawRapids(canvas, offsetX, offsetY);
         foreach (var result in _camReport.Operations)
         {
             if (result.Preview is ContourPreview preview)
             {
                 foreach (var centerline in preview.Centerlines)
-                {
-                    var line = new Polyline { Stroke = Brushes.LimeGreen, StrokeThickness = 2.4 / _zoom,
-                        IsHitTestVisible = false, StrokeDashArray = new DoubleCollection { 5, 2 } };
-                    foreach (var point in centerline) line.Points.Add(new Point(point.X + offsetX, point.Y + offsetY));
-                    canvas.Children.Add(line);
-                }
-                DrawTabs(canvas, preview, result.TabSpans, offsetX, offsetY);
+                    canvas.Children.Add(PathLine(centerline, offsetX, offsetY, CanvasTheme.ToolPath, 1.1 / _zoom));
+                if (result.Operation.Kind != CamOperationKind.Pocket)
+                    foreach (var centerline in preview.Centerlines)
+                        DrawDirectionArrows(canvas, centerline, offsetX, offsetY);
+                DrawTabs(canvas, preview, result.TabSpans, result.Operation.ToolDiameter, offsetX, offsetY);
                 // Warnings first so critical marks are drawn on top.
                 AddConflictMarks(canvas, preview, result.Findings.Where(f => f.Severity == CamSeverity.Warning), offsetX, offsetY);
                 AddConflictMarks(canvas, preview, result.Findings.Where(f => f.Severity == CamSeverity.Critical), offsetX, offsetY);
@@ -112,53 +118,93 @@ public partial class MainWindow
             else if (result.Shape is DesignShape shape)
             {
                 // No path: never leave the object looking as if it were fine.
-                var brush = result.Stale ? WarningBrush : CriticalBrush;
+                var brush = result.Stale ? CanvasTheme.Warning : CanvasTheme.Critical;
                 var outline = new Rectangle { Width = shape.Width, Height = shape.Height, Stroke = brush,
-                    StrokeThickness = 2.5 / _zoom, StrokeDashArray = new DoubleCollection { 3, 2 },
+                    StrokeThickness = 1.4 / _zoom, StrokeDashArray = new DoubleCollection { 4, 3 },
                     IsHitTestVisible = false };
                 Canvas.SetLeft(outline, shape.X + offsetX); Canvas.SetTop(outline, shape.Y + offsetY);
                 canvas.Children.Add(outline);
-                var label = new TextBlock { Text = result.Stale ? "Körbana inaktuell" : "CAM-fel – ej kontrollerad",
-                    FontSize = 11 / _zoom, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
-                    Background = brush, Padding = new Thickness(3 / _zoom, 1 / _zoom, 3 / _zoom, 1 / _zoom),
-                    IsHitTestVisible = false };
-                Canvas.SetLeft(label, shape.X + offsetX); Canvas.SetTop(label, shape.Y + offsetY);
+                var label = new Border {
+                    Background = new SolidColorBrush(Color.FromArgb(225, 0x10, 0x1B, 0x27)),
+                    BorderBrush = brush, BorderThickness = new Thickness(1 / _zoom),
+                    CornerRadius = new CornerRadius(2 / _zoom),
+                    Padding = new Thickness(4 / _zoom, 1 / _zoom, 4 / _zoom, 1 / _zoom),
+                    IsHitTestVisible = false,
+                    Child = new TextBlock { Text = result.Stale ? "Körbana inaktuell" : "CAM-fel – ej kontrollerad",
+                        FontSize = 10.5 / _zoom, FontWeight = FontWeights.SemiBold, Foreground = brush } };
+                Canvas.SetLeft(label, shape.X + offsetX + 3 / _zoom); Canvas.SetTop(label, shape.Y + offsetY + 3 / _zoom);
                 canvas.Children.Add(label);
             }
         }
     }
 
-    private static readonly Brush TabBrush = new SolidColorBrush(Color.FromRgb(255, 214, 10));
-    private static readonly Brush TabEdgeBrush = new SolidColorBrush(Color.FromRgb(90, 62, 0));
+    private static Polyline PathLine(IReadOnlyList<CamPoint> path, double offsetX, double offsetY, Brush stroke, double thickness)
+    {
+        var line = new Polyline { Stroke = stroke, StrokeThickness = thickness, IsHitTestVisible = false,
+            StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
+        foreach (var point in path) line.Points.Add(new Point(point.X + offsetX, point.Y + offsetY));
+        return line;
+    }
+
+    /// <summary>Small chevrons along the path (about every 90 screen pixels) showing travel direction.</summary>
+    private void DrawDirectionArrows(Canvas canvas, IReadOnlyList<CamPoint> path, double offsetX, double offsetY)
+    {
+        if (path.Count < 2) return;
+        double spacing = 90 / _zoom, size = 5 / _zoom, next = spacing / 2, walked = 0;
+        int drawn = 0;
+        for (int i = 1; i < path.Count && drawn < 40; i++)
+        {
+            var a = path[i - 1]; var b = path[i];
+            double dx = b.X - a.X, dy = b.Y - a.Y, len = Math.Sqrt(dx * dx + dy * dy);
+            if (len < 1e-9) continue;
+            double ux = dx / len, uy = dy / len;
+            while (next <= walked + len && drawn < 40)
+            {
+                double t = (next - walked) / len;
+                double x = a.X + dx * t + offsetX, y = a.Y + dy * t + offsetY;
+                var chevron = new Polyline { Stroke = CanvasTheme.Arrow, StrokeThickness = 1.3 / _zoom,
+                    StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round, IsHitTestVisible = false };
+                chevron.Points.Add(new Point(x - ux * size - uy * size * 0.8, y - uy * size + ux * size * 0.8));
+                chevron.Points.Add(new Point(x, y));
+                chevron.Points.Add(new Point(x - ux * size + uy * size * 0.8, y - uy * size - ux * size * 0.8));
+                canvas.Children.Add(chevron);
+                drawn++;
+                next += spacing;
+            }
+            walked += len;
+        }
+    }
 
     /// <summary>
-    /// Tabs as thick yellow bars with a dark edge, sized in screen pixels so they stay
-    /// visible at any zoom and on top of the selection outline. The tool lifts over these.
+    /// Tabs as short amber bridges across the tool band (with a thin dark outline), at least a
+    /// few pixels wide so they stay visible at any zoom. The tool lifts over these.
     /// </summary>
     private void DrawTabs(Canvas canvas, ContourPreview preview, IReadOnlyList<TabSpan> tabs,
-        double offsetX, double offsetY)
+        double toolDiameter, double offsetX, double offsetY)
     {
         var paths = preview.Centerlines.Count > 0 ? preview.Centerlines :
             new IReadOnlyList<CamPoint>[] { preview.Centerline };
+        double width = Math.Max(toolDiameter, 7 / _zoom);
         foreach (var tab in tabs)
         {
             if (tab.PathIndex >= paths.Count) continue;
             var points = new PointCollection(PathMath.Slice(paths[tab.PathIndex], tab.Start, tab.End)
                 .Select(p => new Point(p.X + offsetX, p.Y + offsetY)));
-            canvas.Children.Add(new Polyline { Points = points, Stroke = TabEdgeBrush,
-                StrokeThickness = 11 / _zoom, StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Square, StrokeEndLineCap = PenLineCap.Square,
+            canvas.Children.Add(new Polyline { Points = points, Stroke = CanvasTheme.TabEdge,
+                StrokeThickness = width + 2 / _zoom, StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Flat, StrokeEndLineCap = PenLineCap.Flat,
                 IsHitTestVisible = false });
-            canvas.Children.Add(new Polyline { Points = points, Stroke = TabBrush,
-                StrokeThickness = 8 / _zoom, StrokeLineJoin = PenLineJoin.Round,
+            canvas.Children.Add(new Polyline { Points = points, Stroke = CanvasTheme.Tab,
+                StrokeThickness = width, StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Flat, StrokeEndLineCap = PenLineCap.Flat,
                 IsHitTestVisible = false });
         }
     }
 
     /// <summary>
-    /// Draws only the affected part (TStart..TEnd) of each segment-level finding.
-    /// offsetX/Y converts stock-local path coordinates to the target canvas.
+    /// Draws only the affected part (TStart..TEnd) of each segment-level finding, as a soft
+    /// glow with a sharp core. offsetX/Y converts stock-local path coordinates to the target canvas.
     /// </summary>
     private void AddConflictMarks(Canvas canvas, ContourPreview preview,
         IEnumerable<CamFinding> findings, double offsetX, double offsetY)
@@ -172,13 +218,17 @@ public partial class MainWindow
             if (f.SegmentIndex + 1 >= path.Count) continue;
             var a = path[f.SegmentIndex]; var b = path[f.SegmentIndex + 1];
             double t0 = Math.Clamp(f.TStart, 0, 1), t1 = Math.Clamp(f.TEnd, 0, 1);
-            canvas.Children.Add(new Line {
-                X1 = a.X + (b.X - a.X) * t0 + offsetX, Y1 = a.Y + (b.Y - a.Y) * t0 + offsetY,
-                X2 = a.X + (b.X - a.X) * t1 + offsetX, Y2 = a.Y + (b.Y - a.Y) * t1 + offsetY,
-                Stroke = f.Severity == CamSeverity.Critical ? CriticalBrush : WarningBrush,
-                StrokeThickness = 3.5 / _zoom,
-                StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
-                IsHitTestVisible = false });
+            bool critical = f.Severity == CamSeverity.Critical;
+            double x1 = a.X + (b.X - a.X) * t0 + offsetX, y1 = a.Y + (b.Y - a.Y) * t0 + offsetY;
+            double x2 = a.X + (b.X - a.X) * t1 + offsetX, y2 = a.Y + (b.Y - a.Y) * t1 + offsetY;
+            var layers = new[] {
+                (critical ? CanvasTheme.CriticalGlow : CanvasTheme.WarningGlow, 7 / _zoom),
+                (critical ? CanvasTheme.Critical : CanvasTheme.Warning, 1.8 / _zoom) };
+            foreach (var (brush, thickness) in layers)
+                canvas.Children.Add(new Line { X1 = x1, Y1 = y1, X2 = x2, Y2 = y2,
+                    Stroke = brush, StrokeThickness = thickness,
+                    StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+                    IsHitTestVisible = false });
         }
     }
 

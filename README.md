@@ -196,3 +196,10 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - `docs/GRBL-verifierat.md`: regler för `$J=`, `0x85`, `G10 L20 P0`, `G53` och `$G`.
 
 **Tester:** 273 tester. Inte testad mot riktig maskin ännu.
+
+## 0.7.3 – 3D-vy och ny 2D-stil
+- 3D-vy (F4 eller knappen 3D): simulerat material som höjdkarta, skärande banor, ned/upp-rörelser, snabbförflyttningar och fastspänningar. Byggs bara om när innehållet ändras.
+- Ny mörk 2D-stil: tunna skarpa linjer, diskret rutnät och tydlig materialkant.
+- Körbanor visas med verklig fräsbredd (genomskinligt band), tunn mittlinje och riktningspilar. Hållflikar som bryggor över bandet, konflikter som röd/orange glöd på just den delen av banan.
+- Linjebredder följer zoomen (ritas om när zoomningen stannar).
+- Rättat: en ficka som ligger inuti en annan del (t.ex. en urtagning i en skiva som sågas ut) varnas inte längre som "skär in i annan del".
