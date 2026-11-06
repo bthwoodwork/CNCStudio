@@ -207,6 +207,34 @@ public partial class MainWindow
         w.Show();
     }
 
+    /// <summary>
+    /// The guided first test has its own connection, so the main connection is closed first:
+    /// only one program may talk to the controller at a time.
+    /// </summary>
+    private void FirstTest_Click(object sender, RoutedEventArgs e)
+    {
+        if (_runner is not null) { Error("Ett program körs. Stoppa det först."); return; }
+        if (_grbl is not null)
+        {
+            if (AppDialog.Show(this, "Första testet använder en egen anslutning. Koppla från maskinstyrningen och öppna testet?",
+                    "Första test", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+            DisconnectGrbl("Frånkopplad – första testet har en egen anslutning.");
+        }
+        var w = new FirstTestWindow(
+            () => SerialGrblTransport.AvailablePorts().Append(DemoPort).ToList(),
+            port => port == DemoPort ? (_demoMachine ??= new SimulatedGrbl()) : new SerialGrblTransport(port),
+            _document.Machine,
+            settings =>
+            {
+                RememberChange();
+                _document.Machine = GrblSettings.ApplyToProfile(_document.Machine, settings);
+                RefreshMachineSummary(); ShowStockFields(); Render();
+                return _document.Machine;
+            }) { Owner = this };
+        w.Closed += (_, _) => StatusText.Text = "Första testet stängt. Logg: " + w.LogPath;
+        w.Show();
+    }
+
     private void OpenConsole_Click(object sender, RoutedEventArgs e)
     {
         if (_console is { IsLoaded: true }) { _console.Activate(); return; }

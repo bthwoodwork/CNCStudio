@@ -230,3 +230,10 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Ett larm (ALARM:N) stoppar nu den väntande raden direkt i stället för att vänta på ett svar som aldrig kommer.
 
 **Tester:** 293 tester. Inte testad mot riktig maskin ännu.
+## 0.8.1 – Första test mot maskinen (steg för steg)
+- Maskin-menyn och maskinstyrningen: **Första test mot maskinen…**. Ett eget fönster med egen anslutning (maskinstyrningen kopplas från först).
+- Steg: förberedelser (checklista) → anslut (kontrollerar GRBL 1.1) → läs $$ med säkerhetskopia och kontroll av $13/$32/$22/$23/$21/$20/$27/$11x/$13x (kan rätta det farligaste efter fråga) → brytartest → axelriktning före homing med minus-knappar och "Vänd axel" ($3) → homing med kontroll av MPos → jogg efter homing → luftkörning (50 × 50 mm-kvadrat i luften, inåt från brytarna, Z nära toppen) med paus/fortsätt/matning → sammanfattning.
+- STOPP och Återställ (Ctrl-X) syns hela tiden. Allt loggas till %APPDATA%\CNCStudio\logs.
+- Övningsläge: välj DEMO som port; brytarna kan tryckas in i brytarsteget.
+
+**Tester:** 303 tester. Inte testad mot riktig maskin ännu.
