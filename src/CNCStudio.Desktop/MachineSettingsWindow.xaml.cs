@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -160,7 +160,7 @@ public partial class MachineSettingsWindow : Window
             (changes.Any(c => c.Row.Number is >= 100 and <= 102) ? "\n\nOBS: steg/mm ($100–$102) ändrar hur långt axlarna faktiskt går. Mät efter kalibreringen." : "") +
             (changes.Any(c => c.Row.Number is 3 or 23) ? "\n\nOBS: riktning ($3) eller homingriktning ($23) ändras. Testa med korta jogg innan homing." : "") +
             "\n\nSkriva till maskinen?";
-        if (MessageBox.Show(this, text, "Skriv till maskinen", MessageBoxButton.OKCancel, MessageBoxImage.Warning,
+        if (AppDialog.Show(this, text, "Skriv till maskinen", MessageBoxButton.OKCancel, MessageBoxImage.Warning,
                 MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         SetGrblBusy(true, "Skriver …");
         try
@@ -287,7 +287,7 @@ public partial class MachineSettingsWindow : Window
     }
 
     private void Show(string message) =>
-        MessageBox.Show(this, message, "Maskininställningar", MessageBoxButton.OK, MessageBoxImage.Warning);
+        AppDialog.Show(this, message, "Maskininställningar", MessageBoxButton.OK, MessageBoxImage.Warning);
 
     private static bool Num(TextBox box, out double value) =>
         double.TryParse(box.Text.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out value)

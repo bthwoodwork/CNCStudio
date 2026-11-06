@@ -19,6 +19,28 @@ public class GCodeGeneratorTests
         return (doc, new CamPlanner(ContourToolpaths.Generate).Review(doc, computeAll: true));
     }
 
+    [Fact]
+    public void Blockers_say_what_is_missing_so_the_ui_can_point_there()
+    {
+        var (doc, report) = Ready(tweak: d => { d.Motion.StockTopMachineZ = null; d.Machine.HomeOnStartup = false; });
+        var blockers = GCodeGenerator.Blockers(doc, report);
+        Assert.Contains(blockers, b => b.Kind == ExportBlockerKind.StockTopUnknown);
+        Assert.Contains(blockers, b => b.Kind == ExportBlockerKind.HomingOff);
+        Assert.Equal(blockers.Select(b => b.Message), GCodeGenerator.BlockingReasons(doc, report));
+
+        var (ok, okReport) = Ready();
+        Assert.Empty(GCodeGenerator.Blockers(ok, okReport));
+    }
+
+    [Fact]
+    public void Critical_finding_blocker_points_at_its_shape_and_code()
+    {
+        var (doc, report) = Ready(tweak: d => d.CamOperations[0].ToolKind = ToolKind.VBit);
+        var b = Assert.Single(GCodeGenerator.Blockers(doc, report), x => x.Kind == ExportBlockerKind.CriticalFinding);
+        Assert.Equal("VBitNotSupported", b.FindingCode);
+        Assert.Equal(doc.Shapes[0].Id, b.ShapeId);
+    }
+
     private static List<string> Code(GCodeResult r) =>
         r.Lines.Where(l => !l.StartsWith("(")).ToList();
 

@@ -203,3 +203,10 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Körbanor visas med verklig fräsbredd (genomskinligt band), tunn mittlinje och riktningspilar. Hållflikar som bryggor över bandet, konflikter som röd/orange glöd på just den delen av banan.
 - Linjebredder följer zoomen (ritas om när zoomningen stannar).
 - Rättat: en ficka som ligger inuti en annan del (t.ex. en urtagning i en skiva som sågas ut) varnas inte längre som "skär in i annan del".
+
+## 0.7.4 – Tydliga dialoger med förslag
+- Alla popupfönster är nya: mörka i appens stil, med färg och ikon efter typ. Enter väljer standardknappen och Esc det säkra alternativet (Avbryt/Nej).
+- När G-code inte kan exporteras visas varje orsak med "Gör så här" och en knapp som tar dig dit: t.ex. MPos Z-fältet (markerat i gult), Maskininställningar, Beräkna körbanor eller objektet i CAM.
+- Felaktiga fältvärden: markören hamnar i fältet som ska rättas.
+
+**Tester:** 284 tester. Inte testad mot riktig maskin ännu.

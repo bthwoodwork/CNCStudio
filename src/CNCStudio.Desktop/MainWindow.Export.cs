@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -29,11 +29,16 @@ public partial class MainWindow
 
         if (!result.Success)
         {
-            var text = "G-code kan inte skapas:\n\n" + string.Join("\n", result.BlockingReasons.Select(r => "• " + r));
-            if (result.VerifierIssues.Count > 0)
-                text += "\n\nKontroll av programmet:\n" + string.Join("\n", result.VerifierIssues.Take(15).Select(i => "• " + i));
-            MessageBox.Show(this, text, "Exportera G-code", MessageBoxButton.OK, MessageBoxImage.Stop);
-            StatusText.Text = "G-code skapades inte – se orsakerna i dialogen.";
+            var issues = GCodeGenerator.Blockers(_document, _camReport).Select(ExportIssue).ToList();
+            foreach (var v in result.VerifierIssues.Take(15))
+                issues.Add(new DialogIssue("Kontroll av programmet: " + v,
+                    "Det här är ett internt fel i CNC Studio – programmet släpps inte ut. Spara projektet och rapportera felet."));
+            AppDialog.ShowIssues(this, "Exportera G-code",
+                issues.Count == 1 ? "G-code kan inte skapas ännu – en sak behöver åtgärdas:"
+                                  : $"G-code kan inte skapas ännu – {issues.Count} saker behöver åtgärdas:",
+                issues, MessageBoxImage.Error,
+                "Exporten stoppas med flit tills allt är kontrollerat, så att maskinen aldrig kör ett okontrollerat program.");
+            StatusText.Text = "G-code skapades inte – åtgärda punkterna i dialogen och exportera igen (Ctrl+E).";
             return;
         }
 
@@ -64,7 +69,7 @@ public partial class MainWindow
             if (result.Warnings.Count > 10) summary.AppendLine($"• … och {result.Warnings.Count - 10} till.");
         }
         summary.AppendLine().Append(result.Warnings.Count > 0 ? "Exportera trots varningarna?" : "Exportera?");
-        if (MessageBox.Show(this, summary.ToString(), "Exportera G-code", MessageBoxButton.OKCancel,
+        if (AppDialog.Show(this, summary.ToString(), "Exportera G-code", MessageBoxButton.OKCancel,
                 result.Warnings.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Question,
                 MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
 
@@ -81,6 +86,86 @@ public partial class MainWindow
             StatusText.Text = $"G-code sparad: {dialog.FileName} ({result.Lines.Count} rader, {result.Warnings.Count} varningar).";
         }
         catch (Exception ex) { Error("Kunde inte spara G-code: " + ex.Message); }
+    }
+
+    /// <summary>A blocking reason with a concrete fix and an action that opens the right place.</summary>
+    private DialogIssue ExportIssue(ExportBlocker b)
+    {
+        void ShowShape()
+        {
+            SetWorkspace(Workspace.Cam);
+            if (b.ShapeId is Guid id && _document.Shapes.FirstOrDefault(s => s.Id == id) is DesignShape shape)
+            { SelectShape(shape, toggle: false); _selected = shape; Render(); }
+        }
+        return b.Kind switch
+        {
+            ExportBlockerKind.StockTopUnknown => new(b.Message,
+                "Homa maskinen ($H), jogga ned fräsen tills den nuddar materialet och nolla Z. Klicka sedan " +
+                "\"Läs från maskinen ($#)\". Utan maskin: skriv in MPos Z vid materialytan (ett negativt tal, t.ex. -45.2) " +
+                "och klicka \"Spara Z-höjder\".",
+                "Gå till fältet", () => FocusField(ZMaxBox, ZExpander, "Fyll i MPos Z vid materialytan och klicka Spara Z-höjder.")),
+            ExportBlockerKind.HomingOff => new(b.Message,
+                "Slå på \"Homa vid start ($H)\" i Maskininställningar. Utan homing vet maskinen inte var Z-brytaren är.",
+                "Öppna maskininställningar", () => MachineSettings_Click(this, new RoutedEventArgs())),
+            ExportBlockerKind.StalePath or ExportBlockerKind.MissingPath => new(b.Message,
+                "Låt CNC Studio räkna om körbanorna. Det kan ta några sekunder för stora former.",
+                "Beräkna körbanor nu", () => { SetWorkspace(Workspace.Cam); PreviewContour_Click(this, new RoutedEventArgs()); }),
+            ExportBlockerKind.NoOperations => new(b.Message,
+                "Markera ett objekt, välj bearbetning (kontur eller ficka) i CAM-panelen och klicka Spara CAM.",
+                "Gå till CAM", () => SetWorkspace(Workspace.Cam)),
+            ExportBlockerKind.NoMotion => new(b.Message,
+                "Kontrollera Z-höjderna under Maskin och att alla körbanor är beräknade.",
+                "Gå till Z-höjder", () => FocusField(TravelHeightBox, ZExpander, null)),
+            _ => CriticalIssue(b, ShowShape)
+        };
+    }
+
+    private DialogIssue CriticalIssue(ExportBlocker b, Action showShape) => b.FindingCode switch
+    {
+        "FixtureCollision" => new(b.Message,
+            "Flytta fastspänningen (dra den på maskinbordet) eller flytta objektet på materialet, så att fräsen inte når den.",
+            "Visa maskinbordet", () => SetWorkspace(Workspace.Machine)),
+        "OutsideMachine" => new(b.Message,
+            "Flytta materialet på maskinbordet så att hela banan ligger inom arbetsområdet, eller flytta objektet på materialet.",
+            "Gå till materialplacering", () => FocusField(StockXBox, null, "Ändra materialets X/Y och klicka Spara materialplacering.")),
+        "ZLimitExceeded" or "RapidInMaterial" or "InvalidMotionSettings" => new(b.Message,
+            "Sänk förflyttningshöjden eller fastspänningarnas höjd, eller kontrollera MPos Z vid materialytan.",
+            "Gå till Z-höjder", () => FocusField(TravelHeightBox, ZExpander, null)),
+        "StockTopOutsideTravel" or "ZBottomExceeded" => new(b.Message,
+            "Kontrollera MPos Z vid materialytan, Z-rörelsen i Maskininställningar och skärdjupet i CAM-panelen.",
+            "Gå till MPos Z", () => FocusField(ZMaxBox, ZExpander, null)),
+        "MissingShape" => new(b.Message,
+            "Ångra borttagningen (Ctrl+Z) eller ta bort operationen.", "Gå till CAM", () => SetWorkspace(Workspace.Cam)),
+        _ => new(b.Message,
+            "Markera objektet och ändra fräs eller CAM-inställningar (djup, matning, fräsdiameter) i CAM-panelen.",
+            "Visa objektet", showShape)
+    };
+
+    /// <summary>
+    /// Switches to the workspace that owns <paramref name="field"/>, opens its section, scrolls it
+    /// into view, focuses and highlights it for a few seconds.
+    /// </summary>
+    private void FocusField(System.Windows.Controls.TextBox field, System.Windows.Controls.Expander? section, string? hint)
+    {
+        SetWorkspace(Workspace.Machine);
+        if (section is not null) section.IsExpanded = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            field.BringIntoView();
+            field.Focus(); Keyboard.Focus(field); field.SelectAll();
+            // Background, not border: the focus style of the TextBox template overrides the border colour.
+            var oldBackground = field.ReadLocalValue(System.Windows.Controls.Control.BackgroundProperty);
+            field.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xE3, 0xA8));
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (oldBackground == DependencyProperty.UnsetValue) field.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
+                else field.Background = (System.Windows.Media.Brush)oldBackground;
+            };
+            timer.Start();
+            if (hint is not null) StatusText.Text = hint;
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private static string SafeFileName(string name)

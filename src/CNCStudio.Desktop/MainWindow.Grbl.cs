@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using CNCStudio.Core.Grbl;
@@ -153,7 +153,7 @@ public partial class MainWindow
             string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
             if (stockTop >= 0)
             { Error($"G54 Z + G92 Z + TLO = {F3(stockTop)}. Det ska vara negativt (under Z-brytaren) – är Z-nollan satt och maskinen homad?"); return; }
-            if (MessageBox.Show(this,
+            if (AppDialog.Show(this,
                     $"MPos Z vid materialytan = {F3(stockTop)} mm\n(G54 Z {F3(g54[2])} + G92 Z {F3(g92)} + verktygslängd {F3(tlo)})\n\n" +
                     "Gäller bara om maskinen är homad med $H och Z-nollan är satt på materialets ovansida.\n\nAnvänd värdet?",
                     "Läs Z-nolla från maskinen", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;

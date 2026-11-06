@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using CNCStudio.Core.Grbl;
@@ -49,7 +49,7 @@ public partial class GrblConsoleWindow : Window
     private GrblClient? Client()
     {
         var g = _main.Grbl;
-        if (g is null) MessageBox.Show(this, "Inte ansluten till GRBL.", "GRBL-konsol", MessageBoxButton.OK, MessageBoxImage.Information);
+        if (g is null) AppDialog.Show(this, "Inte ansluten till GRBL.", "GRBL-konsol", MessageBoxButton.OK, MessageBoxImage.Information);
         return g;
     }
 
@@ -58,7 +58,7 @@ public partial class GrblConsoleWindow : Window
         var g = Client();
         if (g is null) return;
         if (GrblProtocol.CheckCommandLine(line) is string problem)
-        { MessageBox.Show(this, problem, "GRBL-konsol", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        { AppDialog.Show(this, problem, "GRBL-konsol", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         _busy = true; UpdateState();
         try { await g.SendLineAsync(line, timeout: timeout); }
         catch (Exception ex) { OnLog($"{DateTime.Now:HH:mm:ss}  ! {ex.Message}"); }
@@ -94,7 +94,7 @@ public partial class GrblConsoleWindow : Window
     private async void Home_Click(object sender, RoutedEventArgs e)
     {
         if (Client() is null) return;
-        if (MessageBox.Show(this, "Kör homing ($H)?\n\nMaskinen rör sig: först Z uppåt mot brytaren, sedan X och Y mot sina brytare. " +
+        if (AppDialog.Show(this, "Kör homing ($H)?\n\nMaskinen rör sig: först Z uppåt mot brytaren, sedan X och Y mot sina brytare. " +
                 "Kontrollera att inget är i vägen.", "Homing", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
         await SendAsync("$H", HomingTimeout);
     }
@@ -102,7 +102,7 @@ public partial class GrblConsoleWindow : Window
     private async void Unlock_Click(object sender, RoutedEventArgs e)
     {
         if (Client() is null) return;
-        if (MessageBox.Show(this, "Lås upp utan homing ($X)?\n\nGRBL varnar: positionen är troligen förlorad. Maskinkoordinaterna och " +
+        if (AppDialog.Show(this, "Lås upp utan homing ($X)?\n\nGRBL varnar: positionen är troligen förlorad. Maskinkoordinaterna och " +
                 "Z-brytarens läge är då OKÄNDA och CNC Studios Z-kontroller gäller inte. Använd bara i nödfall – kör hellre $H.",
                 "Lås upp utan homing", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         InputBox.Clear();

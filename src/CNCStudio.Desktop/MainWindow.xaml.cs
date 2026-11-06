@@ -452,7 +452,7 @@ public partial class MainWindow : Window
     }
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
     private void About_Click(object sender, RoutedEventArgs e)
-        => MessageBox.Show(this, AppTitle + "\nMaskinvy och materialplacering, fastspänningar, CAM XY-förhandsvisning och automatisk CAM-kontroll.\nIngen GRBL-styrning, kameraanslutning eller körbar G-code finns ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
+        => AppDialog.Show(this, AppTitle + "\n\n2D-CAD, DXF/SVG-import, kontur- och fickfräsning med automatisk CAM-kontroll, 3D-vy, G-code för GRBL 1.1 och maskinstyrning (jogg, nollning, inställningar, konsol).\n\nInte testad mot riktig maskin ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
@@ -610,7 +610,7 @@ public partial class MainWindow : Window
             "Kontrollen gör inte en fullständig CAD-topologianalys.";
         if (nearGap.Count > 0)
         {
-            var response = MessageBox.Show(this, report + "\n\nVill du sluta de små glappen? Ändringen kan ångras med Ctrl+Z.",
+            var response = AppDialog.Show(this, report + "\n\nVill du sluta de små glappen? Ändringen kan ångras med Ctrl+Z.",
                 "Vektorkontroll", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (response == MessageBoxResult.Yes)
             {
@@ -624,12 +624,19 @@ public partial class MainWindow : Window
                 Render(); StatusText.Text = $"Slöt {nearGap.Count} konturer (ångra: Ctrl+Z).";
             }
         }
-        else MessageBox.Show(this, report, "Vektorkontroll", MessageBoxButton.OK,
+        else AppDialog.Show(this, report, "Vektorkontroll", MessageBoxButton.OK,
             invalid.Count > 0 || intersections > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
     }
     private static string F(double n) => n.ToString("0.###", CultureInfo.InvariantCulture);
     private static bool Parse(TextBox box, out double result) => double.TryParse(box.Text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out result) && double.IsFinite(result);
-    private void Error(string message) => MessageBox.Show(this, message, "CNC Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+    /// <summary>Shows a problem; with <paramref name="focus"/> the field is focused and selected afterwards.</summary>
+    private void Error(string message, Control? focus = null)
+    {
+        AppDialog.Show(this, message, "CNC Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+        if (focus is null) return;
+        focus.Focus(); Keyboard.Focus(focus);
+        if (focus is TextBox box) box.SelectAll();
+    }
     // Visually synchronize the tool palette with the actual interaction mode.
     // This is called after automatic return to Select as well as menu/tool clicks.
     private void UpdateToolButtonStates()
@@ -1267,7 +1274,7 @@ public partial class MainWindow : Window
     private void UpdateMaterial_Click(object sender, RoutedEventArgs e)
     {
         if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000)
-        { Error("Ogiltigt materialmått (bredd/höjd 1–5000 mm)."); return; }
+        { Error("Ogiltigt materialmått. Bredd och höjd ska vara 1–5000 mm och tjockleken större än 0.", MaterialWidthBox); return; }
         RememberChange();
         _document.Name = NameBox.Text;
         _document.MaterialWidth = w; _document.MaterialHeight = h; _document.MaterialThickness = t;
@@ -1283,7 +1290,7 @@ public partial class MainWindow : Window
     }
     private bool ParseInlay(TextBox field, string description, out double value)
     {
-        if (!Parse(field, out value)) { Error("Ange giltigt värde för " + description + "."); return false; }
+        if (!Parse(field, out value)) { Error("Ange ett giltigt tal för " + description + ".", field); return false; }
         return true;
     }
     private InlaySettings? ReadInlaySettings()
@@ -1303,7 +1310,7 @@ public partial class MainWindow : Window
             !ParseInlay(InlaySafeZ, "säker Z", out var safeZ) ||
             !ParseInlay(InlayRpm, "spindelvarvtal", out var rpm)) return null;
         if (rpm != Math.Truncate(rpm) || rpm < int.MinValue || rpm > int.MaxValue)
-        { Error("Spindelvarvtalet måste vara ett heltal."); return null; }
+        { Error("Spindelvarvtalet måste vara ett heltal.", InlayRpm); return null; }
         return new InlaySettings
         {
             JobKind = (InlayJobKind)Math.Max(0, InlayKind.SelectedIndex),
@@ -1367,7 +1374,7 @@ public partial class MainWindow : Window
                 $"Konturer: {result.Shapes.Count}\nÖppna: {opened}\n" +
                 $"Mått: {F(bounds.Width)} × {F(bounds.Height)} mm\n\n" +
                 result.Notes + "\n\nImportera och placera ritningen med vänster övre hörn 10 × 10 mm på arbetsytan?";
-            if (MessageBox.Show(this, message, "Förhandskontroll av vektorimport",
+            if (AppDialog.Show(this, message, "Förhandskontroll av vektorimport",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             // A single undo snapshot covers the entire import. Existing geometry remains unchanged.
             RememberChange();
@@ -1396,7 +1403,7 @@ public partial class MainWindow : Window
       RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); SyncWorkZero(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000) { Error("Kontrollera materialmåtten innan du sparar."); return; }
+        if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000) { Error("Kontrollera materialmåtten innan du sparar (bredd och höjd 1–5000 mm, tjocklek större än 0).", MaterialWidthBox); return; }
         if (_document.CamOperations.Any(o => CamValidation.GetError(o, t) is not null))
         { Error("En CAM-operation är inte giltig för aktuell materialtjocklek. Kontrollera CAM-inställningarna."); return; }
         if (_document.Inlay is not null && InlayValidation.GetError(_document.Inlay, t) is string inlayError)

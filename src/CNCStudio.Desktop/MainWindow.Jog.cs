@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -82,7 +82,7 @@ public partial class MainWindow
 
     private async void SetWork_Click(object sender, RoutedEventArgs e)
     {
-        if (!Parse(SetPositionBox, out var value)) { Error("Ogiltigt värde."); return; }
+        if (!Parse(SetPositionBox, out var value)) { Error("Ogiltigt värde. Skriv ett tal i mm.", SetPositionBox); return; }
         if (RequireIdle("Sätt värde") is not GrblClient g) return;
         char axis = ((AxisPicker.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "X")[0];
         var line = GrblMachineCommands.SetWork(axis == 'X' ? value : null, axis == 'Y' ? value : null, axis == 'Z' ? value : null);

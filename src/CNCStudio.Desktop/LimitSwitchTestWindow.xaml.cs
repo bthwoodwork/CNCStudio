@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -93,7 +93,7 @@ public partial class LimitSwitchTestWindow : Window
 
     private async void DisableHardLimits_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, "Skriva $21=0 (hårda gränser av) till maskinens minne under testet?\n\n" +
+        if (AppDialog.Show(this, "Skriva $21=0 (hårda gränser av) till maskinens minne under testet?\n\n" +
                 "CNC Studio skriver tillbaka $21=1 och kontrolläser när du klickar Klar eller stänger fönstret. " +
                 "Maskinen ska inte köras medan hårda gränser är av.", "Hårda gränser", MessageBoxButton.OKCancel,
                 MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
@@ -108,7 +108,7 @@ public partial class LimitSwitchTestWindow : Window
         else
         {
             DisableHardLimitsButton.IsEnabled = true;
-            MessageBox.Show(this, r.Message, "Kunde inte ändra $21", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show(this, r.Message, "Kunde inte ändra $21", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -137,7 +137,7 @@ public partial class LimitSwitchTestWindow : Window
         DoneButton.IsEnabled = true;
         ResultText.Foreground = Brushes.OrangeRed;
         ResultText.Text = "HÅRDA GRÄNSER ÄR FORTFARANDE AV. " + r.Message;
-        MessageBox.Show(this, "Kunde inte slå på hårda gränser igen ($21=1):\n\n" + r.Message +
+        AppDialog.Show(this, "Kunde inte slå på hårda gränser igen ($21=1):\n\n" + r.Message +
             "\n\nSkriv $21=1 i GRBL-konsolen innan maskinen körs.", "Hårda gränser är av", MessageBoxButton.OK, MessageBoxImage.Error);
         _closingAfterRestore = true; // let the user close; the warning has been shown
     }

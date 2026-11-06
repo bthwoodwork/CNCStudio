@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -11,6 +11,11 @@ public sealed record GCodeResult(bool Success, IReadOnlyList<string> Lines, IRea
 {
     public string Text => string.Join("\r\n", Lines) + "\r\n";
 }
+
+public enum ExportBlockerKind { NoOperations, CriticalFinding, StalePath, MissingPath, StockTopUnknown, HomingOff, NoMotion }
+
+/// <summary>One reason export is refused; ShapeId/FindingCode point at the cause when known.</summary>
+public sealed record ExportBlocker(ExportBlockerKind Kind, string Message, Guid? ShapeId = null, string? FindingCode = null);
 
 /// <summary>
 /// Writes GRBL 1.1 G-code from a checked CAM report. Every code used is verified against the GRBL
@@ -27,24 +32,35 @@ public sealed record GCodeResult(bool Success, IReadOnlyList<string> Lines, IRea
 /// </summary>
 public static class GCodeGenerator
 {
-    public const string Generator = "CNC Studio 0.7.3";
+    public const string Generator = "CNC Studio 0.7.4";
 
-    public static IReadOnlyList<string> BlockingReasons(CncDocument doc, CamReport report)
+    public static IReadOnlyList<string> BlockingReasons(CncDocument doc, CamReport report) =>
+        Blockers(doc, report).Select(b => b.Message).ToList();
+
+    /// <summary>
+    /// Why export is refused, with enough structure (kind, object, finding code) for the UI to
+    /// suggest a fix and take the user to the right place. One entry per distinct message.
+    /// </summary>
+    public static IReadOnlyList<ExportBlocker> Blockers(CncDocument doc, CamReport report)
     {
-        var reasons = new List<string>();
-        if (report.Operations.Count == 0) reasons.Add("Det finns inga CAM-operationer.");
+        var list = new List<ExportBlocker>();
+        if (report.Operations.Count == 0)
+            list.Add(new(ExportBlockerKind.NoOperations, "Det finns inga CAM-operationer."));
         foreach (var f in report.AllFindings.Where(f => f.Severity == CamSeverity.Critical)
                      .GroupBy(f => (f.Code, f.ShapeId)).Select(g => g.First()))
-            reasons.Add("Kritiskt: " + f.Message);
+            list.Add(new(ExportBlockerKind.CriticalFinding, "Kritiskt: " + f.Message, f.ShapeId, f.Code));
         foreach (var o in report.Operations.Where(o => !o.Analyzed))
-            reasons.Add(o.Stale ? "En körbana är inaktuell – klicka Beräkna körbanor." : "En operation saknar beräknad körbana.");
+            list.Add(o.Stale
+                ? new(ExportBlockerKind.StalePath, "En körbana är inaktuell – klicka Beräkna körbanor.", o.Operation.ShapeId)
+                : new(ExportBlockerKind.MissingPath, "En operation saknar beräknad körbana.", o.Operation.ShapeId));
         if (doc.Motion.ZMaxAboveStockMm is null)
-            reasons.Add("Maskinens Z vid materialytan (MPos Z) är inte angiven – Z-brytaren kan inte kontrolleras.");
+            list.Add(new(ExportBlockerKind.StockTopUnknown,
+                "Maskinens Z vid materialytan (MPos Z) är inte angiven – Z-brytaren kan inte kontrolleras."));
         if (!doc.Machine.HomeOnStartup)
-            reasons.Add("Homing vid start ($H) är avstängd – maskinkoordinaterna är okända.");
+            list.Add(new(ExportBlockerKind.HomingOff, "Homing vid start ($H) är avstängd – maskinkoordinaterna är okända."));
         if (report.Motion.Moves.Count == 0 && report.Operations.Count > 0)
-            reasons.Add("Ingen rörelseplan kunde skapas.");
-        return reasons.Distinct().ToList();
+            list.Add(new(ExportBlockerKind.NoMotion, "Ingen rörelseplan kunde skapas."));
+        return list.GroupBy(b => b.Message).Select(g => g.First()).ToList();
     }
 
     public static GCodeResult Generate(CncDocument doc, CamReport report, DateTime? now = null)

@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.7.3";
+    private const string AppTitle = "CNC Studio 0.7.4";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -55,7 +55,7 @@ public partial class MainWindow
         double? stockTop = null;
         if (!string.IsNullOrWhiteSpace(ZMaxBox.Text))
         {
-            if (!Parse(ZMaxBox, out var z)) { Error("Ogiltig MPos Z. Lämna fältet tomt om värdet är okänt."); return; }
+            if (!Parse(ZMaxBox, out var z)) { Error("Ogiltig MPos Z. Skriv ett negativt tal (t.ex. -45.2), eller lämna fältet tomt om värdet är okänt.", ZMaxBox); return; }
             stockTop = z;
         }
         var candidate = new MotionSettings { TravelHeightMm = travel, PlungeClearanceMm = plunge,
@@ -354,7 +354,7 @@ public partial class MainWindow
         _showContourPreview = true;
         Render();
         StatusText.Text = $"CAM-kontroll: {r.CriticalCount} kritiska, {r.WarningCount} varningar, {r.NotAnalyzedCount} ej kontrollerade.";
-        MessageBox.Show(this, header + string.Join("\n", lines.Take(30)) +
+        AppDialog.Show(this, header + string.Join("\n", lines.Take(30)) +
             (lines.Count > 30 ? $"\n...och {lines.Count - 30} fler." : "") + limitations,
             $"{AppTitle} – CAM-kontroll", MessageBoxButton.OK,
             r.CriticalCount > 0 ? MessageBoxImage.Error :

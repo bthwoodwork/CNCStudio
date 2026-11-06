@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using CNCStudio.Core;
@@ -108,7 +108,7 @@ public partial class ToolLibraryWindow : Window
     {
         var t = Current;
         if (t is null) return;
-        if (MessageBox.Show(this, $"Ta bort \"{t.Name}\" ur biblioteket?\n\nProjekt som använder fräsen behåller sina värden.",
+        if (AppDialog.Show(this, $"Ta bort \"{t.Name}\" ur biblioteket?\n\nProjekt som använder fräsen behåller sina värden.",
                 "Ta bort fräs", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
         _tools.Remove(t);
         RefreshList(_tools.FirstOrDefault());

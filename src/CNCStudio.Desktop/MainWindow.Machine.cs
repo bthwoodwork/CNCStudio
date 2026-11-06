@@ -126,7 +126,7 @@ public partial class MainWindow
     private void SaveMachineSetup_Click(object sender, RoutedEventArgs e)
     {
         if (!Parse(StockXBox, out var x) || !Parse(StockYBox, out var y))
-        { Error("Ange giltiga materialkoordinater."); return; }
+        { Error("Ange giltiga materialkoordinater (X och Y i mm).", StockXBox); return; }
         var oldStock = _document.Stock;
         _document.Stock = new StockPlacement { X = x, Y = y };
         var error = MachineSetupValidation.Validate(_document);
@@ -247,7 +247,7 @@ public partial class MainWindow
         if (!Parse(FixtureXBox, out var x) || !Parse(FixtureYBox, out var y) ||
             !Parse(FixtureWidthBox, out var width) || !Parse(FixtureLengthBox, out var length) ||
             !Parse(FixtureHeightBox, out var height) || !Parse(FixtureClearanceBox, out var clearance))
-        { Error("Ogiltiga mått för fastspänningen."); return; }
+        { Error("Ogiltiga mått för fastspänningen – alla fält ska innehålla tal i mm.", FixtureWidthBox); return; }
         var f = _selectedFixture;
         var clone = new FixtureBlock { Id = f.Id, Name = FixtureNameBox.Text,
             X = x, Y = y, Width = width, Length = length,
