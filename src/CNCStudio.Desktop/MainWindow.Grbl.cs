@@ -19,7 +19,7 @@ public partial class MainWindow
     internal IReadOnlyList<string> GrblLog => _grblLog;
     internal event Action<string>? GrblLogAdded;
 
-    private void InitGrblUi() => RefreshPorts();
+    private void InitGrblUi() { RefreshPorts(); SetMachineControlsEnabled(false); }
 
     private void RefreshPorts_Click(object sender, RoutedEventArgs e) => RefreshPorts();
 
@@ -53,6 +53,8 @@ public partial class MainWindow
             ConnectButton.Content = "Koppla från";
             Log($"Ansluten till {port}: {hello}");
             StatusText.Text = $"Ansluten till GRBL på {port}. Inga kommandon skickas utan att du väljer det.";
+            SetMachineControlsEnabled(true);
+            await ReadActiveWcsAsync(client);
         }
         catch (Exception ex)
         {
@@ -74,7 +76,9 @@ public partial class MainWindow
         }
         ConnectButton.Content = "Anslut";
         SetConnectionBanner("EJ ANSLUTEN", reason, Color.FromRgb(83, 60, 52));
-        LiveStateText.Text = "–"; LiveMPosText.Text = "–"; LiveWPosText.Text = "–";
+        LiveStateText.Text = "–";
+        _jogHeld = false;
+        SetMachineControlsEnabled(false);
         Log(reason);
     }
 
@@ -101,8 +105,9 @@ public partial class MainWindow
         double[]? mpos = s.MPos, wpos = s.WPos;
         if (mpos is null && wpos is not null && _lastWco is not null) mpos = Sub(wpos, _lastWco, add: true);
         if (wpos is null && mpos is not null && _lastWco is not null) wpos = Sub(mpos, _lastWco, add: false);
-        LiveMPosText.Text = Vec(mpos);
-        LiveWPosText.Text = Vec(wpos);
+        // Keep the computed MPos on the status so the jog travel check works whatever $10 reports.
+        s.MPos ??= mpos;
+        ShowDro(mpos, wpos);
     }
 
     private static double[] Sub(double[] a, double[] b, bool add) =>

@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.7.1)
+# CNC Studio – källkod (senaste: 0.7.2)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -184,3 +184,15 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - **Markörens koordinater** i arbetskoordinater visas i statusraden.
 
 **Tester:** 247 tester.
+
+## 0.7.2 – Riktig jogg och nollning
+
+- Demodelen i maskinpanelen är ersatt med riktiga kontroller (aktiva när maskinen är ansluten).
+- **Koordinatvisning:** stora arbetskoordinater, MPos i små siffror, maskinens läge och val av koordinatsystem G54–G59 (läses med `$G`).
+- **Nollning:** per axel, X + Y (Z ändras inte) och "Sätt" för ett eget värde, med `G10 L20 P0`, bara i Idle. När Z nollas på materialet uppdateras MPos Z vid materialytan automatiskt.
+- **Gå till X0/Y0:** Z lyfts först till nära överkanten med `G53 G0`, sedan `G90 G0` i XY.
+- **Jogg:** klick ger ett steg, håll inne ger kontinuerlig jogg enligt GRBL-wikin (korta G91-steg som väntar på `ok`, `0x85` vid släpp). STOPP-knapp. Förinställningar Precis/Normal/Snabb. Hastigheten begränsas av `$110`–`$112`.
+- **Säkerhet:** ingen jogg i larmläge, ingen jogg utanför arbetsområdet minus marginalen (även utan mjuka gränser; rörelse bort från brytaren tillåts alltid), och en varning om ett annat koordinatsystem än G54 är aktivt.
+- `docs/GRBL-verifierat.md`: regler för `$J=`, `0x85`, `G10 L20 P0`, `G53` och `$G`.
+
+**Tester:** 273 tester. Inte testad mot riktig maskin ännu.

@@ -142,3 +142,21 @@ Varje program kontrolleras av `GCodeVerifier`, som läser filen rad för rad obe
 - **`~`** (Cycle start) fortsätter efter pausen. Wikin skriver att `~` *"resumes a feed hold, a safety door/parking state when the door is closed, and the M0 program pause states"*.
 - När fräsen är inställd som manuell skriver CNC Studio **inga** `M3`, `S` eller `M5`. Programmet pausar i stället med `M0` på säker höjd, och raden före pausen är en kommentar som anger vilket varvtal fräsen ska ha. Ett nytt varvtal för en senare operation ger en ny paus på förflyttningshöjden.
 - **Ej verifierat:** exakt hur `gcode.c` väntar in planeraren vid `M0`. CNC Studio lägger alltid pausen på säker höjd, så det spelar ingen roll om de tidigare rörelserna är klara när pausen inträffar.
+
+## Jogg och nollning (Jogging-wikin, `jog.c`, `system.c`, `gcode.c`, `protocol.c`)
+
+- **`$J=`** fungerar som G1, men:
+  - X/Y/Z och **F krävs på varje rad**, eftersom F inte är modalt i jogg.
+  - Bara G90/G91, G20/G21, G53 och N är tillåtna; G0/G1, S och T avvisas.
+  - **Joggen ändrar inte parserns modala läge.** CNC Studio skickar `$J=G91 G21 X… F…`.
+- `$J` godtas **bara i Idle eller Jog** (`system.c`), annars `error:8`. Det betyder **inte i Alarm**: kör `$H` först.
+- **Med mjuka gränser** körs inte en jogg som skulle gå utanför arbetsområdet. GRBL ger då `error:15` utan larm (`jog.c`). CNC Studio kontrollerar dessutom själv mot −$13x…0 minus marginalen, så att det fungerar även utan mjuka gränser. En rörelse tillbaka mot säkert område tillåts alltid.
+- **`0x85`** avbryter joggen: inbromsning och tömning av joggkön. Kommandot ignoreras om GRBL inte joggar.
+- **Kontinuerlig jogg** enligt wikin:
+  - korta G91-steg, och nästa steg skickas först efter `ok`
+  - `0x85` när knappen släpps
+  - dt 0,025–0,06 s; CNC Studio använder 0,05 s och steget s = v·dt.
+- **`G10 L20 P0`** = det **aktiva** koordinatsystemet, och nuvarande position blir det angivna värdet. Axlar som inte nämns ändras inte. Kommandot skrivs till EEPROM. Som G-code avvisas det i Alarm och Jog (`error:9`), så CNC Studio skickar det bara i Idle.
+- **`G53 G0 Z…`** på en rad flyttar i maskinkoordinater och ändrar inte koordinatsystemet. "Gå till X0 Y0" lyfter först Z till `−marginal` i maskinkoordinater och gör sedan `G90 G0 X0 Y0`.
+- **Aktivt koordinatsystem** finns inte i statusrapporten; det läses med `$G` (`[GC:… G54 …]`). CNC Studios G-code använder alltid G54, och programmet varnar om ett annat system är aktivt.
+- **Ej verifierat:** vilken flagga `0x85` sätter i `serial.c`. Beteendet är verifierat i wikin.

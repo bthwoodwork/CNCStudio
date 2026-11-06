@@ -1,7 +1,7 @@
 ﻿<Window x:Class="CNCStudio.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="CNC Studio 0.7.1 – Fräsar, nollpunkt, körtid och rampning" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.7.2 – Jogg och nollning" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -82,7 +82,7 @@
  <MenuItem Header="_Objekt"><MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/><Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/></MenuItem>
  <MenuItem Header="_CAM"><MenuItem Header="Exportera G-code…" Click="ExportGCode_Click" InputGestureText="Ctrl+E"/><Separator/><MenuItem Header="V-carve inlay-inställningar" Click="OpenInlay_Click"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
  <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinkontroll" Click="ShowPanel_Click" Tag="Machine"/></MenuItem>
- <MenuItem Header="_Maskin"><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Nolla X (demo)" Click="ZeroX_Click"/><MenuItem Header="Nolla Y (demo)" Click="ZeroY_Click"/><MenuItem Header="Nolla Z (demo)" Click="ZeroZ_Click"/><MenuItem Header="Nolla X + Y, behåll Z (demo)" Click="ZeroXY_Click"/></MenuItem>
+ <MenuItem Header="_Maskin"><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/></MenuItem>
  <MenuItem Header="_Hjälp"><MenuItem Header="Om CNC Studio" Click="About_Click"/></MenuItem>
 </Menu>
  
@@ -351,35 +351,76 @@
             <ComboBox x:Name="PortPicker" Margin="3" ToolTip="COM-port för GRBL-kontrollern (115200 baud, 8-N-1)"/>
           </DockPanel>
           <Button x:Name="ConnectButton" Content="Anslut" Click="Connect_Click" Background="#24618C"/>
-          <Grid Margin="0,6,0,2">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-            <TextBlock Text="Läge" Foreground="#B8CADC" Margin="3,1,10,1"/><TextBlock x:Name="LiveStateText" Grid.Column="1" Text="–" FontWeight="Bold"/>
-            <TextBlock Grid.Row="1" Text="MPos" Foreground="#B8CADC" Margin="3,1,10,1"/><TextBlock x:Name="LiveMPosText" Grid.Row="1" Grid.Column="1" Text="–" FontFamily="Consolas"/>
-            <TextBlock Grid.Row="2" Text="WPos" Foreground="#B8CADC" Margin="3,1,10,1"/><TextBlock x:Name="LiveWPosText" Grid.Row="2" Grid.Column="1" Text="–" FontFamily="Consolas"/>
-          </Grid>
-          <Button Content="GRBL-konsol…" Click="OpenConsole_Click" ToolTip="Skicka enskilda kommandon till maskinen"/>
-          <Button Content="Testa gränslägesbrytare…" Click="OpenLimitTest_Click" ToolTip="Tryck in brytarna för hand och se att de fungerar – gör detta före homing. Maskinen rör sig inte."/>
-          <Separator Margin="0,12"/>
-          <TextBlock Text="Arbetskoordinater G54 (endast demonstration)" Foreground="#B8CADC" TextWrapping="Wrap" Margin="0,0,0,8"/>
-          <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0"><TextBlock Text="X" HorizontalAlignment="Center" FontSize="18"/><TextBlock x:Name="XPosition" Text="125.000" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><Button Content="Nolla X" Click="ZeroX_Click"/></StackPanel>
-            <StackPanel Grid.Column="1"><TextBlock Text="Y" HorizontalAlignment="Center" FontSize="18"/><TextBlock x:Name="YPosition" Text="85.000" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><Button Content="Nolla Y" Click="ZeroY_Click"/></StackPanel>
-            <StackPanel Grid.Column="2"><TextBlock Text="Z" HorizontalAlignment="Center" FontSize="18"/><TextBlock x:Name="ZPosition" Text="-2.500" FontSize="21" FontWeight="Bold" HorizontalAlignment="Center"/><Button Content="Nolla Z" Click="ZeroZ_Click"/></StackPanel>
-          </Grid>
-          <Button Content="Nolla X + Y (behåll Z)" Click="ZeroXY_Click" Background="#24618C"/>
-          <TextBlock Text="Ställ in en arbetskoordinat separat" Margin="0,15,0,5"/>
-          <WrapPanel><ComboBox x:Name="AxisPicker" Width="60" SelectedIndex="0"><ComboBoxItem Content="X"/><ComboBoxItem Content="Y"/><ComboBoxItem Content="Z"/></ComboBox><TextBox x:Name="SetPositionBox" Text="0" Width="92"/><Button Content="Sätt värde" Click="SetPosition_Click"/></WrapPanel>
-          <Separator Margin="0,18"/>
-          <TextBlock Text="JOGGING (demonstration)" FontWeight="Bold" Margin="0,0,0,9"/>
-          <UniformGrid Columns="3" HorizontalAlignment="Center">
-            <TextBlock/><Button Content="Y+" Click="Jog_Click" Tag="Y+"/><TextBlock/>
-            <Button Content="X-" Click="Jog_Click" Tag="X-"/><TextBlock Text="XY" HorizontalAlignment="Center"/><Button Content="X+" Click="Jog_Click" Tag="X+"/>
-            <TextBlock/><Button Content="Y-" Click="Jog_Click" Tag="Y-"/><TextBlock/>
+          <DockPanel Margin="0,6,0,2">
+            <TextBlock Text="Läge" Foreground="#B8CADC" Margin="3,1,10,1"/>
+            <ComboBox x:Name="WcsPicker" DockPanel.Dock="Right" Width="72" SelectionChanged="Wcs_Changed" ToolTip="Aktivt arbetskoordinatsystem (läses med $G)">
+              <ComboBoxItem Content="G54"/><ComboBoxItem Content="G55"/><ComboBoxItem Content="G56"/>
+              <ComboBoxItem Content="G57"/><ComboBoxItem Content="G58"/><ComboBoxItem Content="G59"/>
+            </ComboBox>
+            <TextBlock x:Name="LiveStateText" Text="–" FontWeight="Bold"/>
+          </DockPanel>
+          <UniformGrid Columns="2" Margin="0,2,0,0">
+            <Button Content="GRBL-konsol…" Click="OpenConsole_Click" ToolTip="Skicka enskilda kommandon till maskinen"/>
+            <Button Content="Testa brytare…" Click="OpenLimitTest_Click" ToolTip="Tryck in brytarna för hand och se att de fungerar – gör detta före homing. Maskinen rör sig inte."/>
           </UniformGrid>
-          <WrapPanel HorizontalAlignment="Center" Margin="0,7"><Button Content="Z+" Tag="Z+" Click="Jog_Click"/><Button Content="Z-" Tag="Z-" Click="Jog_Click"/></WrapPanel>
-          <TextBlock Text="Steg (mm)"/><ComboBox x:Name="StepPicker" SelectedIndex="2" Margin="3"><ComboBoxItem Content="0.1"/><ComboBoxItem Content="1"/><ComboBoxItem Content="10"/><ComboBoxItem Content="100"/></ComboBox>
-          <TextBlock Text="Nollning och jogg här är fortfarande DEMO och skickar inget till maskinen. Använd GRBL-konsolen för riktiga kommandon." TextWrapping="Wrap" Foreground="#FFCE96" Margin="0,15,0,0"/>
+          <Separator Margin="0,10"/>
+
+          <!-- Real coordinates, zeroing and jogging (disabled until connected). -->
+          <StackPanel x:Name="MachineControls" IsEnabled="False">
+            <Grid Margin="0,0,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition/><ColumnDefinition Width="62"/><ColumnDefinition Width="52"/></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+              <TextBlock Text="X" FontSize="18" FontWeight="Bold" Foreground="#FF6B6B"/>
+              <StackPanel Grid.Column="1"><TextBlock x:Name="DroX" Text="–" FontSize="22" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Right"/><TextBlock x:Name="MposX" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Right"/></StackPanel>
+              <Button Grid.Column="2" Content="Nolla" Tag="X" Click="Zero_Click" ToolTip="Nuvarande X blir 0 i aktivt koordinatsystem (G10 L20 P0 X0)"/>
+              <Button Grid.Column="3" Content="→0" Tag="X" Click="GoTo_Click" ToolTip="Lyft Z högt upp och gå till X0"/>
+              <TextBlock Grid.Row="1" Text="Y" FontSize="18" FontWeight="Bold" Foreground="#6BD38A"/>
+              <StackPanel Grid.Row="1" Grid.Column="1"><TextBlock x:Name="DroY" Text="–" FontSize="22" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Right"/><TextBlock x:Name="MposY" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Right"/></StackPanel>
+              <Button Grid.Row="1" Grid.Column="2" Content="Nolla" Tag="Y" Click="Zero_Click" ToolTip="Nuvarande Y blir 0 (G10 L20 P0 Y0)"/>
+              <Button Grid.Row="1" Grid.Column="3" Content="→0" Tag="Y" Click="GoTo_Click" ToolTip="Lyft Z högt upp och gå till Y0"/>
+              <TextBlock Grid.Row="2" Text="Z" FontSize="18" FontWeight="Bold" Foreground="#6FB4FF"/>
+              <StackPanel Grid.Row="2" Grid.Column="1"><TextBlock x:Name="DroZ" Text="–" FontSize="22" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Right"/><TextBlock x:Name="MposZ" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Right"/></StackPanel>
+              <Button Grid.Row="2" Grid.Column="2" Content="Nolla" Tag="Z" Click="Zero_Click" ToolTip="Nuvarande Z blir 0 (G10 L20 P0 Z0). Gör det med fräsen på materialytan – då uppdateras även MPos Z vid materialytan."/>
+            </Grid>
+            <TextBlock Text="Stora siffror = arbetskoordinater, små = maskinkoordinater (MPos)." FontSize="10.5" Foreground="#8CA3BA" Margin="3,0,3,4"/>
+            <UniformGrid Columns="2">
+              <Button Content="Nolla X + Y" Tag="XY" Click="Zero_Click" Background="#24618C" ToolTip="Nollar X och Y – Z ändras inte (G10 L20 P0 X0 Y0)"/>
+              <Button Content="Gå till X0 Y0" Tag="XY" Click="GoTo_Click" ToolTip="Lyfter Z till nära överkanten (G53) och går till X0 Y0"/>
+            </UniformGrid>
+            <DockPanel Margin="0,4,0,0">
+              <Button DockPanel.Dock="Right" Content="Sätt" Click="SetWork_Click" ToolTip="Nuvarande position får detta värde på vald axel (G10 L20 P0)"/>
+              <ComboBox x:Name="AxisPicker" DockPanel.Dock="Left" Width="52" SelectedIndex="0" Margin="3"><ComboBoxItem Content="X"/><ComboBoxItem Content="Y"/><ComboBoxItem Content="Z"/></ComboBox>
+              <TextBox x:Name="SetPositionBox" Text="0" ToolTip="Nytt värde för nuvarande position (mm)"/>
+            </DockPanel>
+
+            <Separator Margin="0,10"/>
+            <TextBlock Text="JOGG" FontWeight="Bold" Margin="0,0,0,6"/>
+            <Grid HorizontalAlignment="Center">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="54"/><ColumnDefinition Width="54"/><ColumnDefinition Width="18"/><ColumnDefinition Width="54"/></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="44"/><RowDefinition Height="44"/></Grid.RowDefinitions>
+              <Button Grid.Column="1" Content="Y+" Tag="Y+" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
+              <Button Grid.Row="1" Content="X−" Tag="X-" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
+              <Button Grid.Row="1" Grid.Column="1" Content="STOPP" Click="JogStop_Click" Background="#8A2E26" FontWeight="Bold" FontSize="11" ToolTip="Avbryt joggen direkt (0x85)"/>
+              <Button Grid.Row="1" Grid.Column="2" Content="X+" Tag="X+" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
+              <Button Grid.Row="2" Grid.Column="1" Content="Y−" Tag="Y-" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
+              <Button Grid.Column="4" Content="Z+" Tag="Z+" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
+              <Button Grid.Row="2" Grid.Column="4" Content="Z−" Tag="Z-" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
+            </Grid>
+            <UniformGrid Columns="3" Margin="0,8,0,2">
+              <RadioButton x:Name="PresetPrecise" Content="Precis" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="0"/>
+              <RadioButton x:Name="PresetNormal" Content="Normal" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="1" IsChecked="True"/>
+              <RadioButton x:Name="PresetRapid" Content="Snabb" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="2"/>
+            </UniformGrid>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <StackPanel><TextBlock Text="XY steg mm" FontSize="10.5"/><TextBox x:Name="JogStepXY" Text="5"/></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="Z steg mm" FontSize="10.5"/><TextBox x:Name="JogStepZ" Text="2"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="mm/min" FontSize="10.5"/><TextBox x:Name="JogFeed" Text="3000"/></StackPanel>
+            </Grid>
+            <TextBlock Text="Klick = ett steg. Håll inne = kontinuerlig jogg – släpp för att stanna." TextWrapping="Wrap" FontSize="10.5" Foreground="#8CA3BA" Margin="3,4"/>
+            <TextBlock x:Name="JogStatusText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="#FFB38A" Margin="3,2"/>
+          </StackPanel>
+          <TextBlock x:Name="MachineControlsHint" Text="Anslut för att nolla och jogga." TextWrapping="Wrap" Foreground="#8CA3BA" FontSize="11" Margin="3,4"/>
         </StackPanel>
       </Border></ScrollViewer></DockPanel>
    </Border>

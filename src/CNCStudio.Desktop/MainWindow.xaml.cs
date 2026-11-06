@@ -55,7 +55,6 @@ public partial class MainWindow : Window
     private bool _showContourPreview = true;
     private sealed record ResizeHandle(DesignShape Shape, string Corner);
     private string? _path;
-    private readonly Dictionary<char, double> _position = new() { ['X'] = 125, ['Y'] = 85, ['Z'] = -2.5 };
     private enum Tool { Select, Rectangle, Ellipse, Polyline }
     private readonly List<Point> _polyPoints = new();
     private Point _polyHover;
@@ -1369,28 +1368,6 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try { var document = DocumentStorage.Load(dialog.FileName); _document = document; _camPlanner.Clear(); _path = dialog.FileName; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
         catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); }
-    }
-    private void UpdatePositions()
-    { XPosition.Text = _position['X'].ToString("0.000", CultureInfo.InvariantCulture); YPosition.Text = _position['Y'].ToString("0.000", CultureInfo.InvariantCulture); ZPosition.Text = _position['Z'].ToString("0.000", CultureInfo.InvariantCulture); }
-    private void ZeroX_Click(object sender, RoutedEventArgs e) { _position['X'] = 0; UpdatePositions(); }
-    private void ZeroY_Click(object sender, RoutedEventArgs e) { _position['Y'] = 0; UpdatePositions(); }
-    private void ZeroZ_Click(object sender, RoutedEventArgs e) { _position['Z'] = 0; UpdatePositions(); }
-    private void ZeroXY_Click(object sender, RoutedEventArgs e) { _position['X'] = 0; _position['Y'] = 0; UpdatePositions(); }
-    private void SetPosition_Click(object sender, RoutedEventArgs e)
-    {
-        if (!Parse(SetPositionBox, out var value)) { Error("Ogiltig koordinat."); return; }
-        var axis = ((AxisPicker.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "X")[0];
-        _position[axis] = value; UpdatePositions();
-    }
-    private void Jog_Click(object sender, RoutedEventArgs e)
-    {
-        var tag = (sender as Button)?.Tag?.ToString() ?? "";
-        if (tag.Length != 2) return;
-        var axis = tag[0];
-        var stepText = (StepPicker.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "1";
-        if (!double.TryParse(stepText, NumberStyles.Float, CultureInfo.InvariantCulture, out var step)) return;
-        _position[axis] += tag[1] == '+' ? step : -step;
-        UpdatePositions(); StatusText.Text = $"DEMOLÄGE: Jog {tag} {step} mm – ingen maskin är ansluten";
     }
     private void CamPanel_Click(object sender, RoutedEventArgs e) => SetPanelVisible("Cam", !_camVisible);
     private void RefreshCamSelection()
