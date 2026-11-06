@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>CNCStudio.Desktop</AssemblyName></PropertyGroup>
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>CNCStudio.Desktop</AssemblyName><ApplicationIcon>Assets\cncstudio.ico</ApplicationIcon></PropertyGroup>
+  <ItemGroup><Resource Include="Assets\cncstudio.ico" /></ItemGroup>
   <ItemGroup><ProjectReference Include="..\CNCStudio.Core\CNCStudio.Core.csproj" /></ItemGroup>
   <ItemGroup>
     <PackageReference Include="HelixToolkit.Wpf" Version="3.1.2" />

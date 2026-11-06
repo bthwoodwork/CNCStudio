@@ -246,3 +246,6 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Demomaskinen svarar inte heller på status medan den väntar på återställning, som riktig GRBL.
 
 **Tester:** 306 tester. Inte testad mot riktig maskin ännu.
+## 0.8.3 – Egen ikon
+- Ny programikon: en fräs som skär en grön verktygsbana i ett material, i appens mörkblå färger. Syns i Utforskaren, aktivitetsfältet och alla fönsters titelrad.
+- Ritas av `tools/make-icon.ps1` i alla storlekar 16–256 px (små storlekar förenklade så att de syns tydligt).
