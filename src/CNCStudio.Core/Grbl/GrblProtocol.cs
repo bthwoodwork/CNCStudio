@@ -27,6 +27,17 @@ public static class GrblProtocol
     public const byte SoftReset = 0x18;
     public const byte JogCancel = 0x85;
 
+    // Feed override (config.h CMD_FEED_OVR_*): 10–200 %, coarse 10 %, fine 1 %.
+    public const byte FeedOverrideReset = 0x90;
+    public const byte FeedOverrideCoarsePlus = 0x91;
+    public const byte FeedOverrideCoarseMinus = 0x92;
+    public const byte FeedOverrideFinePlus = 0x93;
+    public const byte FeedOverrideFineMinus = 0x94;
+    // Rapid override: only 100 / 50 / 25 % (config.h CMD_RAPID_OVR_*).
+    public const byte RapidOverrideReset = 0x95;
+    public const byte RapidOverrideMedium = 0x96;
+    public const byte RapidOverrideLow = 0x97;
+
     public static GrblLine Parse(string raw)
     {
         var line = raw.Trim();
@@ -106,6 +117,7 @@ public static class GrblProtocol
                 case "WPos": status.WPos = Vec(val); break;
                 case "WCO": status.Wco = Vec(val); break;
                 case "Pn": status.Pins = val; break;
+                case "Ov": status.Overrides = Vec(val); break;   // feed,rapid,spindle in % (report.c)
                 default: break;
             }
         }
@@ -179,4 +191,6 @@ public sealed class GrblStatus
     public double[]? WPos { get; set; }
     public double[]? Wco { get; set; }
     public string? Pins { get; set; }
+    /// <summary>Feed, rapid and spindle override in percent; only sent now and then (Ov:).</summary>
+    public double[]? Overrides { get; set; }
 }

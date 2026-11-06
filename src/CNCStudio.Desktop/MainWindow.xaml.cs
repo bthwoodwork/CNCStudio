@@ -387,6 +387,10 @@ public partial class MainWindow : Window
     }
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
+        if (_runner is not null && AppDialog.Show(this,
+                "Ett program körs på maskinen. Stänger du nu avbryts sändningen mitt i jobbet (läget sparas och kan återupptas).\n\nStänga ändå?",
+                "Program körs", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK)
+        { e.Cancel = true; return; }
         _closingMain = true;
         foreach (var window in _floatingPanels.Values.ToList()) window.Close();
         if (_grbl is not null) DisconnectGrbl("Programmet stängs.");

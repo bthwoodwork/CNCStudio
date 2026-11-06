@@ -164,3 +164,19 @@ Varje program kontrolleras av `GCodeVerifier`, som läser filen rad för rad obe
 - **`G53 G0 Z…`** på en rad flyttar i maskinkoordinater och ändrar inte koordinatsystemet. "Gå till X0 Y0" lyfter först Z till `−marginal` i maskinkoordinater och gör sedan `G90 G0 X0 Y0`.
 - **Aktivt koordinatsystem** finns inte i statusrapporten; det läses med `$G` (`[GC:… G54 …]`). CNC Studios G-code använder alltid G54, och programmet varnar om ett annat system är aktivt.
 - **Ej verifierat:** vilken flagga `0x85` sätter i `serial.c`. Beteendet är verifierat i wikin.
+
+## Sändning, överstyrning och återupptagning (kontrollerat 2026-11-06)
+
+Källor: `commands.md`, `interface.md`, `config.h`, `planner.h`, `protocol.c`, `main.c`, `gcode.c`, `settings.c`, `report.c` (gnea/grbl master).
+
+- **ok kommer när raden är tolkad och lagd i planeraren**, inte när den är utförd (`protocol.c`: `report_status_message(gc_execute_line(line))`). Ett ok kan dröja medan planeraren är full.
+- **Planeraren:** `BLOCK_BUFFER_SIZE 16` (`planner.h`). Därför kan upp till 16 rader före sista ok vara outförda. CNC Studio återupptar minst 17 rader före sista ok.
+- **M0:** ok för M0-raden kommer först när användaren fortsätter med `~` (`gcode.c` synkar och sätter feed hold; `protocol.c` stannar i suspend). Sändaren väntar därför utan tidsgräns. *Pausgrenen i gcode.c lästes ur en sammanfattning, inte ordagrant.*
+- **Matningsöverstyrning:** `0x90` 100 %, `0x91` +10 %, `0x92` −10 %, `0x93` +1 %, `0x94` −1 %; område 10–200 % (`config.h`). Snabbförflyttning: `0x95` 100 %, `0x96` 50 %, `0x97` 25 %. Statusfältet `Ov:matning,snabb,spindel` skickas då och då och direkt efter en ändring. Överstyrningar återställs vid M2/M30 (`RESTORE_OVERRIDES_AFTER_PROGRAM_END`).
+- **`$C`:** tolkar allt men rör inga axlar, ignorerar G4, stänger av spindel. `[MSG:Enabled]`/`[MSG:Disabled]`, sedan ok. När `$C` slås av gör GRBL en automatisk mjuk återställning. M0 gör inget i kontrolläge.
+- **Mjuk återställning i Idle** behåller positionen och kräver ingen ny homing (`commands.md`: "If reset while in not motion, position is retained"; `main.c` behåller `sys.state` via `prior_state`). Återställning under rörelse ger `ALARM:3`. G92 nollställs vid återställning.
+- **Stopp:** `!` (feed hold), vänta på `Hold:0` eller Idle, sedan `0x18`. Feed hold stänger inte av spindeln.
+- **G54–G59 sparas i EEPROM** (`G10 L2/L20` skriver med `settings_write_coord_data`) och överlever strömavbrott. G92 sparas inte.
+- **F på vilken rad som helst** (även `G0`) sätter den modala matningen i G94 (`gcode.c`: `gc_state.feed_rate = gc_block.values.f; // Always copy this value`).
+- **Larm under en rad:** efter hård/mjuk gräns eller misslyckad homing väntar GRBL på återställning och svarar inte på raden. CNC Studio avbryter därför den väntande raden när `ALARM:N` kommer.
+- **Ej verifierat:** att GRBL hoppar över block med nollängd (används inte), `Bf:`-fältets standardläge, exakt kod för larm vid återställning under rörelse (`motion_control.c`).

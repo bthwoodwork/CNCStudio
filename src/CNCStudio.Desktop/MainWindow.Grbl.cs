@@ -22,7 +22,7 @@ public partial class MainWindow
     internal IReadOnlyList<string> GrblLog => _grblLog;
     internal event Action<string>? GrblLogAdded;
 
-    private void InitGrblUi() { RefreshPorts(); SetMachineControlsEnabled(false); }
+    private void InitGrblUi() { RefreshPorts(); SetMachineControlsEnabled(false); InitJobUi(); }
 
     private void RefreshPorts_Click(object sender, RoutedEventArgs e) => RefreshPorts();
 
@@ -65,6 +65,7 @@ public partial class MainWindow
             Log($"Ansluten till {port}: {hello}");
             StatusText.Text = $"Ansluten till GRBL på {port}. Inga kommandon skickas utan att du väljer det.";
             SetMachineControlsEnabled(true);
+            UpdateJobButtons(); RefreshRecoveryBanner();
             await ReadActiveWcsAsync(client);
         }
         catch (Exception ex)
@@ -87,6 +88,7 @@ public partial class MainWindow
         }
         ConnectButton.Content = "Anslut";
         _homedThisSession = false; _lastLiveState = null;
+        UpdateJobButtons();
         if (_machineView) RenderMachine(refreshCam: false);
         SetConnectionBanner("EJ ANSLUTEN", reason, Color.FromRgb(83, 60, 52));
         LiveStateText.Text = "–";
@@ -126,6 +128,7 @@ public partial class MainWindow
         s.MPos ??= mpos;
         ShowDro(mpos, wpos);
         UpdateToolMarker();
+        UpdateJobStatus(s);
     }
 
     private string? _lastLiveState;

@@ -2,7 +2,7 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
- Title="CNC Studio 0.7.5 – homing, nollpunkt och demomaskin" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.8 – kör program och återuppta" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -83,7 +83,7 @@
  <MenuItem Header="_Objekt"><MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/><Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/></MenuItem>
  <MenuItem Header="_CAM"><MenuItem Header="Exportera G-code…" Click="ExportGCode_Click" InputGestureText="Ctrl+E"/><Separator/><MenuItem Header="V-carve inlay-inställningar" Click="OpenInlay_Click"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
  <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem x:Name="View3DMenuItem" Header="3D-vy" Click="Toggle3D_Click" InputGestureText="F4"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinkontroll" Click="ShowPanel_Click" Tag="Machine"/></MenuItem>
- <MenuItem Header="_Maskin"><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/></MenuItem>
+ <MenuItem Header="_Maskin"><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/><Separator/><MenuItem Header="Demomaskin: simulera strömavbrott" Click="SimulatePowerCut_Click"/></MenuItem>
  <MenuItem Header="_Hjälp"><MenuItem Header="Om CNC Studio" Click="About_Click"/></MenuItem>
 </Menu>
  
@@ -366,6 +366,17 @@
             <Button Content="GRBL-konsol…" Click="OpenConsole_Click" ToolTip="Skicka enskilda kommandon till maskinen"/>
             <Button Content="Testa brytare…" Click="OpenLimitTest_Click" ToolTip="Tryck in brytarna för hand och se att de fungerar – gör detta före homing. Maskinen rör sig inte."/>
           </UniformGrid>
+          <!-- An interrupted job (power cut, crash, error) found on disk. -->
+          <Border x:Name="RecoveryBanner" Visibility="Collapsed" Background="#4A3313" BorderBrush="#FFB03B" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,8,0,0">
+            <StackPanel>
+              <TextBlock Text="AVBRUTET JOBB" FontWeight="Bold" Foreground="#FFD39F"/>
+              <TextBlock x:Name="RecoveryText" TextWrapping="Wrap" FontSize="11" Foreground="#F3E3CC" Margin="0,3,0,5"/>
+              <UniformGrid Columns="2">
+                <Button Content="Återuppta…" Click="ResumeJob_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Homing, sedan fortsätter jobbet från en säker punkt strax före avbrottet"/>
+                <Button Content="Glöm jobbet" Click="ForgetJob_Click"/>
+              </UniformGrid>
+            </StackPanel>
+          </Border>
           <Separator Margin="0,10"/>
 
           <!-- Real coordinates, zeroing and jogging (disabled until connected). -->
@@ -425,6 +436,32 @@
             </Grid>
             <TextBlock Text="Klick = ett steg. Håll inne = kontinuerlig jogg – släpp för att stanna." TextWrapping="Wrap" FontSize="10.5" Foreground="#8CA3BA" Margin="3,4"/>
             <TextBlock x:Name="JogStatusText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="#FFB38A" Margin="3,2"/>
+
+            <Separator Margin="0,10"/>
+            <TextBlock Text="KÖR PROGRAM" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBlock x:Name="JobInfoText" Text="Inget program laddat." TextWrapping="Wrap" FontSize="11" Foreground="#B8CADC" Margin="3,0,3,4"/>
+            <UniformGrid Columns="2">
+              <Button x:Name="LoadJobButton" Content="Ladda från projektet" Click="LoadJob_Click" ToolTip="Skapar och kontrollerar G-code från projektet (samma kontroller som Exportera)"/>
+              <Button x:Name="CheckJobButton" Content="Kontrollkör ($C)" Click="CheckJob_Click" ToolTip="GRBL läser hela programmet utan att röra sig ($C) och rapporterar fel"/>
+            </UniformGrid>
+            <UniformGrid Columns="3" Margin="0,2,0,0">
+              <Button x:Name="StartJobButton" Content="▶ Starta" Click="StartJob_Click" Background="#2E7A4A" FontWeight="SemiBold"/>
+              <Button x:Name="PauseJobButton" Content="❚❚ Paus" Click="PauseJob_Click" ToolTip="Paus (feed hold !) / Fortsätt (~)"/>
+              <Button x:Name="StopJobButton" Content="■ Stopp" Click="StopJob_Click" Background="#8A2E26" FontWeight="SemiBold" ToolTip="Bromsar in (feed hold) och återställer sedan GRBL – positionen behålls"/>
+            </UniformGrid>
+            <ProgressBar x:Name="JobProgressBar" Height="8" Margin="3,6,3,2" Minimum="0" Maximum="1" Foreground="#4CE07A" Background="#24384C" BorderThickness="0"/>
+            <TextBlock x:Name="JobProgressText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="#D5E3F0" Margin="3,0,3,4"/>
+            <DockPanel Margin="0,2,0,0">
+              <TextBlock Text="Matning" FontSize="11" Foreground="#B8CADC" Margin="3,0,6,0"/>
+              <TextBlock x:Name="FeedOvText" DockPanel.Dock="Right" Text="100 %" FontWeight="Bold" Width="46" TextAlignment="Right" Margin="0,0,3,0"/>
+              <UniformGrid Columns="5">
+                <Button Content="−10" Tag="146" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="−1" Tag="148" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="100" Tag="144" Click="FeedOverride_Click" Padding="2,4" Margin="1" ToolTip="Återställ matningen till 100 %"/>
+                <Button Content="+1" Tag="147" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="+10" Tag="145" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+              </UniformGrid>
+            </DockPanel>
           </StackPanel>
           <TextBlock x:Name="MachineControlsHint" Text="Anslut för att nolla och jogga." TextWrapping="Wrap" Foreground="#8CA3BA" FontSize="11" Margin="3,4"/>
         </StackPanel>

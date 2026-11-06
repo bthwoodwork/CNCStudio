@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -126,6 +126,7 @@ public sealed class GrblClient : IDisposable
         {
             GrblProtocol.SoftReset => "[Ctrl-X mjuk återställning]",
             GrblProtocol.JogCancel => "[0x85 avbryt jogg]",
+            >= 0x90 and <= 0x97 => $"[0x{command:X2} override]",
             _ => ((char)command).ToString()
         });
         if (command == GrblProtocol.SoftReset) FailPending("GRBL återställdes (Ctrl-X).");
@@ -274,6 +275,13 @@ public sealed class GrblClient : IDisposable
             w?.TrySetResult(line);
             lock (_sync) _lateCompletions = 0; // a reset clears GRBL's buffers: nothing more will be answered
             FailPending("GRBL startade om (välkomstmeddelande mottogs).");
+            return;
+        }
+        if (line.Kind == GrblLineKind.Alarm)
+        {
+            // After a hard/soft limit or homing alarm GRBL waits for a reset and never answers the
+            // line in progress (protocol.c critical event) – fail it instead of waiting forever.
+            FailPending("GRBL gick i larm: " + GrblSettings.Describe(line));
             return;
         }
         PendingCommand? p;

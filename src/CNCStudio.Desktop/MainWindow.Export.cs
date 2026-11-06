@@ -17,6 +17,30 @@ public partial class MainWindow
 {
     private void ExportGCode_Click(object sender, RoutedEventArgs e)
     {
+        if (GenerateCheckedProgram("Exportera G-code") is not GCodeResult result) return;
+        if (!ConfirmProgram(result, "Exportera G-code", "Exportera")) return;
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = "G-code för GRBL (*.nc)|*.nc|G-code (*.gcode)|*.gcode",
+            FileName = SafeFileName(_document.Name) + ".nc"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            // Plain ASCII with CRLF; every line has already been checked to be printable ASCII.
+            File.WriteAllText(dialog.FileName, result.Text, Encoding.ASCII);
+            StatusText.Text = $"G-code sparad: {dialog.FileName} ({result.Lines.Count} rader, {result.Warnings.Count} varningar).";
+        }
+        catch (Exception ex) { Error("Kunde inte spara G-code: " + ex.Message); }
+    }
+
+    /// <summary>
+    /// Recomputes every path and generates the program. If anything blocks it, the reasons are shown
+    /// with fixes and "go there" buttons, and null is returned.
+    /// </summary>
+    private GCodeResult? GenerateCheckedProgram(string title)
+    {
         Mouse.OverrideCursor = Cursors.Wait;
         GCodeResult result;
         try
@@ -33,15 +57,20 @@ public partial class MainWindow
             foreach (var v in result.VerifierIssues.Take(15))
                 issues.Add(new DialogIssue("Kontroll av programmet: " + v,
                     "Det här är ett internt fel i CNC Studio – programmet släpps inte ut. Spara projektet och rapportera felet."));
-            AppDialog.ShowIssues(this, "Exportera G-code",
+            AppDialog.ShowIssues(this, title,
                 issues.Count == 1 ? "G-code kan inte skapas ännu – en sak behöver åtgärdas:"
                                   : $"G-code kan inte skapas ännu – {issues.Count} saker behöver åtgärdas:",
                 issues, MessageBoxImage.Error,
                 "Exporten stoppas med flit tills allt är kontrollerat, så att maskinen aldrig kör ett okontrollerat program.");
-            StatusText.Text = "G-code skapades inte – åtgärda punkterna i dialogen och exportera igen (Ctrl+E).";
-            return;
+            StatusText.Text = "G-code skapades inte – åtgärda punkterna i dialogen och försök igen.";
+            return null;
         }
+        return result;
+    }
 
+    /// <summary>Summary with the checklist before running; returns true if the user confirms.</summary>
+    private bool ConfirmProgram(GCodeResult result, string title, string verb)
+    {
         var plan = _camReport.Motion;
         string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
         var ops = _camReport.Operations;
@@ -68,24 +97,10 @@ public partial class MainWindow
             foreach (var w in result.Warnings.Take(10)) summary.AppendLine("• " + w);
             if (result.Warnings.Count > 10) summary.AppendLine($"• … och {result.Warnings.Count - 10} till.");
         }
-        summary.AppendLine().Append(result.Warnings.Count > 0 ? "Exportera trots varningarna?" : "Exportera?");
-        if (AppDialog.Show(this, summary.ToString(), "Exportera G-code", MessageBoxButton.OKCancel,
-                result.Warnings.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Question,
-                MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
-
-        var dialog = new SaveFileDialog
-        {
-            Filter = "G-code för GRBL (*.nc)|*.nc|G-code (*.gcode)|*.gcode",
-            FileName = SafeFileName(_document.Name) + ".nc"
-        };
-        if (dialog.ShowDialog(this) != true) return;
-        try
-        {
-            // Plain ASCII with CRLF; every line has already been checked to be printable ASCII.
-            File.WriteAllText(dialog.FileName, result.Text, Encoding.ASCII);
-            StatusText.Text = $"G-code sparad: {dialog.FileName} ({result.Lines.Count} rader, {result.Warnings.Count} varningar).";
-        }
-        catch (Exception ex) { Error("Kunde inte spara G-code: " + ex.Message); }
+        summary.AppendLine().Append(result.Warnings.Count > 0 ? $"{verb} trots varningarna?" : $"{verb}?");
+        return AppDialog.Show(this, summary.ToString(), title, MessageBoxButton.OKCancel,
+            result.Warnings.Count > 0 ? MessageBoxImage.Warning : MessageBoxImage.Question,
+            MessageBoxResult.Cancel) == MessageBoxResult.OK;
     }
 
     /// <summary>A blocking reason with a concrete fix and an action that opens the right place.</summary>

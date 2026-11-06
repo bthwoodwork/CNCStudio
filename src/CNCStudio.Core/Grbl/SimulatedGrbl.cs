@@ -130,6 +130,14 @@ public sealed class SimulatedGrbl : IGrblTransport
                 case GrblProtocol.FeedHold: FeedHold(); break;
                 case GrblProtocol.CycleStartResume: Resume(); break;
                 case GrblProtocol.JogCancel: JogCancel(); break;
+                case GrblProtocol.FeedOverrideReset: SetFeedOv(100); break;
+                case GrblProtocol.FeedOverrideCoarsePlus: SetFeedOv(_feedOv + 10); break;
+                case GrblProtocol.FeedOverrideCoarseMinus: SetFeedOv(_feedOv - 10); break;
+                case GrblProtocol.FeedOverrideFinePlus: SetFeedOv(_feedOv + 1); break;
+                case GrblProtocol.FeedOverrideFineMinus: SetFeedOv(_feedOv - 1); break;
+                case GrblProtocol.RapidOverrideReset: _rapidOv = 100; _ovChanged = true; break;
+                case GrblProtocol.RapidOverrideMedium: _rapidOv = 50; _ovChanged = true; break;
+                case GrblProtocol.RapidOverrideLow: _rapidOv = 25; _ovChanged = true; break;
             }
         }
         Flush();
@@ -421,6 +429,11 @@ public sealed class SimulatedGrbl : IGrblTransport
     }
 
     private double? _pendingS;
+    private int _feedOv = 100, _rapidOv = 100;
+    private bool _ovChanged = true;
+
+    /// <summary>config.h: feed override is clamped to 10–200 %.</summary>
+    private void SetFeedOv(int value) { _feedOv = Math.Clamp(value, 10, 200); _ovChanged = true; }
 
     private void Enqueue(Block b)
     {
@@ -467,6 +480,7 @@ public sealed class SimulatedGrbl : IGrblTransport
                     return;
                 case BlockKind.End:
                     _spindle = 0; _rapidMode = false; _absolute = true; _activeWcs = 0; // M2/M30 resets
+                    _feedOv = 100; _rapidOv = 100; _ovChanged = true;              // RESTORE_OVERRIDES_AFTER_PROGRAM_END
                     Emit("[MSG:Pgm End]\r\n");
                     Complete(node);
                     break;
@@ -511,7 +525,8 @@ public sealed class SimulatedGrbl : IGrblTransport
         double speed = double.MaxValue;
         for (int i = 0; i < 3; i++)
             if (Math.Abs(d[i]) > 1e-9) speed = Math.Min(speed, MaxRate(i) * dist / Math.Abs(d[i]));
-        if (b.FeedMmMin is double f) speed = Math.Min(speed, f);
+        if (b.FeedMmMin is double f) speed = Math.Min(speed, b.Jog ? f : f * _feedOv / 100.0);
+        else speed = speed * _rapidOv / 100.0;
         speed /= 60.0;
         _currentFeed = speed * 60;
         double step = speed * dt;
@@ -674,6 +689,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         var w = V(wco);
         // report.c sends WCO only now and then (and when it changed).
         if (w != _lastWco || _reportCount++ % 10 == 0) { sb.Append("|WCO:").Append(w); _lastWco = w; }
+        else if (_ovChanged || _reportCount % 10 == 5) { sb.Append($"|Ov:{_feedOv},{_rapidOv},100"); _ovChanged = false; }
         return sb.Append(">\r\n").ToString();
     }
 

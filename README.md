@@ -220,3 +220,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Verifierat i GRBL-källan: maskinkoordinaterna är alltid −$13x…0; en axel som homar åt minus står på −$13x + $27 efter homing.
 
 **Tester:** 285 tester. Inte testad mot riktig maskin ännu.
+## 0.8 – Kör program och återuppta efter strömavbrott
+- **Kör program** i maskinstyrningen: Ladda från projektet (samma kontroller som Exportera), Kontrollkör ($C), Starta, Paus/Fortsätt, Stopp och matningsöverstyrning (−10/−1/100/+1/+10 %). Sändning med send-response; varje rad väntar på ok.
+- Starta kräver homing. Programmets M0-paus (manuell fräs) visas tydligt; Fortsätt skickar ~.
+- Stopp = feed hold, vänta på stillastående, sedan mjuk återställning – positionen behålls.
+- **Återuppta:** efter varje ok sparas jobbets läge och en kopia av programmet i %APPDATA%\CNCStudio\job (skrivs säkert till disk). Ett avbrutet jobb visas som "AVBRUTET JOBB" i maskinstyrningen. Efter homing fortsätter jobbet från en punkt som säkert redan är fräst (minst 17 rader före sista ok, eftersom GRBL kan ha 16 rader i kö): Z upp nära brytaren, XY dit, fräsen startas (M0-paus för manuell fräs), ned i det redan frästa spåret med nedmatningshastighet och vidare längs banan.
+- Varnar om nollpunkten (G54) har ändrats sedan jobbet startade. G54 sparas i maskinens minne och finns kvar efter strömavbrott.
+- Demomaskinen kan simulera strömavbrott (Maskin-menyn) och har matningsöverstyrning.
+- Ett larm (ALARM:N) stoppar nu den väntande raden direkt i stället för att vänta på ett svar som aldrig kommer.
+
+**Tester:** 293 tester. Inte testad mot riktig maskin ännu.
