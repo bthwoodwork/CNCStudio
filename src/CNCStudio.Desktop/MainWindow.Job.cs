@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using CNCStudio.Core;
@@ -27,20 +27,70 @@ public partial class MainWindow
 
     // ---- Load and check ----
 
-    private void LoadJob_Click(object sender, RoutedEventArgs e)
+    private void LoadJob_Click(object sender, RoutedEventArgs e) => LoadProgram(null);
+
+    /// <summary>
+    /// Generates and checks all programs, then loads one: <paramref name="number"/> directly, or the user
+    /// picks (the next one suggested) when the project has several tools. The Z values the checks used are
+    /// remembered: if Z is zeroed again afterwards, the program is checked again (see <see cref="OnZeroChanged"/>).
+    /// </summary>
+    private bool LoadProgram(int? number, string? note = null)
     {
-        if (_runner is not null) return;
-        if (GenerateCheckedProgram("Ladda program") is not GCodeResult result) return;
+        if (_runner is not null) return false;
+        if (GenerateCheckedJobs("Ladda program") is not { } jobs) return false;
+        var job = jobs[0];
+        if (number is int n && jobs.FirstOrDefault(j => j.Number == n) is GCodeJob wanted) job = wanted;
+        else if (jobs.Count > 1)
+        {
+            // No tool changer: pick which tool's program to run (the next one after the last loaded).
+            int next = _loadedJob is { } last && last.Count == jobs.Count && last.Number < jobs.Count ? last.Number + 1 : 1;
+            var picker = new ProgramPickerWindow(jobs, next) { Owner = this };
+            if (picker.ShowDialog() != true || picker.Selected is null) return false;
+            job = picker.Selected;
+        }
+        var result = job.Result;
         _jobLines = result.Lines;
-        _jobName = _document.Name;
-        JobInfoText.Text = $"{_jobName}: {result.Lines.Count} rader. {RunTimeText()}" +
+        _jobName = job.Count > 1 ? $"{_document.Name} – program {job.Number} av {job.Count} ({job.ToolLabel})" : _document.Name;
+        JobInfoText.Text = (note is null ? "" : note + "\n") + $"{_jobName}: {result.Lines.Count} rader." +
+            (job.Count > 1 ? $" Fräs: {job.ToolLabel}. Z-nollan ska vara satt med den." : $" {RunTimeText()}") +
             (result.Warnings.Count > 0 ? $" {result.Warnings.Count} varningar – visas när du startar." : "");
-        _loadedWarnings = result;
+        _loadedJob = job;
+        _loadedStockTop = _document.Motion.StockTopMachineZ;
+        _nextProgramNumber = null;
         JobProgressBar.Value = 0; JobProgressText.Text = "";
         UpdateJobButtons();
+        if (_machineView) RenderMachine(refreshCam: false);   // draw the loaded program
+        _jobToolWork = null; Update3DJob();
+        return true;
     }
 
-    private GCodeResult? _loadedWarnings;
+    /// <summary>The "MPos Z at the stock top" the loaded program was checked against.</summary>
+    private double? _loadedStockTop;
+    /// <summary>After a program of a multi-tool job: the program to load once Z is zeroed with the next tool.</summary>
+    private int? _nextProgramNumber;
+
+    /// <summary>
+    /// Z was zeroed again (new tool or new zero). A loaded program was checked against the old Z, so it is
+    /// checked and loaded again; after a finished program this loads the next one.
+    /// </summary>
+    private void OnZeroChanged()
+    {
+        if (_runner is not null) return;
+        if (_nextProgramNumber is int next)
+        {
+            if (LoadProgram(next, "Z nollad med nya fräsen – nästa program är laddat och kontrollerat mot den nya Z-nollan."))
+                StatusText.Text = $"Program {next} laddat. Starta när fräsen sitter i och materialet är klart.";
+            return;
+        }
+        if (_jobLines is null || _loadedJob is null) return;
+        if (_loadedStockTop is double before && _document.Motion.StockTopMachineZ is double now && Math.Abs(before - now) < 0.0005) return;
+        int number = _loadedJob.Number;
+        _jobLines = null; UpdateJobButtons();
+        JobInfoText.Text = "Z nollades om efter att programmet laddades – det kontrolleras igen …";
+        if (!LoadProgram(number, "Z nollades om – programmet är kontrollerat igen mot den nya Z-nollan."))
+            JobInfoText.Text = "Z nollades om. Programmet är inte laddat – klicka Ladda program.";
+    }
+    private GCodeJob? _loadedJob;
 
     private async void CheckJob_Click(object sender, RoutedEventArgs e)
     {
@@ -71,7 +121,7 @@ public partial class MainWindow
         if (_jobStore.LoadJob() is { Progress.Unfinished: true } &&
             AppDialog.Show(this, "Det finns ett avbrutet jobb som inte är klart. Startar du ett nytt jobb glöms det.\n\nStarta ändå?",
                 "Starta", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
-        if (_loadedWarnings is not null && !ConfirmProgram(_loadedWarnings, "Starta programmet", "Starta")) return;
+        if (_loadedJob is not null && !ConfirmProgram(_loadedJob, "Starta programmet", "Starta")) return;
         var g54 = await ReadG54(g);
         _jobStore.Begin(_jobName, _jobLines, 0, g54);
         await RunJob(g, 0, null);
@@ -98,8 +148,37 @@ public partial class MainWindow
                 "Körningen stoppades", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         else if (result.Outcome == JobOutcome.Finished)
-            AppDialog.Show(this, "Programmet är klart." + (_document.Machine.Spindle == SpindleControl.Manual ? " Stäng av fräsen." : ""),
-                "Klart", MessageBoxButton.OK, MessageBoxImage.Information);
+        {
+            MarkJobPathDone();
+            string stop = _document.Machine.Spindle == SpindleControl.Manual ? " Stäng av fräsen." : "";
+            if (_loadedJob is { Count: > 1 } done && done.Number < done.Count)
+            {
+                // Multi-tool job: the next program needs the next tool and Z zeroed with it. Unload this one so
+                // it cannot be started again by mistake with the new tool in.
+                int next = done.Number + 1;
+                var tree = CamTree.Build(_document, _camReport);
+                string tool = tree.Programs.FirstOrDefault(p => p.Number == next)?.ToolLabel ?? "nästa fräs";
+                _nextProgramNumber = next;
+                _jobLines = null; UpdateJobButtons();
+                if (_machineView) RenderMachine(refreshCam: false);
+                Update3DJob();
+                JobInfoText.Text = $"Program {done.Number} av {done.Count} klart. Nästa: program {next} – {tool}. Byt fräs och klicka Nolla Z – programmet laddas då automatiskt.";
+                AppDialog.Show(this,
+                    $"Program {done.Number} av {done.Count} är klart.{stop}\n\n" +
+                    $"NÄSTA: program {next} – {tool}\n" +
+                    $"1. Byt till {tool}.\n" +
+                    "2. Jogga ned till materialytan och klicka Nolla Z (X och Y ändras inte).\n" +
+                    "   Programmet laddas då automatiskt och kontrolleras mot den nya Z-nollan.\n" +
+                    "3. Klicka Starta.",
+                    "Program klart", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                if (_loadedJob is { Count: > 1 } last) JobInfoText.Text = $"Alla {last.Count} program är klara.";
+                AppDialog.Show(this, (_loadedJob is { Count: > 1 } all ? $"Alla {all.Count} program är klara." : "Programmet är klart.") + stop,
+                    "Klart", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
     }
 
     private void ShowJobProgress(JobRunner r)
@@ -201,7 +280,7 @@ public partial class MainWindow
         if (AppDialog.Show(this, text, "Återuppta jobb", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         _jobLines = lines;
         _jobName = progress.Name;
-        _loadedWarnings = null;
+        _loadedJob = null;
         JobInfoText.Text = $"{_jobName}: {lines.Length} rader (återupptas).";
         _jobStore.Begin(_jobName, lines, plan.StartIndex, g54 ?? progress.G54);
         await RunJob(g, plan.StartIndex, plan.Preamble);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -44,14 +44,16 @@ public static class RunTimeEstimator
                 ? report.Operations[mv.OperationIndex].Operation : null;
             if (op is null) continue;
             double minutes = xy > 1e-9
-                ? Math.Sqrt(xy * xy + dz * dz) / op.FeedRate // cuts, links and ramps
+                ? Math.Sqrt(xy * xy + dz * dz) / (dz > 1e-9 && mv.FollowsPath ? op.RampFeedRate : op.FeedRate) // ramps / cuts and links
                 : dz / op.PlungeRate;                        // straight plunges and tab lifts
             cutting += minutes;
             perOp[mv.OperationIndex] = perOp.GetValueOrDefault(mv.OperationIndex) + minutes;
         }
 
         // Spindle starts/changes: GRBL-controlled ones wait the spin-up time; manual ones are pauses.
-        int changes = report.Operations.Where(o => o.Analyzed).Select(o => o.Operation.SpindleRpm).Distinct().Count();
+        // One program per tool (no tool changer): each program starts the spindle, and changes speed within it.
+        int changes = report.Operations.Where(o => o.Analyzed).GroupBy(o => GCode.GCodeGenerator.ToolKey(o.Operation))
+            .Sum(g => g.Select(o => o.Operation.SpindleRpm).Distinct().Count());
         bool manual = m.Spindle == SpindleControl.Manual;
         double dwell = manual ? 0 : changes * doc.Motion.SpindleSpinUpSeconds / 60.0;
         return new RunTimeEstimate(cutting, rapid, dwell, perOp, assumed, manual ? changes : 0);

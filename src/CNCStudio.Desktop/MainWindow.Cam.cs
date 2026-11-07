@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.8.7";
+    private const string AppTitle = "CNC Studio 0.8.8";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -38,6 +38,11 @@ public partial class MainWindow
         TravelHeightBox.Text = F(m.TravelHeightMm);
         PlungeClearanceBox.Text = F(m.PlungeClearanceMm);
         SpinUpBox.Text = F(m.SpindleSpinUpSeconds);
+        RapidIntoCutBox.IsChecked = m.RapidIntoCutClearanceMm is not null;
+        RapidIntoCutClearanceBox.Text = F(m.RapidIntoCutClearanceMm ?? new MotionSettings().RapidIntoCutClearanceMm ?? m.PlungeClearanceMm / 4);
+        EndPositionPicker.SelectedIndex = (int)m.EndPosition;
+        EndXBox.Text = F(m.EndXMm); EndYBox.Text = F(m.EndYMm);
+        UpdateMotionPanels();
         ZMaxBox.Text = m.StockTopMachineZ is double z ? F(z) : "";
         double margin = _document.Machine.LimitMarginMm;
         ZHeadroomText.Text = m.ZMaxAboveStockMm is double h
@@ -58,8 +63,19 @@ public partial class MainWindow
             if (!Parse(ZMaxBox, out var z)) { Error("Ogiltig MPos Z. Skriv ett negativt tal (t.ex. -45.2), eller lämna fältet tomt om värdet är okänt.", ZMaxBox); return; }
             stockTop = z;
         }
+        double? rapidInto = null;
+        if (RapidIntoCutBox.IsChecked == true)
+        {
+            if (!Parse(RapidIntoCutClearanceBox, out var rc)) { Error("Ange höjden över fräst djup i mm.", RapidIntoCutClearanceBox); return; }
+            rapidInto = rc;
+        }
+        var end = (EndPosition)Math.Max(0, EndPositionPicker.SelectedIndex);
+        double endX = _document.Motion.EndXMm, endY = _document.Motion.EndYMm;
+        if (end == EndPosition.Point && (!Parse(EndXBox, out endX) || !Parse(EndYBox, out endY)))
+        { Error("Ange slutpunktens X och Y i mm.", EndXBox); return; }
         var candidate = new MotionSettings { TravelHeightMm = travel, PlungeClearanceMm = plunge,
-            StockTopMachineZ = stockTop, SpindleSpinUpSeconds = spinUp };
+            StockTopMachineZ = stockTop, SpindleSpinUpSeconds = spinUp,
+            RapidIntoCutClearanceMm = rapidInto, EndPosition = end, EndXMm = endX, EndYMm = endY };
         if (MotionValidation.GetError(candidate) is string error) { Error(error); return; }
         RememberChange();
         _document.Motion = candidate;
@@ -68,6 +84,16 @@ public partial class MainWindow
         StatusText.Text = candidate.ZMaxAboveStockMm is double h
             ? $"Z-höjder sparade. {F(h)} mm upp till Z-brytaren; rörelser kontrolleras mot {F(h - margin)} mm över materialet."
             : "Z-höjder sparade. MPos Z vid materialytan är inte angiven – Z-brytaren kan inte kontrolleras.";
+    }
+
+    private void RapidIntoCut_Click(object sender, RoutedEventArgs e) => UpdateMotionPanels();
+    private void EndPosition_Changed(object sender, SelectionChangedEventArgs e) => UpdateMotionPanels();
+
+    private void UpdateMotionPanels()
+    {
+        if (RapidIntoCutPanel is null || EndPointPanel is null || EndPositionPicker is null) return;
+        RapidIntoCutPanel.Visibility = RapidIntoCutBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        EndPointPanel.Visibility = EndPositionPicker.SelectedIndex == (int)EndPosition.Point ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>Rapid XY moves as short thin dashes; moves raised over a fixture in violet.</summary>
@@ -97,13 +123,25 @@ public partial class MainWindow
         {
             if (result.Preview is not ContourPreview preview) continue;
             double width = Math.Max(result.Operation.ToolDiameter, 0.5 / _zoom);
+            if (preview.IsDrill) { canvas.Children.Add(HoleDisc(preview.Centerline[0], result.Operation.ToolDiameter, offsetX, offsetY, CanvasTheme.ToolBand, null)); continue; }
             foreach (var centerline in preview.Centerlines)
                 canvas.Children.Add(PathLine(centerline, offsetX, offsetY, CanvasTheme.ToolBand, width));
         }
         DrawRapids(canvas, offsetX, offsetY);
         foreach (var result in _camReport.Operations)
         {
-            if (result.Preview is ContourPreview preview)
+            if (result.Preview is ContourPreview { IsDrill: true } hole)
+            {
+                // A drilled hole: its outline and a centre cross (no direction, no tabs).
+                var c = hole.Centerline[0];
+                canvas.Children.Add(HoleDisc(c, result.Operation.ToolDiameter, offsetX, offsetY, null, CanvasTheme.ToolPath));
+                double arm = Math.Max(result.Operation.ToolDiameter * 0.7, 6 / _zoom);
+                canvas.Children.Add(new Line { X1 = c.X + offsetX - arm, X2 = c.X + offsetX + arm, Y1 = c.Y + offsetY, Y2 = c.Y + offsetY, Stroke = CanvasTheme.ToolPath, StrokeThickness = 1 / _zoom, IsHitTestVisible = false });
+                canvas.Children.Add(new Line { X1 = c.X + offsetX, X2 = c.X + offsetX, Y1 = c.Y + offsetY - arm, Y2 = c.Y + offsetY + arm, Stroke = CanvasTheme.ToolPath, StrokeThickness = 1 / _zoom, IsHitTestVisible = false });
+                AddConflictMarks(canvas, hole, result.Findings.Where(f => f.Severity == CamSeverity.Warning), offsetX, offsetY);
+                AddConflictMarks(canvas, hole, result.Findings.Where(f => f.Severity == CamSeverity.Critical), offsetX, offsetY);
+            }
+            else if (result.Preview is ContourPreview preview)
             {
                 foreach (var centerline in preview.Centerlines)
                     canvas.Children.Add(PathLine(centerline, offsetX, offsetY, CanvasTheme.ToolPath, 1.1 / _zoom));
@@ -136,6 +174,14 @@ public partial class MainWindow
                 canvas.Children.Add(label);
             }
         }
+    }
+
+    private Ellipse HoleDisc(CamPoint c, double diameter, double offsetX, double offsetY, Brush? fill, Brush? stroke)
+    {
+        double d = Math.Max(diameter, 1 / _zoom);
+        var e = new Ellipse { Width = d, Height = d, Fill = fill, Stroke = stroke, StrokeThickness = 1.1 / _zoom, IsHitTestVisible = false };
+        Canvas.SetLeft(e, c.X - d / 2 + offsetX); Canvas.SetTop(e, c.Y - d / 2 + offsetY);
+        return e;
     }
 
     private static Polyline PathLine(IReadOnlyList<CamPoint> path, double offsetX, double offsetY, Brush stroke, double thickness)
@@ -236,6 +282,7 @@ public partial class MainWindow
     private void UpdateCamHealth()
     {
         if (CamHealthHeader is null || CamHealthText is null) return;
+        UpdateCamTree();
         var r = _camReport;
         int stale = r.StaleCount;
         if (ComputePathsButton is not null)

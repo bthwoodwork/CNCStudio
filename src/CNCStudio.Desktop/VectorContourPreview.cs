@@ -26,6 +26,8 @@ internal static class VectorContourPreview
         if (error is not null) throw new ArgumentException(error);
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness); // Clipper2, handles holes/islands
+        if (operation.Kind == CamOperationKind.Drill)
+            return DrillToolpaths.Generate(shape, operation);                    // centre of the imported circle
         if (shape.Contours is null || shape.Contours.Count == 0 ||
             shape.Contours.Any(c => !c.Closed || c.Points.Count < 3))
             throw new ArgumentException("Konturfräsning kräver slutna konturer med minst tre punkter.");

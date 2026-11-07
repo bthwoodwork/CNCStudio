@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -39,7 +39,7 @@ public sealed record MotionPlan(IReadOnlyList<MotionMove> Moves, double StartHei
 /// lifts over tabs and retracts – and checks it against fixtures and the Z travel limit.
 /// <para>Order: inside contours before outside contours; within an operation, inner (smaller)
 /// paths before outer ones, so a part stays held by the surrounding material as long as possible.</para>
-/// <para>Not covered: tool holder/collet geometry, ramping, feed rates, lower Z limit.</para>
+/// <para>Not covered: tool holder/collet geometry, feed rates.</para>
 /// </summary>
 public static class MotionPlanner
 {
@@ -105,6 +105,18 @@ public static class MotionPlanner
             z = m.PlungeClearanceMm;
         }
 
+        // Going down at (s) towards targetZ: when part of the way is already cut (clearedZ below the
+        // surface) the tool rapids through that air down to clearance above it; the rest is fed.
+        void DescendThroughCut(CamPoint s, double clearedZ)
+        {
+            if (m.RapidIntoCutClearanceMm is not double rc || clearedZ >= -1e-9) return;
+            double rapidTo = clearedZ + rc;
+            if (z <= rapidTo + 1e-9) return;
+            moves.Add(new MotionMove(MoveKind.Rapid, s.X, s.Y, z, s.X, s.Y, rapidTo,
+                $"Snabbt ned i fräst spår till {F(rc)} mm över föregående djup"));
+            z = rapidTo;
+        }
+
         // Plunge at the start of a closed loop and cut the whole loop at cutZ. With ramping the tool
         // descends along the path itself (only through material not yet cut: from clearedZ), cuts the
         // rest of the loop at depth and then the ramp section again at full depth.
@@ -115,6 +127,7 @@ public static class MotionPlanner
             if (op.Plunge == PlungeMode.Ramp && length > 1e-6)
             {
                 double fromZ = Math.Min(z, clearedZ);
+                DescendThroughCut(s, clearedZ);
                 if (z > fromZ + 1e-9)
                 {
                     moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, fromZ,
@@ -134,6 +147,7 @@ public static class MotionPlanner
                     return;
                 }
             }
+            DescendThroughCut(s, clearedZ);
             moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, cutZ, $"Nedmatning till {F(depth)} mm", opIndex));
             z = cutZ;
             AddCut(moves, path, opIndex, pi, 0, length, cutZ, purpose);
@@ -148,6 +162,11 @@ public static class MotionPlanner
             if (preview.IsPocket)
             {
                 PlanPocket(preview, paths, opIndex, op);
+                continue;
+            }
+            if (preview.IsDrill)
+            {
+                PlanDrill(preview, opIndex);
                 continue;
             }
             var pathOrder = Enumerable.Range(0, paths.Count).OrderBy(i => BoxArea(paths[i])).ToList();
@@ -172,6 +191,9 @@ public static class MotionPlanner
                         cleared = cutZ;
                         continue;
                     }
+                    // A tab at the very start leaves material there: only the air above it is cut.
+                    double clearedAtStart = tabs.Where(t => t.Start <= 1e-6).Select(t => -t.TopDepth).Append(cleared).Max();
+                    DescendThroughCut(start, clearedAtStart);
                     moves.Add(new MotionMove(MoveKind.Feed, start.X, start.Y, z, start.X, start.Y, cutZ,
                         $"Nedmatning till {F(depth)} mm", opIndex));
                     z = cutZ;
@@ -195,6 +217,30 @@ public static class MotionPlanner
                     "Lyft ur spåret"));
                 z = m.TravelHeightMm; at = start;
             }
+        }
+
+        // Drilling: straight pecks at the hole centre. After each peck the tool lifts out of the hole to
+        // the plunge clearance (chips out), then goes back down through the drilled part and on.
+        void PlanDrill(ContourPreview preview, int opIndex)
+        {
+            var c = preview.Centerline[0];
+            TravelTo(c);
+            double cleared = 0;
+            for (int k = 0; k < preview.PassDepths.Count; k++)
+            {
+                double depth = preview.PassDepths[k], cutZ = -depth;
+                DescendThroughCut(c, cleared);
+                moves.Add(new MotionMove(MoveKind.Feed, c.X, c.Y, z, c.X, c.Y, cutZ,
+                    preview.PassDepths.Count == 1 ? $"Borrning till {F(depth)} mm" : $"Borrning steg {k + 1} av {preview.PassDepths.Count} till {F(depth)} mm", opIndex));
+                z = cutZ; cleared = cutZ;
+                if (k < preview.PassDepths.Count - 1)
+                {
+                    moves.Add(new MotionMove(MoveKind.Rapid, c.X, c.Y, z, c.X, c.Y, m.PlungeClearanceMm, "Lyft ur hålet (spånor)"));
+                    z = m.PlungeClearanceMm;
+                }
+            }
+            moves.Add(new MotionMove(MoveKind.Rapid, c.X, c.Y, z, c.X, c.Y, m.TravelHeightMm, "Lyft ur hålet"));
+            z = m.TravelHeightMm; at = c;
         }
 
         // Pocket: level by level (the whole area at one depth before going deeper), loops inside out.
@@ -259,6 +305,19 @@ public static class MotionPlanner
         if (at is not null && z < startHeight - 1e-9)
             moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, at.X, at.Y, startHeight,
                 $"Programslut: lyft till Z {F(startHeight)}"));
+        if (at is not null && m.EndPosition != EndPosition.StayAbove)
+        {
+            var (ex, ey) = m.EndPosition == EndPosition.WorkZero ? doc.FromWork(0, 0) : doc.FromWork(m.EndXMm, m.EndYMm);
+            moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, startHeight, ex, ey, startHeight,
+                m.EndPosition == EndPosition.WorkZero ? "Programslut: till arbetsnollan (X0 Y0)"
+                    : $"Programslut: till X {F(m.EndXMm)} Y {F(m.EndYMm)}"));
+            // The end point is in work coordinates: it must still be inside the machine's work area.
+            double tx = doc.Stock.X + ex, ty = doc.Stock.Y + ey;
+            var machine = doc.Machine ?? new MachineProfile();
+            if (tx < -1e-9 || ty < -1e-9 || tx > machine.WorkWidthMm + 1e-9 || ty > machine.WorkLengthMm + 1e-9)
+                findings.Add(new CamFinding(CamSeverity.Critical, "EndPointOutsideMachine",
+                    $"Slutpunkten X {F(m.EndXMm)} Y {F(m.EndYMm)} ligger utanför maskinens arbetsområde. Välj en annan slutposition under Z-höjder och förflyttningar.", null));
+        }
 
         double maxZ = moves.Max(x => Math.Max(x.Z0, x.Z1));
         var plan = new MotionPlan(moves, startHeight, maxZ, order.Select(o => o.Index).ToList());

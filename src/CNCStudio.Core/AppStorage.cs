@@ -41,6 +41,7 @@ public sealed class AppStorage
         Path.Combine(ToolsFolderName, "verktyg.json"),
         Path.Combine(MaterialsFolderName, "material.json"),
         Path.Combine(SettingsFolderName, "maskinprofil.json"),
+        Path.Combine(SettingsFolderName, "probplatta.json"),
     };
 
     private readonly string _local;
@@ -126,6 +127,17 @@ public sealed class AppStorage
     }
 
     public void SaveMachineProfile(MachineProfile profile) => WriteAtomic(MachineProfilePath, JsonSerializer.Serialize(profile, Json));
+
+    /// <summary>The touch plate and probing speeds (Inställningar\probplatta.json) – shared like the machine profile.</summary>
+    public string ProbeSettingsPath => Path.Combine(DataFolder, SettingsFolderName, "probplatta.json");
+
+    public Grbl.ProbeSettings LoadProbeSettings()
+    {
+        try { return File.Exists(ProbeSettingsPath) ? JsonSerializer.Deserialize<Grbl.ProbeSettings>(File.ReadAllText(ProbeSettingsPath), Json) ?? new() : new(); }
+        catch (Exception) { return new(); }
+    }
+
+    public void SaveProbeSettings(Grbl.ProbeSettings settings) => WriteAtomic(ProbeSettingsPath, JsonSerializer.Serialize(settings, Json));
 
     /// <summary>
     /// Earlier versions kept tools.json and maskinprofil.json directly in %APPDATA%\CNCStudio or in the

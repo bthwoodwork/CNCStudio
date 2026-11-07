@@ -2,7 +2,7 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
- Title="CNC Studio 0.8.7 – loggar på Drive" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.8.8 – rampfart, slutposition, snabb nedgång" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -83,7 +83,7 @@
  <MenuItem Header="_Objekt"><MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/><Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/></MenuItem>
  <MenuItem Header="_CAM"><MenuItem Header="Exportera G-code…" Click="ExportGCode_Click" InputGestureText="Ctrl+E"/><Separator/><MenuItem Header="Verktygsbibliotek…" Click="ManageTools_Click"/><MenuItem Header="Materialbibliotek…" Click="ManageMaterials_Click"/><Separator/><MenuItem Header="V-carve inlay-inställningar" Click="OpenInlay_Click"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
  <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem x:Name="View3DMenuItem" Header="3D-vy" Click="Toggle3D_Click" InputGestureText="F4"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinkontroll" Click="ShowPanel_Click" Tag="Machine"/></MenuItem>
- <MenuItem Header="_Maskin"><MenuItem Header="Första test mot maskinen…" Click="FirstTest_Click"/><Separator/><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/><Separator/><MenuItem Header="Demomaskin: simulera strömavbrott" Click="SimulatePowerCut_Click"/></MenuItem>
+ <MenuItem Header="_Maskin"><MenuItem Header="Första test mot maskinen…" Click="FirstTest_Click"/><Separator/><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Probning…" Click="Probe_Click"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/><Separator/><MenuItem Header="Demomaskin: simulera strömavbrott" Click="SimulatePowerCut_Click"/></MenuItem>
  <MenuItem Header="_Hjälp"><MenuItem Header="Loggar och fellogg…" Click="ShowLogs_Click"/><Separator/><MenuItem Header="Om CNC Studio" Click="About_Click"/></MenuItem>
 </Menu>
  
@@ -255,6 +255,9 @@
           <Expander Header="PROJEKT OCH MATERIAL" IsExpanded="True" Margin="0,10,0,3">
            <StackPanel>
             <TextBlock Text="Projektnamn"/><TextBox x:Name="NameBox" Text="Nytt projekt"/>
+            <Border x:Name="NoMaterialText" Background="#3A3220" BorderBrush="#8A6A1E" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="3,6,3,2" Visibility="Collapsed">
+              <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#FFD39F" Text="Inget material ännu. Ange bredd, höjd och tjocklek och klicka Lägg till material. Utan material beräknas inga körbanor."/>
+            </Border>
             <Grid>
              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
              <StackPanel><TextBlock Text="Bredd"/><TextBox x:Name="MaterialWidthBox" Text="600"/></StackPanel>
@@ -273,7 +276,7 @@
                       ToolTip="Var X0 Y0 sätts på materialet innan körning. Z0 är alltid materialets ovansida.">
               <ComboBoxItem Content="Främre vänstra hörnet"/><ComboBoxItem Content="Mitten av materialet"/>
             </ComboBox>
-            <Button Content="Uppdatera material" Click="UpdateMaterial_Click" Margin="3,6"/>
+            <Button x:Name="MaterialButton" Content="Uppdatera material" Click="UpdateMaterial_Click" Margin="3,6"/>
            </StackPanel>
           </Expander>
          </StackPanel>
@@ -319,6 +322,16 @@
             <TextBlock Text="Alla höjder i mm över materialytan (Z0 = materialets ovansida)." TextWrapping="Wrap" Foreground="#BDCEE0" Margin="3,2,3,6" FontSize="11"/>
             <TextBlock Text="Förflyttningshöjd (snabbförflyttning)"/><TextBox x:Name="TravelHeightBox" Text="10" ToolTip="Höjd för snabbförflyttningar mellan skären. Höjs automatiskt över fastspänningar."/>
             <TextBlock Text="Höjd före nedmatning"/><TextBox x:Name="PlungeClearanceBox" Text="2" ToolTip="Fräsen går snabbt ned hit och matar sedan långsamt in i materialet."/>
+            <CheckBox x:Name="RapidIntoCutBox" Content="Snabbt ned i redan fräst spår" Margin="3,6,3,0" Click="RapidIntoCut_Click" ToolTip="När fräsen går ned igen där det redan är fräst (fickans nästa djup, ett nytt varv efter ett lyft) går den med G0 genom luften och matar bara sista biten."/>
+            <StackPanel x:Name="RapidIntoCutPanel"><TextBlock Text="   … till höjd över fräst djup"/><TextBox x:Name="RapidIntoCutClearanceBox" Text="0.5" ToolTip="mm över det djup som redan är fräst. Minst 0,1 mm och högst höjden före nedmatning."/></StackPanel>
+            <TextBlock Text="Slutposition" Margin="3,6,3,0"/>
+            <ComboBox x:Name="EndPositionPicker" Margin="3" SelectionChanged="EndPosition_Changed" ToolTip="Vart fräsen går när programmet är klart (på start-/sluthöjden).">
+              <ComboBoxItem Content="Stanna över sista skäret"/><ComboBoxItem Content="Arbetsnollan (X0 Y0)"/><ComboBoxItem Content="Egen punkt"/>
+            </ComboBox>
+            <Grid x:Name="EndPointPanel"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+             <StackPanel><TextBlock Text="X (mm)"/><TextBox x:Name="EndXBox" Text="0" ToolTip="Slutpunkt i arbetskoordinater (samma som G-coden)."/></StackPanel>
+             <StackPanel Grid.Column="1"><TextBlock Text="Y (mm)"/><TextBox x:Name="EndYBox" Text="0" ToolTip="Slutpunkt i arbetskoordinater (samma som G-coden)."/></StackPanel>
+            </Grid>
             <TextBlock Text="Spindelns uppstartstid (s)"/><TextBox x:Name="SpinUpBox" Text="4" ToolTip="Väntetid efter M3 innan första rörelsen (G4 P, sekunder)."/>
             <TextBlock Text="Maskinens Z vid materialytan (MPos Z)" TextWrapping="Wrap"/><TextBox x:Name="ZMaxBox" Text="" ToolTip="Efter homing är Z-brytaren MPos Z 0. Sätt Z-nollan på materialytan och läs av MPos Z i gSender (negativt värde, t.ex. -45.2). Lämna tomt om okänt (ger varning)."/>
             <Button Content="Läs från maskinen ($#)" Click="ReadZeroFromMachine_Click" ToolTip="Läser G54-offset, G92 och verktygslängd från maskinen. Kräver att Z-nollan är satt på materialytan."/>
@@ -410,6 +423,7 @@
               <Button x:Name="HomeButton" Content="⌂  Homing ($H)" Click="Home_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Kör homing: först Z upp mot brytaren, sedan X och Y mot sina brytare. Därefter är maskinkoordinaterna kända."/>
               <Button Content="Nolla X + Y" Tag="XY" Click="Zero_Click" Background="#24618C" ToolTip="Nollar X och Y – Z ändras inte (G10 L20 P0 X0 Y0)"/>
               <Button Content="Gå till X0 Y0" Tag="XY" Click="GoTo_Click" ToolTip="Lyfter Z till nära överkanten (G53) och går till X0 Y0"/>
+              <Button Content="⊥  Probning…" Click="Probe_Click" Background="#6B4FA0" FontWeight="SemiBold" ToolTip="Sätt Z (standard) – eller X, Y och Z i hörnet – med probplatta (G38.2)."/>
               <Button Content="Arbetsområde hit…" Click="SetTravelHere_Click" ToolTip="Efter homing: jogga till yttersta punkten maskinen får nå och klicka här. Avståndet från brytarna blir maskinens rörelse ($130/$131) – de mjuka gränserna."/>
             </UniformGrid>
             <CheckBox x:Name="ShowToolBox" Content="Visa fräsens position i maskinvyn" IsChecked="True" Foreground="#E8F1FA" Margin="4,6,3,2" Checked="ShowTool_Changed" Unchecked="ShowTool_Changed"/>
@@ -486,72 +500,143 @@
   </StackPanel><TextBlock Text="SMART CAM" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
  </DockPanel></Border><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
             
-            <TextBlock x:Name="CamSelectionLabel" Text="Markera ett objekt först." TextWrapping="Wrap" Margin="0,0,0,12" Foreground="#BDCEE0"/>
-            <TextBlock Text="Fräs"/>
-            <DockPanel Margin="0,0,0,8">
-              <Button DockPanel.Dock="Right" Content="Fräsar…" Click="ManageTools_Click" Padding="8,3" ToolTip="Verktygsbibliotek: lägg till och ändra fräsar och deras standardvärden"/>
-              <ComboBox x:Name="CamToolPicker" Margin="3" SelectionChanged="CamTool_Changed" DisplayMemberPath="DisplayName"
-                        ToolTip="Välj fräs – diameter, matning, nedmatning, djup per pass och varvtal fylls i från biblioteket"/>
-            </DockPanel>
-            <TextBlock Text="Bearbetning"/>
-            <ComboBox x:Name="CamKind" SelectedIndex="0" Margin="3,5,3,12" SelectionChanged="CamInput_Changed">
-              <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/>
-            </ComboBox>
-            <TextBlock Text="Fräsdiameter (mm)"/><TextBox x:Name="CamDiameter" Text="3.175" TextChanged="CamInput_Changed"/>
-            <TextBlock Text="Totalt djup (mm)" Margin="0,8,0,0"/><TextBox x:Name="CamDepth" Text="6" TextChanged="CamInput_Changed"/>
-            <TextBlock Text="Djup per pass (mm)" Margin="0,8,0,0"/><TextBox x:Name="CamPass" Text="2" TextChanged="CamInput_Changed"/>
-            <Grid Margin="0,8,0,0">
-              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-              <StackPanel><TextBlock Text="Matning" FontSize="11" ToolTip="Skärande matning, mm/min (G1 F)"/><TextBox x:Name="CamFeed" Text="1000" TextChanged="CamInput_Changed" ToolTip="mm/min"/></StackPanel>
-              <StackPanel Grid.Column="1"><TextBlock Text="Nedmatning" FontSize="11" ToolTip="Matning nedåt i Z, mm/min"/><TextBox x:Name="CamPlunge" Text="300" TextChanged="CamInput_Changed" ToolTip="mm/min"/></StackPanel>
-              <StackPanel Grid.Column="2"><TextBlock Text="Varvtal" FontSize="11" ToolTip="Spindelvarvtal, varv/min (M3 S)"/><TextBox x:Name="CamRpm" Text="18000" TextChanged="CamInput_Changed" ToolTip="varv/min"/></StackPanel>
-            </Grid>
-            <TextBlock Text="Matning och nedmatning i mm/min, varvtal i varv/min." Foreground="#AFBDD0" FontSize="11" Margin="3,2"/>
-            <Grid Margin="0,8,0,0">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition/></Grid.ColumnDefinitions>
-              <StackPanel><TextBlock Text="Nedmatning" FontSize="11"/>
-                <ComboBox x:Name="CamPlungeMode" SelectedIndex="0" Margin="3" SelectionChanged="CamInput_Changed">
-                  <ComboBoxItem Content="Rak (lodrät)"/><ComboBoxItem Content="Rampad längs banan"/>
-                </ComboBox></StackPanel>
-              <StackPanel Grid.Column="1" x:Name="RampAnglePanel"><TextBlock Text="Vinkel °" FontSize="11"/>
-                <TextBox x:Name="CamRampAngle" Text="3" TextChanged="CamInput_Changed" ToolTip="Rampens vinkel mot horisontalplanet, 1–45°. 2–5° är skonsamt i trä."/></StackPanel>
-            </Grid>
-            <TextBlock Text="Fräsriktning" FontSize="11" Margin="0,4,0,0"/>
-            <ComboBox x:Name="CamDirectionPicker" SelectedIndex="0" Margin="3" SelectionChanged="CamInput_Changed"
-                      ToolTip="Medfräsning (climb): väggen på fräsens högra sida, renare yta. Motfräsning (conventional): väggen till vänster, lugnare på svaga maskiner. Gäller medurs spindel (M3).">
-              <ComboBoxItem Content="Standard (som beräknad)"/><ComboBoxItem Content="Medfräsning (climb)"/><ComboBoxItem Content="Motfräsning (conventional)"/>
-            </ComboBox>
-            <StackPanel x:Name="PocketSettingsPanel" Margin="0,8,0,0" Visibility="Collapsed">
-              <TextBlock Text="Stegning (% av fräsdiametern)"/>
-              <TextBox x:Name="CamStepover" Text="40" TextChanged="CamInput_Changed" ToolTip="Avstånd mellan varven i fickan. 30–50 % är vanligt i trä."/>
-              <TextBlock Text="Fickan fräses inifrån och ut, ett djup i taget. Sista varvet följer väggen." TextWrapping="Wrap" Foreground="#AFBDD0" FontSize="11" Margin="3,2"/>
-            </StackPanel>
-            <CheckBox x:Name="CamTabs" IsChecked="True" Content="Hållflikar (vid genomskärning)" Margin="4,14,4,6" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
-            <Grid x:Name="TabSettingsPanel" Margin="18,0,0,8">
-              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="0"><TextBlock Text="Antal" FontSize="11"/><TextBox x:Name="CamTabCount" Text="4" TextChanged="CamInput_Changed" ToolTip="Flikar per sluten bana. Färre placeras om banan är för kort."/></StackPanel>
-              <StackPanel Grid.Column="1"><TextBlock Text="Bredd mm" FontSize="11"/><TextBox x:Name="CamTabWidth" Text="6" TextChanged="CamInput_Changed" ToolTip="Bredden på materialbryggan vid delen."/></StackPanel>
-              <StackPanel Grid.Column="2"><TextBlock Text="Höjd mm" FontSize="11"/><TextBox x:Name="CamTabHeight" Text="3" TextChanged="CamInput_Changed" ToolTip="Flikens höjd ovanför spårets botten."/></StackPanel>
-            </Grid>
-            <Border Background="#1C2A39" Padding="10" CornerRadius="4" Margin="0,6,0,8">
+            <StackPanel.Resources>
+              <Style x:Key="CamSection" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#8CA3BA"/><Setter Property="Margin" Value="3,0,3,4"/></Style>
+              <Style x:Key="CamCard" TargetType="Border"><Setter Property="Background" Value="#1C2A39"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Padding" Value="8,8,8,6"/><Setter Property="Margin" Value="0,0,0,10"/></Style>
+              <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="#BDCEE0"/><Setter Property="Margin" Value="3,0,3,0"/></Style>
+            </StackPanel.Resources>
+
+            <!-- ===== ALL OPERATIONS: one program per tool, in run order ===== -->
+            <TextBlock Text="OPERATIONER · i körordning" ToolTip="Ett program per verktyg (ingen verktygsväxlare): byt fräs och nolla Z mellan programmen." Style="{StaticResource CamSection}"/>
+            <Border Background="#16222F" BorderBrush="#33475C" BorderThickness="1" CornerRadius="5" Padding="2,4" Margin="0,0,0,12">
+              <TreeView x:Name="CamTreeView" MaxHeight="280" Background="Transparent" BorderThickness="0" Foreground="#E8F1FA"
+                        SelectedItemChanged="CamTree_SelectedItemChanged" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ToolTip="Klicka för att markera objektet. Högerklicka för att kopiera/klistra in inställningar, ta bort CAM eller exportera ett program."/>
+            </Border>
+            <!-- ===== THE SELECTED OBJECT ===== -->
+            <Border Background="#24384D" CornerRadius="5" Padding="10,8" Margin="0,0,0,10">
+              <TextBlock x:Name="CamSelectionLabel" Text="Markera ett objekt först." TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#E8F1FA"/>
+            </Border>
+
+            <!-- 1. What and with what -->
+            <TextBlock Text="1 · BEARBETNING OCH FRÄS" Style="{StaticResource CamSection}"/>
+            <Border Style="{StaticResource CamCard}">
+              <StackPanel>
+                <TextBlock Text="Bearbetning" Style="{StaticResource FieldLabel}"/>
+                <ComboBox x:Name="CamKind" SelectedIndex="0" Margin="3,3,3,8" SelectionChanged="CamInput_Changed">
+                  <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/><ComboBoxItem Content="Borrning (Drill)" ToolTip="Hål med fräsens diameter i objektets mitt, rakt ned i steg"/>
+                </ComboBox>
+                <TextBlock Text="Fräs" Style="{StaticResource FieldLabel}"/>
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Content="Fräsar…" Click="ManageTools_Click" Padding="8,3" ToolTip="Verktygsbibliotek: lägg till och ändra fräsar och deras standardvärden"/>
+                  <ComboBox x:Name="CamToolPicker" Margin="3" SelectionChanged="CamTool_Changed" DisplayMemberPath="DisplayName"
+                            ToolTip="Välj fräs – diameter, matning, nedmatning, djup per pass och varvtal fylls i från biblioteket"/>
+                </DockPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <StackPanel><TextBlock Text="Fräsdiameter (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamDiameter" Text="3.175" TextChanged="CamInput_Changed"/></StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+
+            <!-- 2. How deep -->
+            <TextBlock Text="2 · DJUP" Style="{StaticResource CamSection}"/>
+            <Border Style="{StaticResource CamCard}">
+              <StackPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <StackPanel><TextBlock Text="Totalt djup (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamDepth" Text="6" TextChanged="CamInput_Changed"/></StackPanel>
+                  <StackPanel Grid.Column="1"><TextBlock x:Name="CamPassLabel" Text="Djup per pass (mm)" Style="{StaticResource FieldLabel}" TextTrimming="CharacterEllipsis"/><TextBox x:Name="CamPass" Text="2" TextChanged="CamInput_Changed"/></StackPanel>
+                </Grid>
+                <StackPanel x:Name="PocketSettingsPanel" Margin="0,6,0,0" Visibility="Collapsed">
+                  <TextBlock Text="Stegning (% av fräsdiametern)" Style="{StaticResource FieldLabel}"/>
+                  <TextBox x:Name="CamStepover" Text="40" TextChanged="CamInput_Changed" ToolTip="Avstånd mellan varven i fickan. 30–50 % är vanligt i trä. Fickan fräses inifrån och ut, ett djup i taget; sista varvet följer väggen."/>
+                </StackPanel>
+                <CheckBox x:Name="CamTabs" IsChecked="True" Content="Hållflikar (vid genomskärning)" Margin="4,10,4,4" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
+                <Grid x:Name="TabSettingsPanel" Margin="18,0,0,2">
+                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0"><TextBlock Text="Antal" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamTabCount" Text="4" TextChanged="CamInput_Changed" ToolTip="Flikar per sluten bana. Färre placeras om banan är för kort."/></StackPanel>
+                  <StackPanel Grid.Column="1"><TextBlock Text="Bredd mm" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamTabWidth" Text="6" TextChanged="CamInput_Changed" ToolTip="Bredden på materialbryggan vid delen."/></StackPanel>
+                  <StackPanel Grid.Column="2"><TextBlock Text="Höjd mm" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamTabHeight" Text="3" TextChanged="CamInput_Changed" ToolTip="Flikens höjd ovanför spårets botten."/></StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+
+            <!-- 3. Speeds -->
+            <TextBlock Text="3 · MATNING OCH VARVTAL" Style="{StaticResource CamSection}"/>
+            <Border Style="{StaticResource CamCard}">
+              <StackPanel>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <StackPanel><TextBlock Text="Matning" Style="{StaticResource FieldLabel}" ToolTip="Skärande matning, mm/min (G1 F)"/><TextBox x:Name="CamFeed" Text="1000" TextChanged="CamInput_Changed" ToolTip="mm/min"/></StackPanel>
+                  <StackPanel Grid.Column="1"><TextBlock Text="Nedmatning" Style="{StaticResource FieldLabel}" ToolTip="Matning nedåt i Z, mm/min"/><TextBox x:Name="CamPlunge" Text="300" TextChanged="CamInput_Changed" ToolTip="mm/min"/></StackPanel>
+                  <StackPanel Grid.Column="2"><TextBlock Text="Varvtal" Style="{StaticResource FieldLabel}" ToolTip="Spindelvarvtal, varv/min (M3 S)"/><TextBox x:Name="CamRpm" Text="18000" TextChanged="CamInput_Changed" ToolTip="varv/min"/></StackPanel>
+                </Grid>
+                <TextBlock Text="mm/min · mm/min · varv/min" Foreground="#8CA3BA" FontSize="10.5" Margin="3,1,3,0"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 4. Entry and direction (details) -->
+            <Expander x:Name="CamAdvancedExpander" Header="4 · NEDMATNING OCH FRÄSRIKTNING" IsExpanded="False" Margin="0,0,0,10">
+              <Border Style="{StaticResource CamCard}" Margin="0,4,0,0">
+                <StackPanel>
+                  <Grid x:Name="PlungeModePanel">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <StackPanel><TextBlock Text="Nedmatning" Style="{StaticResource FieldLabel}"/>
+                      <ComboBox x:Name="CamPlungeMode" SelectedIndex="0" Margin="3" SelectionChanged="CamInput_Changed">
+                        <ComboBoxItem Content="Rak (lodrät)"/><ComboBoxItem Content="Rampad längs banan"/>
+                      </ComboBox></StackPanel>
+                    <StackPanel Grid.Column="1" x:Name="RampAnglePanel"><TextBlock Text="Vinkel °" Style="{StaticResource FieldLabel}"/>
+                      <TextBox x:Name="CamRampAngle" Text="3" TextChanged="CamInput_Changed" ToolTip="Rampens vinkel mot horisontalplanet, 1–45°. 2–5° är skonsamt i trä."/></StackPanel>
+                    <StackPanel Grid.Column="2" x:Name="RampFeedPanel"><TextBlock Text="Matning %" Style="{StaticResource FieldLabel}"/>
+                      <TextBox x:Name="CamRampFeed" Text="70" TextChanged="CamInput_Changed" ToolTip="Matning längs rampen i % av matningen (5–100). Rampen skär med både spets och sida, så lägre fart är skonsammare."/></StackPanel>
+                  </Grid>
+                  <TextBlock Text="Fräsriktning" Style="{StaticResource FieldLabel}" Margin="3,6,3,0"/>
+                  <ComboBox x:Name="CamDirectionPicker" SelectedIndex="0" Margin="3" SelectionChanged="CamInput_Changed"
+                            ToolTip="Medfräsning (climb): väggen på fräsens högra sida, renare yta. Motfräsning (conventional): väggen till vänster, lugnare på svaga maskiner. Gäller medurs spindel (M3).">
+                    <ComboBoxItem Content="Standard (som beräknad)"/><ComboBoxItem Content="Medfräsning (climb)"/><ComboBoxItem Content="Motfräsning (conventional)"/>
+                  </ComboBox>
+                </StackPanel>
+              </Border>
+            </Expander>
+
+            <!-- Summary and save for this object -->
+            <Border Background="#1A3A2C" BorderBrush="#2F6B4C" BorderThickness="1" Padding="10,8" CornerRadius="5" Margin="0,0,0,6">
               <TextBlock x:Name="CamSummary" Text="3 pass vid 2 mm/pass." TextWrapping="Wrap" Foreground="#D5E3F0"/>
             </Border>
-            <Button Content="Spara CAM till markerat objekt" Background="#24618C" Click="SaveCam_Click" Margin="3,9"/>
-            <Button Content="Ta bort objektets CAM" Click="RemoveCam_Click"/>
-            <Button x:Name="ComputePathsButton" Content="Beräkna körbanor" Click="PreviewContour_Click" Background="#23623F" Margin="3,10,3,4" ToolTip="Räknar om alla inaktuella körbanor. Enkla former räknas om automatiskt; stora DXF/SVG/Boolean-former först när du klickar här."/>
-            <CheckBox x:Name="ContourVisibilityCheck" Content="Visa sparade verktygsbanor i båda vyerna" IsChecked="True" Checked="ContourVisibility_Changed" Unchecked="ContourVisibility_Changed" Margin="4,8" Foreground="#D4E8D8"/>
-            <Button Content="Kontrollera hinder (XY)" Click="ReviewCamSafety_Click" Background="#80532B" ToolTip="Kontroll av skärande XY-konturer mot fastspänningar och maskinens XY-gränser; ej full säkerhetskontroll"/>
-            <Button Content="Exportera G-code…" Click="ExportGCode_Click" Background="#2E7DD7" FontWeight="SemiBold" Margin="3,8,3,3"
-                    ToolTip="Skapar ett GRBL-program (.nc). Blockeras vid kritiska fel eller okontrollerade körbanor. (Ctrl+E)"/>
-            <Border x:Name="CamHealthBorder" Background="#1C2A39" BorderBrush="#50657D" BorderThickness="1" Padding="9" CornerRadius="4" Margin="0,10,0,4">
+            <Grid Margin="0,0,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <Button Content="Spara CAM" Background="#24618C" FontWeight="SemiBold" Click="SaveCam_Click" ToolTip="Spara inställningarna ovan på det markerade objektet"/>
+              <Button Grid.Column="1" Content="Ta bort" Click="RemoveCam_Click" ToolTip="Ta bort det markerade objektets CAM"/>
+            </Grid>
+
+            <!-- ===== THE WHOLE PROJECT ===== -->
+            <Border Height="1" Background="#3C5167" Margin="0,12,0,10"/>
+            <TextBlock Text="HELA PROJEKTET" Style="{StaticResource CamSection}"/>
+            <Border x:Name="CamHealthBorder" Background="#1C2A39" BorderBrush="#50657D" BorderThickness="1" Padding="9" CornerRadius="5" Margin="0,0,0,8">
               <StackPanel>
                 <TextBlock x:Name="CamHealthHeader" Text="CAM-kontroll" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="#D5E3F0"/>
                 <TextBlock x:Name="CamHealthText" Text="Inga CAM-operationer." TextWrapping="Wrap" Foreground="#D5E3F0" Margin="0,5,0,0" FontSize="11.5"/>
               </StackPanel>
             </Border>
-            <TextBlock Text="Grön streckad linje = fräscentrum. Gula partier = hållflikar. Blå streckad = snabbförflyttning, lila = lyft över fastspänning. Kontur (utvändig/invändig) och fickfräsning för rektanglar, ellipser, DXF/SVG- och Boolean-former." Foreground="#AFBDD0" Margin="1,6,1,2" TextWrapping="Wrap" FontSize="11"/>
-            <TextBlock Margin="0,8,0,0" Foreground="#FFCE96" TextWrapping="Wrap" FontSize="11" Text="Kontrollera alltid G-coden i gSender och kör gärna i luften första gången. Hållare/spännhylsa och rampad nedmatning kontrolleras inte ännu."/>
-            <Expander x:Name="InlayExpander" Header="V-CARVE INLAY · hona + hane" IsExpanded="False" Margin="0,16,0,0" Foreground="#E8F1FA">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <Button x:Name="ComputePathsButton" Content="Beräkna körbanor" Click="PreviewContour_Click" Background="#23623F" ToolTip="Räknar om alla inaktuella körbanor. Enkla former räknas om automatiskt; stora DXF/SVG/Boolean-former först när du klickar här."/>
+              <Button Grid.Column="1" Content="Kontrollera hinder" Click="ReviewCamSafety_Click" Background="#80532B" ToolTip="Kontroll av skärande XY-konturer mot fastspänningar och maskinens XY-gränser; ej full säkerhetskontroll"/>
+            </Grid>
+            <CheckBox x:Name="ContourVisibilityCheck" Content="Visa körbanorna i vyerna" IsChecked="True" Checked="ContourVisibility_Changed" Unchecked="ContourVisibility_Changed" Margin="4,8" Foreground="#D4E8D8"/>
+            <Button Content="Exportera G-code…" Click="ExportGCode_Click" Background="#2E7DD7" FontWeight="SemiBold" Padding="8,9" Margin="3,2,3,8"
+                    ToolTip="Skapar GRBL-program (.nc), ett per verktyg. Blockeras vid kritiska fel eller okontrollerade körbanor. (Ctrl+E)"/>
+
+            <Expander Header="FÖRKLARING" IsExpanded="False" Margin="0,4,0,0">
+              <StackPanel Margin="4,6,4,0">
+                <TextBlock Text="Grön streckad linje = fräscentrum. Gula partier = hållflikar. Blå streckad = snabbförflyttning, lila = lyft över fastspänning. Cirkel med kryss = borrhål. Kontur (utvändig/invändig), ficka och borrning för rektanglar, ellipser, DXF/SVG- och Boolean-former." Foreground="#AFBDD0" TextWrapping="Wrap" FontSize="11"/>
+                <TextBlock Margin="0,8,0,0" Foreground="#FFCE96" TextWrapping="Wrap" FontSize="11" Text="Kontrollera alltid G-coden och kör gärna i luften första gången. Hållare/spännhylsa kontrolleras inte."/>
+              </StackPanel>
+            </Expander>
+
+            <!-- V-carve inlay: settings only (no G-code yet) – shown from CAM → V-carve inlay-inställningar. -->
+            <Expander x:Name="InlayExpander" Header="V-CARVE INLAY · förberedelse, ingen G-code ännu" IsExpanded="False" Margin="0,12,0,0" Foreground="#E8F1FA" Visibility="Collapsed">
               <StackPanel Margin="4,10,4,4">
                 <TextBlock Text="InlayStudio-inställningar integrerade i projektet" TextWrapping="Wrap" Foreground="#BDCEE0" Margin="0,0,0,9"/>
                 <TextBlock Text="Jobbtyp"/><ComboBox x:Name="InlayKind" SelectedIndex="0" Margin="3,4,3,9"><ComboBoxItem Content="Hona + hane"/><ComboBoxItem Content="Endast hona"/><ComboBoxItem Content="Endast hane"/><ComboBoxItem Content="Endast V-carve"/></ComboBox>

@@ -23,8 +23,9 @@ public sealed record SimSnapshot(string State, bool Homed, double[] MPos, double
 /// $J= rules (Idle/Jog, F required, error:15), G10 L20, G53, $$/$#/$G, settings only in Idle/Alarm.
 /// </para>
 /// <para>
-/// Simplifications (documented in docs/Demomaskin.md): no acceleration, no arcs (G2/G3), no probing,
-/// no G28/G30; homing has no slow locate phase. The simulator is never proof that something works
+/// Simplifications (documented in docs/Demomaskin.md): no acceleration, no arcs (G2/G3), no G28/G30;
+/// homing has no slow locate phase. Probing (G38.2/G38.3) works against a simulated touch plate
+/// (<see cref="ProbePlate"/>), placed under the tool at the first Z probe if none is set. The simulator is never proof that something works
 /// on the real machine.
 /// </para>
 /// </summary>
@@ -91,7 +92,23 @@ public sealed class SimulatedGrbl : IGrblTransport
         public bool OkWhenDone;                            // GRBL syncs the buffer before answering
         public bool[] Axes = new bool[3];                  // homing axes
         public double Travelled;
+        public bool Probe, ProbeNoError, ProbeStarted;     // G38.2 / G38.3
     }
+
+    /// <summary>A conductive touch plate in machine coordinates: a block from the stock top up to TopZ.</summary>
+    public sealed record SimProbePlate(double XMin, double YMin, double XMax, double YMax, double TopZ);
+
+    /// <summary>The plate the probe touches. Null = placed automatically at the first probe downwards.</summary>
+    public SimProbePlate? ProbePlate { get; set; }
+    /// <summary>Radius of the tool in the spindle (side probing touches with the flank).</summary>
+    public double ProbeToolRadius { get; set; } = 3.175 / 2;
+    /// <summary>For the automatic plate: machine Z of the stock top, plate thickness, how far the tool is in from the plate's outer edges, plate size.</summary>
+    public double StockTopMPosZ { get; set; } = -45;
+    public double AutoPlateThickness { get; set; } = 15;
+    public double AutoPlateInset { get; set; } = 10;
+    public double AutoPlateSize { get; set; } = 60;
+    private double[] _probePos = new double[3];
+    private bool _probeOk;
 
     public event Action<string>? DataReceived;
 
@@ -230,7 +247,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         {
             for (int i = 0; i < 6; i++) Emit($"[G{54 + i}:{V(_wcs[i])}]\r\n");
             Emit("[G28:0.000,0.000,0.000]\r\n[G30:0.000,0.000,0.000]\r\n");
-            Emit($"[G92:{V(_g92)}]\r\n[TLO:0.000]\r\n[PRB:0.000,0.000,0.000:0]\r\n");
+            Emit($"[G92:{V(_g92)}]\r\n[TLO:0.000]\r\n[PRB:{V(_probePos)}:{(_probeOk ? 1 : 0)}]\r\n");
             Ok();
         }
         else if (u == "$G")
@@ -334,6 +351,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         var words = Words(clean, out int err);
         if (err != 0) { Error(err); return; }
         bool g53 = false, g10 = false, g92 = false, dwell = false;
+        int probe = 0;                                     // 2 = G38.2, 3 = G38.3
         int? motion = null, l = null, p = null, mCode = null;
         double? pValue = null;
         var axis = new double?[3];
@@ -358,6 +376,8 @@ public sealed class SimulatedGrbl : IGrblTransport
                         case 90: absolute = true; break;
                         case 91: absolute = false; break;
                         case 92: g92 = true; break;
+                        case var g38 when Math.Abs(g38 - 38.2) < 1e-6: probe = 2; motion = 382; break;
+                        case var g38 when Math.Abs(g38 - 38.3) < 1e-6: probe = 3; motion = 383; break;
                         default: Error(20); return;
                     }
                     break;
@@ -408,6 +428,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         if (mCode is 3 or 4) _spindle = spindle ?? _pendingS ?? _spindle;
         if (mCode == 5) _spindle = 0;
 
+        if (probe != 0) { Probe(axis, absolute, g53, k, probe == 3); return; }
         if (motion is not null) _rapidMode = motion == 0;
         if (axis.Any(a => a is not null))
         {
@@ -431,6 +452,32 @@ public sealed class SimulatedGrbl : IGrblTransport
         if (mCode == 0) { Enqueue(new Block { Kind = BlockKind.Pause, OkWhenDone = true }); return; }
         if (mCode is 2 or 30) { Enqueue(new Block { Kind = BlockKind.End, OkWhenDone = true }); return; }
         if (axis.All(a => a is null)) Ok();
+    }
+
+    /// <summary>G38.2/G38.3 (gcode.c, motion_control.c mc_probe_cycle): F and an axis word required, target
+    /// not the current position, alarm 4 if already in contact, alarm 5 (G38.2) without contact.</summary>
+    private void Probe(double?[] axis, bool absolute, bool g53, double k, bool noError)
+    {
+        if (g53) { Error(30); return; }
+        if (axis.All(a => a is null)) { Error(26); return; }
+        if (!_feedSet) { Error(22); return; }
+        var end = (double[])_planned.Clone();
+        for (int i = 0; i < 3; i++)
+            if (axis[i] is double v) end[i] = absolute ? v * k + Wco(i) : _planned[i] + v * k;
+        if (Same(end, _planned)) { Error(33); return; }
+        if (_checkMode) { Ok(); return; }
+        // The contact check and the automatic plate happen when the block starts: GRBL waits for every
+        // earlier move to finish before a probe cycle (protocol_buffer_synchronize in mc_probe_cycle).
+        _queue.AddLast(new Block { Kind = BlockKind.Move, Target = end, FeedMmMin = _feed, Probe = true, ProbeNoError = noError, OkWhenDone = true });
+        _planned = end;
+    }
+
+    /// <summary>The tool (a cylinder with its tip at p) touches the plate.</summary>
+    private bool ProbeContact(double[] p)
+    {
+        if (ProbePlate is not { } b || p[2] > b.TopZ + 1e-9) return false;
+        double dx = Math.Max(Math.Max(b.XMin - p[0], 0), p[0] - b.XMax), dy = Math.Max(Math.Max(b.YMin - p[1], 0), p[1] - b.YMax);
+        return Math.Sqrt(dx * dx + dy * dy) <= ProbeToolRadius + 1e-9;
     }
 
     private double? _pendingS;
@@ -488,6 +535,41 @@ public sealed class SimulatedGrbl : IGrblTransport
                     _feedOv = 100; _rapidOv = 100; _ovChanged = true;              // RESTORE_OVERRIDES_AFTER_PROGRAM_END
                     Emit("[MSG:Pgm End]\r\n");
                     Complete(node);
+                    break;
+                case BlockKind.Move when b.Probe:
+                    if (!b.ProbeStarted)
+                    {
+                        b.ProbeStarted = true;
+                        if (ProbePlate is null && b.Target[2] < _pos[2] - 1e-9)
+                            ProbePlate = new SimProbePlate(_pos[0] - AutoPlateInset, _pos[1] - AutoPlateInset,
+                                _pos[0] - AutoPlateInset + AutoPlateSize, _pos[1] - AutoPlateInset + AutoPlateSize, StockTopMPosZ + AutoPlateThickness);
+                        if (ProbeContact(_pos)) { RaiseAlarm(4, critical: false); return; }
+                    }
+                    var from = (double[])_pos.Clone();
+                    dt = Move(b, dt);
+                    if (ProbeContact(_pos))
+                    {
+                        // Find the first contact on this step (bisection) and stop there – the trigger point.
+                        double lo = 0, hi = 1; var to = (double[])_pos.Clone();
+                        for (int it = 0; it < 40; it++)
+                        {
+                            double mid = (lo + hi) / 2;
+                            if (ProbeContact(from.Select((v, i) => v + (to[i] - v) * mid).ToArray())) hi = mid; else lo = mid;
+                        }
+                        Displace(to.Select((v, i) => from[i] + (v - from[i]) * hi - v).ToArray());
+                        _probePos = (double[])_pos.Clone(); _probeOk = true;
+                        _planned = (double[])_pos.Clone();
+                        Emit($"[PRB:{V(_probePos)}:1]\r\n");
+                        Complete(node);
+                        return;
+                    }
+                    if (_critical || _queue.First != node) return;
+                    if (Same(_pos, b.Target))
+                    {
+                        _probePos = (double[])_pos.Clone(); _probeOk = false;
+                        if (b.ProbeNoError) { Emit($"[PRB:{V(_probePos)}:0]\r\n"); Complete(node); }
+                        else { RaiseAlarm(5, critical: false); return; }
+                    }
                     break;
                 case BlockKind.Move:
                     dt = Move(b, dt);
@@ -701,7 +783,8 @@ public sealed class SimulatedGrbl : IGrblTransport
     private string PinText()
     {
         bool invert = _settings[5] == 1;                  // $5 is applied before reporting
-        return string.Concat(Enumerable.Range(0, 3).Where(i => SwitchTriggered(i) ^ invert).Select(i => AxisNames[i]));
+        var limits = string.Concat(Enumerable.Range(0, 3).Where(i => SwitchTriggered(i) ^ invert).Select(i => AxisNames[i]));
+        return limits + (ProbeContact(_pos) ? "P" : "");          // report.c: P = probe pin
     }
 
     // ---- Helpers ----

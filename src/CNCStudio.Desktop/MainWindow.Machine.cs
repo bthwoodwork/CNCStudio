@@ -72,7 +72,7 @@ public partial class MainWindow
             StrokeThickness = (MachineSetupValidation.StockProblem(_document) is null ? 1.2 : 2.5) / _zoom,
             Cursor = Cursors.SizeAll, Tag = "stock", ToolTip = "Dra materialet eller ange X/Y i egenskaper" };
         Canvas.SetLeft(stock, _document.Stock.X); Canvas.SetTop(stock, _document.Stock.Y);
-        MachineCanvas.Children.Add(stock);
+        if (_document.HasMaterial) MachineCanvas.Children.Add(stock);          // no material: an empty table
 
         foreach (var sh in _document.Shapes)
         {
@@ -86,7 +86,9 @@ public partial class MainWindow
 
         // Render the saved CAM XY centerlines in machine coordinates as well.
         // This is a VISUAL PREVIEW only: no Z routing, tabs, holder collision or executable G-code.
-        if (_showContourPreview)
+        // A loaded program is drawn instead: remaining in blue, what has run in orange.
+        if (HasJobPath) AddJobPath();
+        else if (_showContourPreview)
             DrawCamResults(MachineCanvas, _document.Stock.X, _document.Stock.Y);
         DrawWorkZeroMarker(MachineCanvas, _document.Stock.X, _document.Stock.Y);
 

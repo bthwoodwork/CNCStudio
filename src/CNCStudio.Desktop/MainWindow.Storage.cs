@@ -46,10 +46,10 @@ public partial class MainWindow
         catch (Exception) { return ""; }
     }
 
-    /// <summary>A new project starts with the saved default machine profile (shared via the sync folder).</summary>
+    /// <summary>A new project starts without material, with the saved default machine profile (shared via the sync folder).</summary>
     private static CncDocument NewDocument()
     {
-        var doc = new CncDocument();
+        var doc = new CncDocument { HasMaterial = false };
         if (AppStorage.Current.LoadMachineProfile() is MachineProfile profile) doc.Machine = profile;
         return doc;
     }

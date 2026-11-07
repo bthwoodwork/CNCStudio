@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 
 namespace CNCStudio.Desktop;
 
@@ -25,6 +25,8 @@ public partial class MainWindow
     private void Update3D()
     {
         if (!_show3D || View3DPanel is null) return;
+        if (!_document.HasMaterial) { View3DPanel.ShowEmpty(); return; }   // nothing to show without material
         View3DPanel.Show(_document, _camReport);
+        Update3DJob();
     }
 }

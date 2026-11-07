@@ -72,7 +72,11 @@ public static class CamOperationChecks
         if (op.ToolKind == ToolKind.BallNose)
             list.Add(new CamFinding(CamSeverity.Info, "BallNoseFloor",
                 "Kulfräs: botten och väggens nederkant blir rundade, inte plana.", id));
-        if (op.DepthPerPass > op.ToolDiameter + 1e-9)
+        if (op.Kind == CamOperationKind.Drill && !DrillToolpaths.MatchesTool(shape, op))
+            list.Add(new CamFinding(CamSeverity.Warning, "HoleSizeMismatch",
+                $"Borrningen ger ett hål med fräsens diameter (Ø{F(op.ToolDiameter)} mm) i objektets mitt, men objektet är " +
+                $"{F(shape.Width)} × {F(shape.Height)} mm. Välj en fräs med objektets diameter, eller ficka för ett större hål.", id));
+        if (op.Kind != CamOperationKind.Drill && op.DepthPerPass > op.ToolDiameter + 1e-9)
             list.Add(new CamFinding(CamSeverity.Warning, "DeepPass",
                 $"Djup per pass ({F(op.DepthPerPass)} mm) är större än fräsdiametern ({F(op.ToolDiameter)} mm). " +
                 "Risk för fräsbrott; ett vanligt riktvärde i trä är högst 1 × diametern.", id));
@@ -167,6 +171,13 @@ public sealed class CamPlanner
                 continue;
             }
             var findings = new List<CamFinding>();
+            if (!document.HasMaterial)
+            {
+                findings.Add(new CamFinding(CamSeverity.Critical, "NoMaterial",
+                    "Projektet har inget material ännu. Lägg till material under Egenskaper → Projekt och material – inga körbanor beräknas innan dess.", shape.Id));
+                results.Add(new CamOperationResult(op, shape, null, findings));
+                continue;
+            }
             if (placement is not null)
             {
                 findings.Add(new CamFinding(CamSeverity.Critical, "PlacementOutsideMachine",

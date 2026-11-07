@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -14,6 +14,8 @@ public sealed record ContourPreview(IReadOnlyList<CamPoint> Centerline, IReadOnl
     public IReadOnlyList<IReadOnlyList<CamPoint>> Centerlines { get; init; } =
         Array.Empty<IReadOnlyList<CamPoint>>();
 
+    /// <summary>True for drilling: Centerline is the single hole centre and PassDepths are the pecks.</summary>
+    public bool IsDrill { get; init; }
     /// <summary>True for a pocket: Centerlines are loops in cutting order (inside out).</summary>
     public bool IsPocket { get; init; }
     /// <summary>Pocket only: where the tool centre may go (the pocket shrunk by the tool radius).</summary>
@@ -33,6 +35,8 @@ public static class ContourToolpaths
         if (problem != null) throw new ArgumentException(problem);
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness);
+        if (operation.Kind == CamOperationKind.Drill)
+            return DrillToolpaths.Generate(shape, operation);
         if (shape.Kind == ShapeKind.VectorPath)
             throw new NotSupportedException("Konturer med importerade/Boolean-former kräver en robust polygon-offsetmotor. Ej implementerat ännu.");
         if (!double.IsFinite(shape.X) || !double.IsFinite(shape.Y) ||

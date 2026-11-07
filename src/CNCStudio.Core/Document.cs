@@ -35,7 +35,8 @@ public sealed class DesignShape
     public List<VectorContour> Contours { get; set; } = new();
 }
 
-public enum CamOperationKind { Outside, Inside, Pocket }
+/// <summary>Drill: straight plunges at the shape's centre (the hole gets the tool's diameter), in pecks of DepthPerPass.</summary>
+public enum CamOperationKind { Outside, Inside, Pocket, Drill }
 
 public enum PlungeMode { Vertical, Ramp }
 
@@ -58,6 +59,11 @@ public sealed class CamOperation
     public PlungeMode Plunge { get; set; } = PlungeMode.Vertical;
     /// <summary>Ramp angle in degrees from horizontal.</summary>
     public double RampAngleDeg { get; set; } = 3;
+    /// <summary>Feed along the ramp, as % of <see cref="FeedRate"/> – the tool cuts with its tip and side at once, so slower is gentler.</summary>
+    public double RampFeedPercent { get; set; } = 70;
+    /// <summary>The ramp's feed in mm/min.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public double RampFeedRate => FeedRate * RampFeedPercent / 100;
     public MillingDirection Direction { get; set; } = MillingDirection.Default;
     public Guid ShapeId { get; set; }
     public CamOperationKind Kind { get; set; } = CamOperationKind.Outside;
@@ -98,13 +104,20 @@ public static class CamValidation
             return "Fräsdiameter måste vara större än 0 och högst 100 mm.";
         if (!double.IsFinite(operation.TotalDepth) || operation.TotalDepth <= 0 || operation.TotalDepth > materialThickness)
             return "Totalt djup måste vara större än 0 och får inte överstiga materialtjockleken.";
-        if (!double.IsFinite(operation.DepthPerPass) || operation.DepthPerPass <= 0 || operation.DepthPerPass > operation.TotalDepth)
-            return "Djup per pass måste vara större än 0 och får inte överstiga totalt djup.";
+        // A pass deeper than the total depth simply means one pass (e.g. the tool's cutting data says 3 mm
+        // per pass and this cut is only 2 mm deep).
+        if (!double.IsFinite(operation.DepthPerPass) || operation.DepthPerPass <= 0)
+            return "Djup per pass måste vara större än 0.";
         if (operation.Plunge == PlungeMode.Ramp &&
             (!double.IsFinite(operation.RampAngleDeg) || operation.RampAngleDeg < 1 || operation.RampAngleDeg > 45))
             return "Rampvinkeln måste vara 1–45 grader.";
+        if (operation.Plunge == PlungeMode.Ramp &&
+            (!double.IsFinite(operation.RampFeedPercent) || operation.RampFeedPercent < 5 || operation.RampFeedPercent > 100))
+            return "Rampens matning måste vara 5–100 % av matningen.";
         if (operation.Kind == CamOperationKind.Pocket && operation.UseTabs)
             return "Hållflikar används inte för fickfräsning.";
+        if (operation.Kind == CamOperationKind.Drill && operation.UseTabs)
+            return "Hållflikar används inte för borrning.";
         if (operation.Kind == CamOperationKind.Pocket &&
             (!double.IsFinite(operation.StepoverPercent) || operation.StepoverPercent < 5 || operation.StepoverPercent > 90))
             return "Stegningen för fickfräsning måste vara 5–90 % av fräsdiametern.";
@@ -230,7 +243,23 @@ public sealed class MotionSettings
     /// itself waits for spin-up is not confirmed, so an explicit dwell is always written.
     /// </summary>
     public double SpindleSpinUpSeconds { get; set; } = 4;
+
+    /// <summary>
+    /// When the tool goes back down into a cut that is already made (a pocket's next level, a new pass
+    /// after a lift), it rapids (G0) down to this height above the depth already cut and feeds only the
+    /// rest. Null = feed the whole way down from <see cref="PlungeClearanceMm"/>.
+    /// </summary>
+    public double? RapidIntoCutClearanceMm { get; set; } = 0.5;
+
+    /// <summary>Where the tool goes when the program is done (at the start/end height).</summary>
+    public EndPosition EndPosition { get; set; } = EndPosition.WorkZero;
+    /// <summary>End point in work coordinates (mm) when <see cref="EndPosition"/> is <see cref="EndPosition.Point"/>.</summary>
+    public double EndXMm { get; set; }
+    public double EndYMm { get; set; }
 }
+
+/// <summary>Program end: stay above the last cut, go to work zero (X0 Y0) or to a chosen point.</summary>
+public enum EndPosition { StayAbove, WorkZero, Point }
 
 public static class MotionValidation
 {
@@ -244,6 +273,10 @@ public static class MotionValidation
             return "Maskinens Z vid materialytan måste vara negativ (under Z-brytaren efter homing), högst −500 mm.";
         if (!double.IsFinite(m.SpindleSpinUpSeconds) || m.SpindleSpinUpSeconds < 0 || m.SpindleSpinUpSeconds > 60)
             return "Spindelns uppstartstid måste vara 0–60 sekunder.";
+        if (m.RapidIntoCutClearanceMm is double rc && (!double.IsFinite(rc) || rc < 0.1 || rc > m.PlungeClearanceMm))
+            return "Höjden över redan fräst djup måste vara minst 0,1 mm och högst höjden före nedmatning.";
+        if (m.EndPosition == EndPosition.Point && (!double.IsFinite(m.EndXMm) || !double.IsFinite(m.EndYMm)))
+            return "Slutpunktens X och Y måste vara tal.";
         return null;
     }
 }
@@ -329,7 +362,7 @@ public static class MachineSetupValidation
         var m = d.Machine; var stock = d.Stock;
         if (m is null || stock is null || d.Fixtures is null) return "Maskininställningar saknas.";
         if (FixtureValues(d) is string bad) return bad;
-        return StockProblem(d) ?? d.Fixtures.Select(f => FixtureProblem(d, f)).FirstOrDefault(p => p is not null);
+        return (d.HasMaterial ? StockProblem(d) : null) ?? d.Fixtures.Select(f => FixtureProblem(d, f)).FirstOrDefault(p => p is not null);
     }
 
     /// <summary>The material outside the work area, or null.</summary>
@@ -363,6 +396,11 @@ public static class MachineSetupValidation
 public sealed class CncDocument
 {
     public string Name { get; set; } = "Nytt projekt";
+    /// <summary>
+    /// False for a new project until material is added: nothing is drawn as stock and no toolpaths are
+    /// computed. The size fields then only hold placeholders. Older project files always have material.
+    /// </summary>
+    public bool HasMaterial { get; set; } = true;
     /// <summary>The material from the material library (decides which cutting data tools use).</summary>
     public Guid? MaterialId { get; set; }
     /// <summary>The material's name, kept so the project still says what it is on a computer without that material.</summary>
@@ -381,6 +419,12 @@ public sealed class CncDocument
         double wx = x, wy = MaterialHeight - y;
         if (WorkZero == WorkZero.Center) { wx -= MaterialWidth / 2; wy -= MaterialHeight / 2; }
         return (wx, wy);
+    }
+    /// <summary>Inverse of <see cref="ToWork"/>: work coordinates → stock-local design coordinates.</summary>
+    public (double X, double Y) FromWork(double wx, double wy)
+    {
+        if (WorkZero == WorkZero.Center) { wx += MaterialWidth / 2; wy += MaterialHeight / 2; }
+        return (wx, MaterialHeight - wy);
     }
     public List<FixtureBlock> Fixtures { get; set; } = new();
     public CameraSetup Camera { get; set; } = new();

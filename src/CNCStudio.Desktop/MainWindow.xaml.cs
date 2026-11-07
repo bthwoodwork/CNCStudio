@@ -27,6 +27,8 @@ public partial class MainWindow : Window
     private Point? _start;
     private Point _original;
     private Tool _tool = Tool.Select;
+    /// <summary>The object under the pointer when a drawing gesture started on top of it (selected on a plain click).</summary>
+    private DesignShape? _drawStartedOn;
     private bool _moving;
     private bool _marqueeActive;
     private Point _marqueeStart, _marqueeEnd;
@@ -214,15 +216,8 @@ public partial class MainWindow : Window
     {
         var args = Environment.GetCommandLineArgs().Skip(1).ToList();
         var file = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal) && File.Exists(a));
-        if (file is not null)
-        {
-            try
-            {
-                _document = DocumentStorage.Load(file); _path = file; _camPlanner.Clear(); View3DPanel.ResetView();
-                SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + file;
-            }
-            catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); }
-        }
+        // No project on the command line: open blank – the user opens a project or starts a new one.
+        if (file is null || !OpenProject(file)) ShowStartScreen();
         if (args.Contains("--3d")) Set3D(true);
     }
     private static double Clamp(double n, double lo, double hi) => Math.Max(lo, Math.Min(hi, n));
@@ -245,11 +240,16 @@ public partial class MainWindow : Window
         UpdateZoomLabel();
         RefreshViewportDecorations();
     }
+    /// <summary>The design surface: the material, or the machine's work area while the project has no material.</summary>
+    private (double W, double H) DesignArea => _document.HasMaterial
+        ? (_document.MaterialWidth, _document.MaterialHeight)
+        : (_document.Machine.WorkWidthMm, _document.Machine.WorkLengthMm);
+
     private void FitToMaterial()
     {
         if (Viewport.ActualWidth <= 0 || Viewport.ActualHeight <= 0) return;
-        double areaWidth = _machineView ? _document.Machine.WorkWidthMm : _document.MaterialWidth;
-        double areaHeight = _machineView ? _document.Machine.WorkLengthMm : _document.MaterialHeight;
+        double areaWidth = _machineView ? _document.Machine.WorkWidthMm : DesignArea.W;
+        double areaHeight = _machineView ? _document.Machine.WorkLengthMm : DesignArea.H;
         _zoom = Clamp(Math.Min((Viewport.ActualWidth - 60) / areaWidth,
             (Viewport.ActualHeight - 110) / areaHeight), .1, 8);
         DesignScale.ScaleX = DesignScale.ScaleY = _zoom;
@@ -471,6 +471,13 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object sender, KeyEventArgs e)
     {
+        // Start view: only Ctrl+N and Ctrl+O – nothing may act on the hidden empty document behind it.
+        if (StartScreenVisible)
+        {
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.N) { New_Click(this, new RoutedEventArgs()); e.Handled = true; }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.O) { Open_Click(this, new RoutedEventArgs()); e.Handled = true; }
+            return;
+        }
         // Workspace shortcuts work everywhere, also while typing in a field.
         if (e.Key == Key.F1) { SetWorkspace(Workspace.Design); e.Handled = true; return; }
         if (e.Key == Key.F2) { SetWorkspace(Workspace.Cam); e.Handled = true; return; }
@@ -657,6 +664,8 @@ public partial class MainWindow : Window
     private void UpdateToolButtonStates()
     {
         SetToolButtonState(SelectToolButton, _tool == Tool.Select);
+        // Crosshair while a drawing tool is armed, so it is clear the next drag draws.
+        if (DesignCanvas is not null) DesignCanvas.Cursor = _tool == Tool.Select ? null : Cursors.Cross;
         SetToolButtonState(RectangleToolButton, _tool == Tool.Rectangle);
         SetToolButtonState(EllipseToolButton, _tool == Tool.Ellipse);
         SetToolButtonState(PolylineToolButton, _tool == Tool.Polyline);
@@ -708,19 +717,19 @@ public partial class MainWindow : Window
     private void RefreshAdaptiveGrid()
     {
         var key = (_zoom, DesignOffset.X, DesignOffset.Y, Viewport.ActualWidth,
-            Viewport.ActualHeight, _document.MaterialWidth, _document.MaterialHeight);
+            Viewport.ActualHeight, DesignArea.W, DesignArea.H);
         if (_gridCache.HasValue && _gridCache.Value == key) return;
         _gridCache = key;
         _gridLayer.Children.Clear();
-        _gridLayer.Width = _document.MaterialWidth;
-        _gridLayer.Height = _document.MaterialHeight;
+        _gridLayer.Width = DesignArea.W;
+        _gridLayer.Height = DesignArea.H;
         if (Viewport.ActualWidth <= 0 || Viewport.ActualHeight <= 0 || _zoom <= 0) return;
 
         double step = GridStep(_zoom);
         double minX = Math.Max(0, -DesignOffset.X / _zoom);
-        double maxX = Math.Min(_document.MaterialWidth, (Viewport.ActualWidth - DesignOffset.X) / _zoom);
+        double maxX = Math.Min(DesignArea.W, (Viewport.ActualWidth - DesignOffset.X) / _zoom);
         double minY = Math.Max(0, -DesignOffset.Y / _zoom);
-        double maxY = Math.Min(_document.MaterialHeight, (Viewport.ActualHeight - DesignOffset.Y) / _zoom);
+        double maxY = Math.Min(DesignArea.H, (Viewport.ActualHeight - DesignOffset.Y) / _zoom);
         if (maxX < minX || maxY < minY) return;
 
         // Constant 0.45-1.15px grid strokes regardless of zoom. Fine 1mm lines
@@ -732,8 +741,8 @@ public partial class MainWindow : Window
             byte alpha = major50 ? (byte)70 : major10 ? (byte)42 : (byte)18;
             double stroke = (major50 ? 1.0 : major10 ? 0.8 : 0.6) / _zoom;
             var line = vertical
-                ? new Line { X1 = v, X2 = v, Y1 = 0, Y2 = _document.MaterialHeight }
-                : new Line { X1 = 0, X2 = _document.MaterialWidth, Y1 = v, Y2 = v };
+                ? new Line { X1 = v, X2 = v, Y1 = 0, Y2 = DesignArea.H }
+                : new Line { X1 = 0, X2 = DesignArea.W, Y1 = v, Y2 = v };
             var c = CanvasTheme.GridColor;
             line.Stroke = new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B));
             line.StrokeThickness = stroke;
@@ -758,7 +767,7 @@ public partial class MainWindow : Window
     {
         if (TopRuler is null || LeftRuler is null) return;
         var key = (_zoom, DesignOffset.X, DesignOffset.Y, Viewport.ActualWidth,
-            Viewport.ActualHeight, _document.MaterialWidth, _document.MaterialHeight);
+            Viewport.ActualHeight, DesignArea.W, DesignArea.H);
         if (_rulerCache.HasValue && _rulerCache.Value == key) return;
         _rulerCache = key;
         TopRuler.Children.Clear();
@@ -768,9 +777,9 @@ public partial class MainWindow : Window
         double labelStep = ChooseRulerLabelStep(_zoom);
         double tickStep = GridStep(_zoom);
         double left = Math.Max(0, -DesignOffset.X / _zoom);
-        double right = Math.Min(_document.MaterialWidth, (Viewport.ActualWidth - DesignOffset.X) / _zoom);
+        double right = Math.Min(DesignArea.W, (Viewport.ActualWidth - DesignOffset.X) / _zoom);
         double top = Math.Max(0, -DesignOffset.Y / _zoom);
-        double bottom = Math.Min(_document.MaterialHeight, (Viewport.ActualHeight - DesignOffset.Y) / _zoom);
+        double bottom = Math.Min(DesignArea.H, (Viewport.ActualHeight - DesignOffset.Y) / _zoom);
         if (left > right || top > bottom) return;
         var tickBrush = new SolidColorBrush(Color.FromRgb(158, 183, 209));
         var labelBrush = new SolidColorBrush(Color.FromRgb(224, 235, 247));
@@ -816,13 +825,14 @@ public partial class MainWindow : Window
         if (_machineView && MachineCanvas is not null) RenderMachine(refreshCam: false);
         UpdateToolButtonStates();
         _renderedZoom = _zoom;
-        DesignCanvas.Width = _document.MaterialWidth;
-        DesignCanvas.Height = _document.MaterialHeight;
+        var (areaW, areaH) = DesignArea;
+        DesignCanvas.Width = areaW;
+        DesignCanvas.Height = areaH;
         DesignCanvas.Children.Clear();
         DesignCanvas.Children.Add(_gridLayer);
         RefreshAdaptiveGrid();
-        // Crisp material edge (constant 1 px on screen).
-        DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
+        // Crisp material edge (constant 1 px on screen) – only when the project has material.
+        if (_document.HasMaterial) DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
             Stroke = CanvasTheme.StockEdge, StrokeThickness = 1 / _zoom, IsHitTestVisible = false });
         foreach (var s in _document.Shapes)
         {
@@ -899,7 +909,7 @@ public partial class MainWindow : Window
         // Recalculate after MouseUp; transient drags show only their geometry.
         if (_showContourPreview && !geometryGesture)
             DrawCamResults(DesignCanvas, 0, 0);
-        if (!geometryGesture) DrawWorkZeroMarker(DesignCanvas, 0, 0);
+        if (!geometryGesture && _document.HasMaterial) DrawWorkZeroMarker(DesignCanvas, 0, 0);
         UpdateCamHealth();
         if (_marqueeActive)
         {
@@ -1043,6 +1053,12 @@ public partial class MainWindow : Window
         var sourceTag = (e.OriginalSource as FrameworkElement)?.Tag;
         var handle = sourceTag as ResizeHandle;
         var clicked = handle?.Shape ?? sourceTag as DesignShape;
+        // An armed drawing tool draws on top of other objects too (a hole inside a rectangle);
+        // Ctrl+click still selects the object under the pointer. A resize grip is always a resize.
+        bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        _drawStartedOn = null;
+        if (_tool != Tool.Select && clicked is not null && handle is null && !ctrl)
+        { _drawStartedOn = clicked; clicked = null; }
         if (_tool == Tool.Polyline && (clicked is null || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)))
         {
             var snapped = SnapPoint(p);
@@ -1141,9 +1157,9 @@ public partial class MainWindow : Window
             var top = corner.Contains('N')
                 ? Clamp(Snap(p.Y), 0, bottom - minSize) : original.Y;
             var newRight = corner.Contains('E')
-                ? Clamp(Snap(p.X), left + minSize, _document.MaterialWidth) : right;
+                ? Clamp(Snap(p.X), left + minSize, DesignArea.W) : right;
             var newBottom = corner.Contains('S')
-                ? Clamp(Snap(p.Y), top + minSize, _document.MaterialHeight) : bottom;
+                ? Clamp(Snap(p.Y), top + minSize, DesignArea.H) : bottom;
             selected.X = left;
             selected.Y = top;
             selected.Width = Math.Max(minSize, newRight - left);
@@ -1187,6 +1203,8 @@ public partial class MainWindow : Window
                 _selectionOrder.Remove(_selected.Id);
                 _selected = null;
                 StatusText.Text = "Ingen form skapades. Dra på tom yta för att markera objekt.";
+                // A plain click (no drag) on an object with a drawing tool armed: select that object.
+                if (_drawStartedOn is DesignShape under && _document.Shapes.Contains(under)) SelectShape(under, false);
             }
             else
                 StatusText.Text = "Form skapad. Dra på tom yta för områdesmarkering.";
@@ -1291,9 +1309,12 @@ public partial class MainWindow : Window
         if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000)
         { Error("Ogiltigt materialmått. Bredd och höjd ska vara 1–5000 mm och tjockleken större än 0.", MaterialWidthBox); return; }
         RememberChange();
+        bool added = !_document.HasMaterial;
         _document.Name = NameBox.Text;
         _document.MaterialWidth = w; _document.MaterialHeight = h; _document.MaterialThickness = t;
-        Render(); FitToMaterial();
+        _document.HasMaterial = true;
+        SyncMetadata(); Render(); FitToMaterial();
+        if (added) StatusText.Text = $"Material tillagt: {F(w)} × {F(h)} × {F(t)} mm.";
         if (MachineSetupValidation.StockProblem(_document) is string outside)
             StatusText.Text = outside + " Flytta materialet under Maskin → Materialplacering – inga körbanor beräknas så länge.";
     }
@@ -1301,7 +1322,9 @@ public partial class MainWindow : Window
     private void OpenInlay_Click(object sender, RoutedEventArgs e)
     {
         SetPanelVisible("Cam", true);
+        InlayExpander.Visibility = Visibility.Visible;          // hidden in the panel until asked for (settings only)
         InlayExpander.IsExpanded = true;
+        InlayExpander.BringIntoView();
     }
     private bool ParseInlay(TextBox field, string description, out double value)
     {
@@ -1410,15 +1433,21 @@ public partial class MainWindow : Window
     }
 
     private void New_Click(object sender, RoutedEventArgs e)
-    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = NewDocument(); _camPlanner.Clear(); View3DPanel?.ResetView(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
+    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = NewDocument(); _camPlanner.Clear(); View3DPanel?.ResetView(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); HideStartScreen(); StatusText.Text = "Nytt projekt."; }
     private void SyncMetadata()
-    { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
+    { NameBox.Text = _document.Name;
+      bool has = _document.HasMaterial;
+      MaterialWidthBox.Text = has ? F(_document.MaterialWidth) : ""; MaterialHeightBox.Text = has ? F(_document.MaterialHeight) : ""; MaterialThicknessBox.Text = has ? F(_document.MaterialThickness) : "";
+      MaterialButton.Content = has ? "Uppdatera material" : "Lägg till material";
+      NoMaterialText.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
       RefreshMachineSummary();
       ShowStockFields();
       RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); SyncWorkZero(); RefreshMaterialPicker(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000) { Error("Kontrollera materialmåtten innan du sparar (bredd och höjd 1–5000 mm, tjocklek större än 0).", MaterialWidthBox); return; }
+        // Without material the size fields are empty on purpose: the project is saved with its placeholders.
+        double w = _document.MaterialWidth, h = _document.MaterialHeight, t = _document.MaterialThickness;
+        if (_document.HasMaterial && (!Parse(MaterialWidthBox, out w) || !Parse(MaterialHeightBox, out h) || !Parse(MaterialThicknessBox, out t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000)) { Error("Kontrollera materialmåtten innan du sparar (bredd och höjd 1–5000 mm, tjocklek större än 0).", MaterialWidthBox); return; }
         if (_document.CamOperations.Any(o => CamValidation.GetError(o, t) is not null))
         { Error("En CAM-operation är inte giltig för aktuell materialtjocklek. Kontrollera CAM-inställningarna."); return; }
         if (_document.Inlay is not null && InlayValidation.GetError(_document.Inlay, t) is string inlayError)
@@ -1434,8 +1463,16 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json|JSON|*.json", InitialDirectory = ProjectsFolder() };
         if (dialog.ShowDialog(this) != true) return;
-        try { var document = DocumentStorage.Load(dialog.FileName); _document = document; _camPlanner.Clear(); View3DPanel?.ResetView(); _path = dialog.FileName; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
-        catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); }
+        OpenProject(dialog.FileName);
+    }
+
+    /// <summary>Opens a project file; true if it was opened (an error is shown otherwise).</summary>
+    private bool OpenProject(string path)
+    {
+        try { var document = DocumentStorage.Load(path); _document = document; _camPlanner.Clear(); View3DPanel?.ResetView(); _path = path; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
+        catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); return false; }
+        HideStartScreen();
+        return true;
     }
     private void CamPanel_Click(object sender, RoutedEventArgs e) => SetPanelVisible("Cam", !_camVisible);
     private void RefreshCamSelection()
@@ -1445,7 +1482,8 @@ public partial class MainWindow : Window
         try
         {
             CamSelectionLabel.Text = _selected is null ? "Markera ett objekt för att tilldela CAM."
-                : $"Markerat: {_selected.Kind} · {_selected.Width:0.###} × {_selected.Height:0.###} mm";
+                : _selection.Count > 1 ? $"Markerat: {_selection.Count} objekt – inställningarna gäller {CamPlanner.Label(_document, _selected)}"
+                : $"Markerat: {CamPlanner.Label(_document, _selected)} · {_selected.Width:0.###} × {_selected.Height:0.###} mm";
             var operation = _selected is null ? null : _document.CamOperations.FirstOrDefault(o => o.ShapeId == _selected.Id);
             CamKind.SelectedIndex = operation is null ? 0 : (int)operation.Kind;
             CamDiameter.Text = F(operation?.ToolDiameter ?? 3.175);
@@ -1462,6 +1500,7 @@ public partial class MainWindow : Window
             CamStepover.Text = F(operation?.StepoverPercent ?? defaults.StepoverPercent);
             CamPlungeMode.SelectedIndex = (int)(operation?.Plunge ?? defaults.Plunge);
             CamRampAngle.Text = F(operation?.RampAngleDeg ?? defaults.RampAngleDeg);
+            CamRampFeed.Text = F(operation?.RampFeedPercent ?? defaults.RampFeedPercent);
             CamDirectionPicker.SelectedIndex = (int)(operation?.Direction ?? defaults.Direction);
             SelectTool(operation?.ToolName);
             UpdateCamPanels();
@@ -1478,13 +1517,19 @@ public partial class MainWindow : Window
     /// <summary>Pocket: show stepover, hide tabs (they do not apply). Contour: the opposite.</summary>
     private void UpdateCamPanels()
     {
-        if (CamKind is null || PocketSettingsPanel is null || CamTabs is null || TabSettingsPanel is null) return;
+        // Called while the XAML is still loading (SelectionChanged fires early): wait until every part exists.
+        if (CamKind is null || PocketSettingsPanel is null || CamTabs is null || TabSettingsPanel is null ||
+            PlungeModePanel is null || CamPassLabel is null || RampAnglePanel is null || RampFeedPanel is null || CamPlungeMode is null) return;
         bool pocket = CamKind.SelectedIndex == (int)CamOperationKind.Pocket;
+        bool drill = CamKind.SelectedIndex == (int)CamOperationKind.Drill;
         PocketSettingsPanel.Visibility = pocket ? Visibility.Visible : Visibility.Collapsed;
-        CamTabs.Visibility = pocket ? Visibility.Collapsed : Visibility.Visible;
-        TabSettingsPanel.Visibility = !pocket && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        CamTabs.Visibility = pocket || drill ? Visibility.Collapsed : Visibility.Visible;
+        TabSettingsPanel.Visibility = !pocket && !drill && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        // Drilling always plunges straight down; ramping does not apply.
+        if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill ? Visibility.Collapsed : Visibility.Visible;
+        if (CamPassLabel is not null) CamPassLabel.Text = drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
         if (RampAnglePanel is not null && CamPlungeMode is not null)
-            RampAnglePanel.Visibility = CamPlungeMode.SelectedIndex == (int)PlungeMode.Ramp ? Visibility.Visible : Visibility.Hidden;
+            RampAnglePanel.Visibility = RampFeedPanel.Visibility = CamPlungeMode.SelectedIndex == (int)PlungeMode.Ramp ? Visibility.Visible : Visibility.Hidden;
     }
     private CamOperation? ReadCam()
     {
@@ -1494,7 +1539,7 @@ public partial class MainWindow : Window
             return null;
         var kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex);
         bool pocket = kind == CamOperationKind.Pocket;
-        bool useTabs = !pocket && CamTabs.IsChecked == true; // tabs never apply to pockets
+        bool useTabs = !pocket && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets or holes
         var defaults = new CamOperation();
         double stepover = defaults.StepoverPercent;
         if (CamStepover is not null && !Parse(CamStepover, out stepover))
@@ -1523,6 +1568,12 @@ public partial class MainWindow : Window
             if (plungeMode == PlungeMode.Ramp) return null;
             rampAngle = defaults.RampAngleDeg;
         }
+        double rampFeed = defaults.RampFeedPercent;
+        if (CamRampFeed is not null && !Parse(CamRampFeed, out rampFeed))
+        {
+            if (plungeMode == PlungeMode.Ramp) return null;
+            rampFeed = defaults.RampFeedPercent;
+        }
         // The tool keeps its name and kind only while its diameter is unchanged; otherwise it is a custom cutter.
         var tool = SelectedTool;
         bool fromLibrary = tool is not null && Math.Abs(tool.Diameter - diameter) < 1e-9;
@@ -1533,7 +1584,7 @@ public partial class MainWindow : Window
             FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm, StepoverPercent = stepover,
             ToolName = fromLibrary ? tool!.Name : null,
             ToolKind = fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
-            Plunge = plungeMode, RampAngleDeg = rampAngle,
+            Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
             Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
     }
     private void UpdateCamSummary()
@@ -1544,8 +1595,17 @@ public partial class MainWindow : Window
         var error = CamValidation.GetError(op, _document.MaterialThickness);
         string kind = op.Kind switch
         {
-            CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur", _ => "Ficka"
+            CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur",
+            CamOperationKind.Drill => "Borrning", _ => "Ficka"
         };
+        if (error is null && op.Kind == CamOperationKind.Drill)
+        {
+            int pecks = (int)Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9);
+            CamSummary.Text = $"Borrning · hål Ø {F(op.ToolDiameter)} mm i objektets mitt · {F(op.TotalDepth)} mm djupt · " +
+                (pecks <= 1 ? "i ett steg" : $"{pecks} steg à {F(op.DepthPerPass)} mm, lyfter ur hålet mellan stegen") +
+                $" · nedmatning {F(op.PlungeRate)} mm/min";
+            return;
+        }
         CamSummary.Text = error ?? $"{kind} · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm djup · " +
             $"{Math.Ceiling(op.TotalDepth / op.DepthPerPass):0} pass · " +
             (op.Kind == CamOperationKind.Pocket

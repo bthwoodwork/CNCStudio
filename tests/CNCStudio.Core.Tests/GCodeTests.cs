@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CNCStudio.Core.GCode;
 
 namespace CNCStudio.Core.Tests;
@@ -73,7 +73,8 @@ public class GCodeGeneratorTests
         var code = Code(GCodeGenerator.Generate(doc, report));
         Assert.Equal("M30", code[^1]);
         Assert.Equal("M5", code[^2]);
-        Assert.Equal("G0 Z10", code[^3]);
+        Assert.Equal("G0 X0 Y0", code[^3]);      // default: back to work zero at the end height
+        Assert.Equal("G0 Z10", code[^4]);
     }
 
     [Fact]

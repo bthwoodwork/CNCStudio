@@ -266,6 +266,50 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.8.8 – Rampfart, slutposition och snabb nedgång
+Förbättringarna kommer från ett program som har fungerat på maskinen (Kapsylöppnare.nc). Alla värden går att ändra.
+- **Rampens matning** ställs in per bearbetning, i % av matningen (standard 70 %, 5–100 %). Fältet "Matning %" ligger bredvid rampvinkeln. Tidigare rampade programmet i full skärhastighet. Tidsuppskattningen räknar med rampens matning.
+- **Slutposition** under Z-höjder: *Stanna över sista skäret*, *Arbetsnollan (X0 Y0)* (standard) eller *Egen punkt* (X/Y i arbetskoordinater). Fräsen åker dit på start- och sluthöjden. En punkt utanför arbetsområdet ger ett kritiskt CAM-fel.
+- **Snabbt ned i redan fräst spår** under Z-höjder, med inställbar höjd över det frästa djupet (standard 0,5 mm). När fräsen går ned igen där det redan är fräst, till exempel på fickans nästa djup, går den med G0 genom luften och matar bara den sista biten. Funktionen kan stängas av. En hållflik i startpunkten räknas som material.
+- Gamla projekt får standardvärdena när de öppnas.
+- **Programmet öppnar blankt:** en startvy med *Nytt projekt*, *Öppna projekt…* och de senast sparade projekten i Projekt-mappen, även i undermappar. Inget material ritas förrän ett projekt öppnas eller skapas. På startvyn fungerar bara Ctrl+N och Ctrl+O. Ett projekt som anges på kommandoraden, till exempel vid dubbelklick på en projektfil, öppnas direkt.
+- **Ett nytt projekt har inget material.** Ritytan är maskinens arbetsområde utan materialkant. Under Projekt och material visas en gul ruta och knappen *Lägg till material*. Utan material beräknas inga körbanor (kritiskt CAM-fel *NoMaterial*). Exporten pekar till materialfälten, och maskinvyn och 3D-vyn är tomma. Projektet kan sparas utan material. Äldre projektfiler har alltid material.
+
+- **Ett program per verktyg.** Maskinen har ingen verktygsväxlare, så verktyg blandas aldrig i ett program. Om projektet använder flera verktyg (samma namn, diameter och typ = samma verktyg) blir det ett numrerat program per verktyg, i körordning med fickor och innerkonturer först. Varje program planeras och kontrolleras för sig och börjar med *PROGRAM n AV m* och *BYT VERKTYG … och NOLLA Z*. Exporten sparar alla filer (`<namn> 1 av 3 - 6 mm rak fräs.nc` …). *Ladda program* låter dig välja vilket program som ska köras och föreslår nästa i ordningen. T/M6 används aldrig. Spara-dialogen öppnas i projektets mapp, eller i Projekt-mappen om projektet inte är sparat. Tidsuppskattningen räknar med en manuell paus per program.
+
+- **Borrning (som i Easel).** Den nya bearbetningen *Borrning (Drill)* går rakt ned i objektets mitt och ger ett hål med fräsens diameter. Fräsen borrar i steg om *Djup per steg* och lyfter ur hålet mellan stegen så att spånen kommer ut. Sedan går den snabbt ned till strax ovanför det redan borrade djupet (inställningen *Snabbt ned i redan fräst spår*) och borrar vidare med nedmatningshastigheten. Bara G0/G1 används, eftersom GRBL 1.1 saknar borrcykler (G81/G83). Ett objekt som inte är en cirkel med fräsens diameter ger en varning. Hålen ritas som cirkel med kryss och borras före ytterkonturer. Hållflikar och ramp gäller inte för borrning.
+
+- **Rita ovanpå objekt:** när Rektangel, Ellips eller Polylinje är valt ritar en dragning även inne i andra objekt, till exempel ett hål i en rektangel. Verktyget byter inte längre till Markera. Ctrl-klick markerar ett objekt, ett klick utan dragning markerar objektet under pekaren, och pekaren är ett kors medan ett ritverktyg är valt.
+
+- **Djup per pass större än totalt djup** ger nu ett pass i stället för ett kritiskt fel. Det händer när fräsens skärdata säger till exempel 3 mm per pass men skäret bara är 2 mm djupt.
+
+- **3D-vyn: Material Massivt / Genomskinligt / Dolt.** I läget Genomskinligt syns banorna inne i materialet tillsammans med det som fräses bort, och i läget Dolt syns bara banorna. Materialet har nu också en undersida, så det ser massivt ut underifrån, med hål där det är genomskuret.
+
+- **Smart CAM-panelen är omgjord** i numrerade avsnitt för det markerade objektet: 1 Bearbetning och fräs, 2 Djup (med stegning eller hållflikar beroende på bearbetning), 3 Matning och varvtal, och 4 Nedmatning och fräsriktning (hopfällt). Under dem finns en sammanfattning och *Spara CAM | Ta bort*. Avsnittet *Hela projektet* har CAM-kontrollen, Beräkna körbanor, Kontrollera hinder och Exportera. Förklaringen är hopfälld.
+- **V-carve inlay** visas inte längre i panelen. Avsnittet sparar bara inställningar och skapar ingen G-code ännu. Det öppnas från CAM → V-carve inlay-inställningar.
+
+- **Operationsträd** överst i CAM-panelen: ett program per verktyg i körordning (*Program 1 – 5 mm borr*, *Program 2 – 6 mm rak fräs* med ungefärlig tid). Under varje program visas operationerna, till exempel *Ficka Rektangel 7 · 14 mm* och *Kontur ut Rektangel 8 · 21 mm · 4 flikar · genom*. Varje rad har en statuspunkt (grön, gul, röd eller grå), och en tooltip visar vad som är fel. Objekt utan CAM samlas under *Ej tilldelade*. Ett klick på en operation markerar objektet och visar dess inställningar, och ett klick på ett program markerar alla dess objekt. Högerklick ger *Kopiera/Klistra in CAM-inställningar*, *Ta bort CAM* och *Exportera bara program n*. Etiketten för det markerade objektet använder samma namn som trädet.
+
+- **Köra flera program i CNC Studio:**
+  - När ett program i ett jobb med flera verktyg är klart talar en dialog om vad som ska göras härnäst: byt till nästa fräs, nolla Z och klicka Starta. Det klara programmet laddas ur, så att det inte kan köras igen av misstag med den nya fräsen.
+  - När Z nollas laddas nästa program automatiskt och kontrolleras mot den nya Z-nollan.
+  - Om Z nollas om efter att ett program har laddats kontrolleras programmet igen automatiskt.
+  - När sista programmet är klart visas *Alla n program är klara*.
+
+- **Probning** (Maskinkontroll → *⊥ Probning…* eller Maskin → Probning…):
+  - **Z** är standard. Fräsen söker nedåt mot plattan, först snabbt och sedan långsamt, och Z0 sätts på materialytan.
+  - Det finns också **hörn X, Y och Z**, **hörn X och Y**, **bara X** och **bara Y** (plattan i materialets främre vänstra hörn).
+  - Alla mått och hastigheter går att ställa in: plattans tjocklek, väggtjocklek X/Y, snabb och långsam matning, sökavstånd, backning, sidoförflyttning, sidodjup och lyft. De sparas i `Inställningar\probplatta.json` och följer med via synkmappen.
+  - *Testa kontakt* väntar på probsignalen (Pn:P).
+  - Probningen använder G38.2 (verifierad mot GRBL 1.1). Kontaktpunkten läses ur [PRB] med $# i maskinkoordinater. Fräsen flyttas till en exakt maskinposition (G53) innan koordinaten sätts med G10 L20 P0, så att eventuell glidning efter kontakten inte påverkar nollan.
+  - Ingen kontakt (ALARM:5) och redan i kontakt (ALARM:4) ger tydliga meddelanden.
+  - En Z-probning uppdaterar Z-kontrollen och laddar nästa program i ett jobb med flera verktyg, precis som Nolla Z.
+  - Demomaskinen har en simulerad probplatta.
+
+- **Programmet syns under körningen:** det laddade programmet ritas i maskinvyn. Det som återstår är blått, det som redan har körts är orange, och snabbförflyttningar är streckade. Gränsen följer fräsens verkliga position i statusrapporterna, inte raderna som har skickats, eftersom GRBL tar emot raderna långt innan den kör dem. När programmet är klart är hela banan orange. Samma sak visas i **3D-vyn**, med en röd lodrät stapel där fräsen är.
+
+**Tester:** 378 tester.
+
 ## 0.8.7 – Loggar på Drive
 - **Loggarna ligger i CNC Studio-mappen:** `Loggar\<datornamn>`. Varje dator skriver i sin egen mapp, så två datorer skriver aldrig i samma fil. Med en synkmapp (Google Drive) går alla datorers loggar att läsa från vilken dator som helst.
 - Befintliga loggar i `%APPDATA%\CNCStudio\logs` kopieras dit en gång. Felloggen, Första test och ``-kopiorna skrivs nu där.

@@ -234,6 +234,7 @@ public partial class MainWindow
         // Keep the computed MPos on the status so the jog travel check works whatever $10 reports.
         s.MPos ??= mpos;
         ShowDro(mpos, wpos);
+        if (wpos is not null && _runner is not null) UpdateJobPathPosition(wpos);
         UpdateToolMarker();
         UpdateJobStatus(s);
     }

@@ -12,6 +12,20 @@ public sealed record GCodeResult(bool Success, IReadOnlyList<string> Lines, IRea
     public string Text => string.Join("\r\n", Lines) + "\r\n";
 }
 
+/// <summary>
+/// One program of a job: all operations that use the same tool. The machine has no tool changer, so
+/// each tool is its own program, run in <see cref="Number"/> order with Z zeroed again with that tool.
+/// </summary>
+public sealed record GCodeJob(int Number, int Count, string ToolLabel, double ToolDiameter,
+    IReadOnlyList<CamOperationResult> Operations, MotionPlan Motion, GCodeResult Result)
+{
+    /// <summary>"2 av 3 - 6 mm rak fras" style name part (ASCII-safe for file names is up to the caller).</summary>
+    public string Title => Count == 1 ? ToolLabel : $"{Number} av {Count} - {ToolLabel}";
+}
+
+/// <summary>Information written at the top of one program of a multi-tool job.</summary>
+public sealed record GCodeJobInfo(int Number, int Count, string ToolLabel);
+
 public enum ExportBlockerKind { NoOperations, CriticalFinding, StalePath, MissingPath, StockTopUnknown, HomingOff, NoMotion }
 
 /// <summary>One reason export is refused; ShapeId/FindingCode point at the cause when known.</summary>
@@ -32,7 +46,7 @@ public sealed record ExportBlocker(ExportBlockerKind Kind, string Message, Guid?
 /// </summary>
 public static class GCodeGenerator
 {
-    public const string Generator = "CNC Studio 0.8.7";
+    public const string Generator = "CNC Studio 0.8.8";
 
     public static IReadOnlyList<string> BlockingReasons(CncDocument doc, CamReport report) =>
         Blockers(doc, report).Select(b => b.Message).ToList();
@@ -63,9 +77,48 @@ public static class GCodeGenerator
         return list.GroupBy(b => b.Message).Select(g => g.First()).ToList();
     }
 
-    public static GCodeResult Generate(CncDocument doc, CamReport report, DateTime? now = null)
+    /// <summary>Same tool = same name, diameter and kind (a cutter from the library or a custom one).</summary>
+    public static (string Name, double Diameter, ToolKind Kind) ToolKey(CamOperation op) =>
+        ((op.ToolName ?? "").Trim(), Math.Round(op.ToolDiameter, 3), op.ToolKind);
+
+    public static string ToolLabel(CamOperation op) =>
+        string.IsNullOrWhiteSpace(op.ToolName) ? $"Fras {F(op.ToolDiameter)} mm" : op.ToolName!.Trim();
+
+    /// <summary>
+    /// One program per tool, in the order the operations would run (inside contours and pockets before
+    /// outside contours). Each program has its own motion plan and is verified on its own. If anything
+    /// blocks export, no program is made.
+    /// </summary>
+    public static (IReadOnlyList<GCodeJob> Jobs, IReadOnlyList<string> BlockingReasons) GenerateByTool(
+        CncDocument doc, CamReport report, DateTime? now = null)
     {
         var blocking = BlockingReasons(doc, report);
+        if (blocking.Count > 0) return (Array.Empty<GCodeJob>(), blocking);
+        var order = report.Motion.OperationOrder.ToList();
+        int Rank(int i) { int k = order.IndexOf(i); return k < 0 ? int.MaxValue : k; }
+        var groups = report.Operations.Select((o, i) => (Op: o, Index: i))
+            .GroupBy(x => ToolKey(x.Op.Operation))
+            .OrderBy(g => g.Min(x => Rank(x.Index))).ToList();
+        var jobs = new List<GCodeJob>();
+        for (int n = 0; n < groups.Count; n++)
+        {
+            var ops = groups[n].OrderBy(x => x.Index).Select(x => x.Op).ToList();
+            var (motion, findings) = MotionPlanner.Plan(doc, ops);
+            var sub = new CamReport(ops) { Motion = motion, GlobalFindings = findings };
+            var label = ToolLabel(ops[0].Operation);
+            var info = groups.Count == 1 ? null : new GCodeJobInfo(n + 1, groups.Count, label);
+            jobs.Add(new GCodeJob(n + 1, groups.Count, label, ops[0].Operation.ToolDiameter, ops, motion, Generate(doc, sub, now, info)));
+        }
+        return (jobs, Array.Empty<string>());
+    }
+
+    public static GCodeResult Generate(CncDocument doc, CamReport report, DateTime? now = null, GCodeJobInfo? job = null)
+    {
+        var blocking = BlockingReasons(doc, report).ToList();
+        // No tool changer: one program never mixes tools (GenerateByTool splits them).
+        int tools = report.Operations.Select(o => ToolKey(o.Operation)).Distinct().Count();
+        if (tools > 1)
+            blocking.Add($"Projektet använder {tools} verktyg. Maskinen har ingen verktygsväxlare – exportera ett program per verktyg.");
         var warnings = report.AllFindings.Where(f => f.Severity == CamSeverity.Warning)
             .Select(f => f.Message).Distinct().ToList();
         warnings.AddRange(RateWarnings(doc, report));
@@ -82,6 +135,13 @@ public static class GCodeGenerator
 
         Comment($"{Generator} - {doc.Name}");
         Comment($"Skapad {(now ?? DateTime.Now):yyyy-MM-dd HH:mm}");
+        if (job is not null)
+        {
+            Comment($"PROGRAM {job.Number} AV {job.Count}: {job.ToolLabel}");
+            Comment(job.Number == 1
+                ? $"Satt i {job.ToolLabel}, nolla Z pa materialytan, kor sedan program {job.Number}."
+                : $"BYT VERKTYG till {job.ToolLabel} och NOLLA Z pa materialytan innan start. X0 Y0 ar oforandrade.");
+        }
         Comment($"Material {F(doc.MaterialWidth)} x {F(doc.MaterialHeight)} x {F(doc.MaterialThickness)} mm");
         Comment(doc.WorkZero == WorkZero.Center
             ? "Nollpunkt G54: X0 Y0 = materialets MITT, Z0 = materialets ovansida"
@@ -181,7 +241,7 @@ public static class GCodeGenerator
                 {
                     // Ramped plunge: Z falls linearly with distance along the path.
                     double pz = k == slice.Count - 1 || total <= 0 ? m.Z1 : m.Z0 + (m.Z1 - m.Z0) * run / total;
-                    lines.Add($"G1 {XY(p.X, p.Y)} Z{F(pz)}" + Feed(op.FeedRate));
+                    lines.Add($"G1 {XY(p.X, p.Y)} Z{F(pz)}" + Feed(op.RampFeedRate));
                     z = pz;
                 }
                 else lines.Add($"G1 {XY(p.X, p.Y)}" + Feed(op.FeedRate));

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -59,7 +59,7 @@ public static class CamGeometryChecks
             if (other.Id == shape.Id) continue;
             // A pocket or inside contour placed within another part is a feature OF that part
             // (e.g. a recess in a board that is cut out afterwards) – cutting into it is intended.
-            if (op.Kind is CamOperationKind.Pocket or CamOperationKind.Inside && LiesWithin(shape, other)) continue;
+            if (op.Kind is CamOperationKind.Pocket or CamOperationKind.Inside or CamOperationKind.Drill && LiesWithin(shape, other)) continue;
             // Quick reject: the tool band cannot reach the other part's bounding box.
             if (other.X > pMaxX + r || other.Y > pMaxY + r ||
                 other.X + other.Width < pMinX - r || other.Y + other.Height < pMinY - r) continue;

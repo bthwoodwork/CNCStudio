@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,7 +16,7 @@ public static class CamDirection
 {
     public static ContourPreview Apply(ContourPreview p, DesignShape shape, CamOperation op)
     {
-        if (op.Direction == MillingDirection.Default) return p;
+        if (op.Direction == MillingDirection.Default || p.IsDrill) return p;   // a drilled hole has no direction
         bool wantRight = op.Direction == MillingDirection.Climb;
         var paths = p.Centerlines.Count > 0 ? p.Centerlines : new[] { p.Centerline };
         var outline = CamGeometryChecks.Outline(shape);

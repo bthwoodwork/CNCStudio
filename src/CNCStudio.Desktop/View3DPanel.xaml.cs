@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -24,6 +24,11 @@ public partial class View3DPanel : UserControl
     private readonly LinesVisual3D _rapids = new() { Color = Color.FromRgb(255, 77, 77), Thickness = 1.0 };
     private readonly ModelVisual3D _fixtures = new();
     private readonly ModelVisual3D _zero = new();
+    // The running program: what has run (orange), what is left (blue) and where the tool is.
+    private readonly LinesVisual3D _jobDone = new() { Color = Color.FromRgb(255, 159, 58), Thickness = 2.0 };
+    private readonly LinesVisual3D _jobTodo = new() { Color = Color.FromRgb(79, 179, 255), Thickness = 1.4 };
+    private readonly LinesVisual3D _jobTool = new() { Color = Color.FromRgb(255, 77, 77), Thickness = 4 };
+    private bool _jobActive;
     private CancellationTokenSource? _simulation;
     private bool _fitted;
 
@@ -55,6 +60,55 @@ public partial class View3DPanel : UserControl
 
     public void ResetView() { _fitted = false; _shownKey = null; }
 
+    /// <summary>
+    /// Shows the loaded program with its progress: moves before <paramref name="index"/> (and the part of that
+    /// one up to <paramref name="fraction"/>) have run. <paramref name="toView"/> maps work X/Y to the view.
+    /// Rapids are left to the rapids layer. <paramref name="tool"/> is the tool tip in work coordinates.
+    /// </summary>
+    public void ShowJob(IReadOnlyList<CNCStudio.Core.GCode.ProgramMove> moves, int index, double fraction,
+        Func<double, double, Point> toView, double[]? tool)
+    {
+        var done = new Point3DCollection(); var todo = new Point3DCollection();
+        Point3D P(double x, double y, double z) { var p = toView(x, y); return new Point3D(p.X, p.Y, z); }
+        for (int i = 0; i < moves.Count; i++)
+        {
+            var m = moves[i];
+            if (m.Rapid) continue;
+            var a = P(m.X0, m.Y0, m.Z0); var b = P(m.X1, m.Y1, m.Z1);
+            if (i < index) { done.Add(a); done.Add(b); }
+            else if (i == index && fraction > 0)
+            {
+                var c = a + (b - a) * fraction;
+                done.Add(a); done.Add(c); todo.Add(c); todo.Add(b);
+            }
+            else { todo.Add(a); todo.Add(b); }
+        }
+        _jobDone.Points = done; _jobTodo.Points = todo;
+        _jobTool.Points = tool is { Length: >= 3 } t
+            ? new Point3DCollection { P(t[0], t[1], t[2]), P(t[0], t[1], t[2] + 25) }
+            : new Point3DCollection();
+        if (!_jobActive) { _jobActive = true; Layer_Changed(this, new RoutedEventArgs()); }
+    }
+
+    /// <summary>No program loaded: back to the planned cuts.</summary>
+    public void ClearJob()
+    {
+        if (!_jobActive) return;
+        _jobActive = false;
+        _jobDone.Points = new Point3DCollection(); _jobTodo.Points = new Point3DCollection(); _jobTool.Points = new Point3DCollection();
+        Layer_Changed(this, new RoutedEventArgs());
+    }
+
+    /// <summary>A project without material: no stock, paths, fixtures or work zero.</summary>
+    public void ShowEmpty()
+    {
+        if (_shownKey == "empty") return;
+        _simulation?.Cancel();
+        _stock.Content = null; _fixtures.Content = null; _zero.Content = null;
+        _cuts.Points = new Point3DCollection(); _plunges.Points = new Point3DCollection(); _rapids.Points = new Point3DCollection();
+        _shownKey = "empty";
+    }
+
     private string? _shownKey;
 
     private static string SceneKey(CncDocument doc, CamReport report)
@@ -83,7 +137,8 @@ public partial class View3DPanel : UserControl
         try { map = await Task.Run(() => StockSimulator.Simulate(doc, report), cts.Token); }
         catch (Exception ex) { InfoText.Text = "Simuleringen misslyckades: " + ex.Message; return; }
         if (cts.IsCancellationRequested) return;
-        _stock.Content = BuildStockModel(map);
+        _lastMap = map;
+        _stock.Content = BuildStockModel(map, StockOpacity);
         var ms = (DateTime.Now - started).TotalMilliseconds;
         InfoText.Text = $"Material {F(w)} × {F(l)} × {F(t)} mm · rutnät {F(map.Cell, 2)} mm · " +
                         $"djupast {F(-map.MinHeight, 2)} mm · bortfräst {F(map.RemovedVolume / 1000, 1)} cm³ · {ms:0} ms. " +
@@ -92,7 +147,18 @@ public partial class View3DPanel : UserControl
 
     // ---- Material ----
 
-    private static Model3DGroup BuildStockModel(StockHeightMap map)
+    private StockHeightMap? _lastMap;
+
+    /// <summary>Massivt = 1, Genomskinligt = see-through so the paths inside the material show.</summary>
+    private double StockOpacity => StockMode?.SelectedIndex == 1 ? 0.35 : 1.0;
+
+    private void StockMode_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_lastMap is not null) _stock.Content = BuildStockModel(_lastMap, StockOpacity);
+        Layer_Changed(sender, e);
+    }
+
+    private static Model3DGroup BuildStockModel(StockHeightMap map, double opacity)
     {
         // Thin the grid for display, keeping the DEEPEST value in each block so no groove disappears.
         int step = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((double)map.Nx * map.Ny / MaxDisplayVertices)));
@@ -135,14 +201,40 @@ public partial class View3DPanel : UserControl
         depthBrush.GradientStops.Add(new GradientStop(Color.FromRgb(196, 160, 112), 0.35));
         depthBrush.GradientStops.Add(new GradientStop(Color.FromRgb(140, 104, 66), 0.985));
         depthBrush.GradientStops.Add(new GradientStop(Color.FromRgb(62, 68, 76), 1.0));
+        depthBrush.Opacity = opacity;
         depthBrush.Freeze();
 
         var group = new Model3DGroup();
         group.Children.Add(new GeometryModel3D(top, new DiffuseMaterial(depthBrush)) { BackMaterial = new DiffuseMaterial(depthBrush) });
-        group.Children.Add(new GeometryModel3D(Sides(h, nx, ny, cx, cy, t), new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(201, 165, 116))))
-            { BackMaterial = new DiffuseMaterial(new SolidColorBrush(Color.FromRgb(201, 165, 116))) });
+        var side = new SolidColorBrush(Color.FromRgb(201, 165, 116)) { Opacity = opacity };
+        group.Children.Add(new GeometryModel3D(Sides(h, nx, ny, cx, cy, t), new DiffuseMaterial(side)) { BackMaterial = new DiffuseMaterial(side) });
+        // The underside, so the stock looks solid when the view is turned to look from below. Cells cut
+        // through are left open, so a through-cut is still visible from underneath.
+        var underside = new SolidColorBrush(Color.FromRgb(176, 140, 96)) { Opacity = opacity };
+        group.Children.Add(new GeometryModel3D(Bottom(h, nx, ny, cx, cy, t), new DiffuseMaterial(underside)) { BackMaterial = new DiffuseMaterial(underside) });
         group.Freeze();
         return group;
+    }
+
+    /// <summary>The bottom face at −t on the same grid as the top, without the cells that are cut through.</summary>
+    private static MeshGeometry3D Bottom(double[,] h, int nx, int ny, double cx, double cy, double t)
+    {
+        var m = new MeshGeometry3D();
+        for (int j = 0; j < ny; j++)
+            for (int i = 0; i < nx; i++)
+                m.Positions.Add(new Point3D((i + 0.5) * cx, (j + 0.5) * cy, -t));
+        bool Through(int i, int j) => h[i, j] <= -t + 1e-4;
+        for (int j = 0; j + 1 < ny; j++)
+            for (int i = 0; i + 1 < nx; i++)
+            {
+                if (Through(i, j) || Through(i + 1, j) || Through(i, j + 1) || Through(i + 1, j + 1)) continue;
+                int a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
+                // Wound the other way than the top, so the face points down.
+                m.TriangleIndices.Add(a); m.TriangleIndices.Add(d); m.TriangleIndices.Add(b);
+                m.TriangleIndices.Add(a); m.TriangleIndices.Add(c); m.TriangleIndices.Add(d);
+            }
+        Freeze(m);
+        return m;
     }
 
     /// <summary>The four outer walls from the bottom up to the (possibly cut) edge of the surface.</summary>
@@ -243,12 +335,18 @@ public partial class View3DPanel : UserControl
     private void Layer_Changed(object sender, RoutedEventArgs e)
     {
         // Checked events fire while the XAML is still loading, before every checkbox exists.
-        if (ShowStock is null || ShowCuts is null || ShowRapids is null || ShowFixtures is null || Scene is null) return;
-        SetVisible(_stock, ShowStock.IsChecked == true);
-        SetVisible(_cuts, ShowCuts.IsChecked == true);
-        SetVisible(_plunges, ShowCuts.IsChecked == true);
+        if (StockMode is null || ShowCuts is null || ShowRapids is null || ShowFixtures is null || Scene is null) return;
+        SetVisible(_stock, StockMode.SelectedIndex != 2);
+        // While a program is loaded its own path replaces the planned cuts (same moves, with progress).
+        SetVisible(_cuts, ShowCuts.IsChecked == true && !_jobActive);
+        SetVisible(_plunges, ShowCuts.IsChecked == true && !_jobActive);
+        SetVisible(_jobTodo, ShowCuts.IsChecked == true && _jobActive);
+        SetVisible(_jobDone, ShowCuts.IsChecked == true && _jobActive);
+        SetVisible(_jobTool, _jobActive);
         SetVisible(_rapids, ShowRapids.IsChecked == true);
         SetVisible(_fixtures, ShowFixtures.IsChecked == true);
+        // See-through material must be drawn after the paths, or it hides them in the depth buffer.
+        if (StockMode.SelectedIndex == 1 && Scene.Children.Contains(_stock)) { Scene.Children.Remove(_stock); Scene.Children.Add(_stock); }
     }
 
     private void SetVisible(Visual3D v, bool on)

@@ -105,8 +105,36 @@ public partial class MainWindow
         RefreshMotionFields();
         Render();
         StatusText.Text = $"MPos Z vid materialytan uppdaterad till {stockTop.ToString("0.###", CultureInfo.InvariantCulture)} – Z-kontrollerna använder nu den.";
+        OnZeroChanged();
     }
 
+    private ProbeWindow? _probeWindow;
+
+    /// <summary>Opens probing (Z by default). Needs homing: corner probing moves in machine coordinates (G53).</summary>
+    private void Probe_Click(object sender, RoutedEventArgs e)
+    {
+        if (RequireIdle("Probning") is not GrblClient g) return;
+        if (!_homedThisSession) { Error("Kör homing först (⌂ Homing). Probningen flyttar i maskinkoordinater och behöver veta var maskinen står."); return; }
+        if (_probeWindow is { IsLoaded: true }) { _probeWindow.Activate(); return; }
+        double tool = _loadedJob?.ToolDiameter ?? SelectedTool?.Diameter
+                      ?? _document.CamOperations.Select(o => (double?)o.ToolDiameter).FirstOrDefault() ?? 6;
+        _probeWindow = new ProbeWindow(g, AppStorage.Current.LoadProbeSettings(), tool, _document.WorkZero == WorkZero.Center,
+            r => Dispatcher.Invoke(() => OnProbed(r))) { Owner = this };
+        _probeWindow.Show();
+    }
+
+    /// <summary>After probing: Z probed → the stock top (MPos Z) is known, so the Z checks and a waiting program use it.</summary>
+    private void OnProbed(ProbeResult r)
+    {
+        JogStatusText.Text = r.Message;
+        if (r.StockTopMPosZ is not double z || z >= 0) return;
+        RememberChange();
+        _document.Motion.StockTopMachineZ = Math.Round(z, 3);
+        RefreshMotionFields();
+        Render();
+        StatusText.Text = $"Probat: MPos Z vid materialytan {z.ToString("0.###", CultureInfo.InvariantCulture)} – Z-kontrollerna använder nu den.";
+        OnZeroChanged();
+    }
     private async void GoTo_Click(object sender, RoutedEventArgs e)
     {
         var axes = ((FrameworkElement)sender).Tag?.ToString() ?? "";
