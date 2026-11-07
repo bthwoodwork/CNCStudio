@@ -66,7 +66,10 @@ public partial class MainWindow
         MachineCanvas.Children.Add(_machineGridLayer);
 
         var stock = new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
-            Fill = StockFill, Stroke = CanvasTheme.StockEdge, StrokeThickness = 1.2 / _zoom,
+            Fill = StockFill,
+            // Red edge when the material no longer fits the work area (toolpaths are blocked then).
+            Stroke = MachineSetupValidation.StockProblem(_document) is null ? CanvasTheme.StockEdge : CanvasTheme.Critical,
+            StrokeThickness = (MachineSetupValidation.StockProblem(_document) is null ? 1.2 : 2.5) / _zoom,
             Cursor = Cursors.SizeAll, Tag = "stock", ToolTip = "Dra materialet eller ange X/Y i egenskaper" };
         Canvas.SetLeft(stock, _document.Stock.X); Canvas.SetTop(stock, _document.Stock.Y);
         MachineCanvas.Children.Add(stock);
@@ -130,7 +133,7 @@ public partial class MainWindow
         var (x, y) = FromTable(tx, ty, _document.MaterialWidth, _document.MaterialHeight);
         var oldStock = _document.Stock;
         _document.Stock = new StockPlacement { X = x, Y = y };
-        var error = MachineSetupValidation.Validate(_document);
+        var error = MachineSetupValidation.StockProblem(_document);
         _document.Stock = oldStock;
         if (error is not null) { Error(error); return; }
         RememberChange(); _document.Stock = new StockPlacement { X = x, Y = y };
@@ -142,12 +145,9 @@ public partial class MainWindow
     {
         var dialog = new MachineSettingsWindow(_document.Machine, d =>
         {
-            // Validate the candidate against the current stock and fixtures before accepting.
-            var old = _document.Machine;
-            _document.Machine = d;
-            var error = MachineSetupValidation.Validate(_document);
-            _document.Machine = old;
-            return error;
+            // Only the profile itself must be valid. Material or fixtures that no longer fit a smaller
+            // work area do not stop saving – they block the toolpaths until they are moved (CAM says so).
+            return MachineSetupValidation.ValidateProfile(d);
         }, Grbl) { Owner = this };
         if (dialog.ShowDialog() != true || dialog.Result is null) return;
         RememberChange();
@@ -156,6 +156,10 @@ public partial class MainWindow
         RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields();
         _selectedFixture = null; Render();
         StatusText.Text = $"Maskininställningar sparade: {dialog.Result.Name} (ej GRBL-kalibrerad).";
+        if (MachineSetupValidation.PlacementProblem(_document) is string placement)
+            AppDialog.Show(this, "Maskininställningarna är sparade.\n\n" + placement + "\n\nInga körbanor beräknas förrän materialet och fastspänningarna ligger inom arbetsområdet. " +
+                "Flytta materialet under Maskin → Materialplacering (eller dra det i maskinvyn), eller ändra dess storlek.",
+                "Material utanför arbetsområdet", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void RefreshMachineSummary()
@@ -260,7 +264,7 @@ public partial class MainWindow
         var index = _document.Fixtures.IndexOf(f);
         if (index < 0) return;
         _document.Fixtures[index] = clone;
-        var error = MachineSetupValidation.Validate(_document);
+        var error = MachineSetupValidation.FixtureProblem(_document, clone);
         _document.Fixtures[index] = f;
         if (error is not null) { Error(error); return; }
         RememberChange(); _document.Fixtures[index] = clone; _selectedFixture = clone;
@@ -348,7 +352,7 @@ public partial class MainWindow
                 var f = new FixtureBlock { X = r.Left, Y = r.Top,
                     Width = r.Width, Length = r.Height };
                 _document.Fixtures.Add(f);
-                if (MachineSetupValidation.Validate(_document) is string error)
+                if (MachineSetupValidation.FixtureProblem(_document, f) is string error)
                 { _document.Fixtures.Remove(f); Error(error); }
                 else { _document.Fixtures.Remove(f); RememberChange(); _document.Fixtures.Add(f);
                     _selectedFixture = f; RefreshFixtureFields(); }

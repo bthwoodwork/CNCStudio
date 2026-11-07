@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.8.5";
+    private const string AppTitle = "CNC Studio 0.8.6";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -330,7 +330,7 @@ public partial class MainWindow
     /// <summary>Full report dialog. Computes outdated paths first so everything is checked.</summary>
     private void ReviewCamSafety_Click(object sender, RoutedEventArgs e)
     {
-        if (MachineSetupValidation.Validate(_document) is string setupError)
+        if (MachineSetupValidation.ValidateProfile(_document.Machine) is string setupError)
         { Error(setupError); return; }
         Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
         try { _camReport = _camPlanner.Review(_document, computeAll: true); }

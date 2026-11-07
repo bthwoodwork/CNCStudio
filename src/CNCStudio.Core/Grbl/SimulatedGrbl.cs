@@ -94,6 +94,9 @@ public sealed class SimulatedGrbl : IGrblTransport
     }
 
     public event Action<string>? DataReceived;
+
+    /// <summary>False = behave like a board that does not reset on connect (no welcome message).</summary>
+    public bool WelcomeOnOpen { get; set; } = true;
     public bool IsOpen { get; private set; }
     public IReadOnlyDictionary<int, double> Settings { get { lock (_sync) return new Dictionary<int, double>(_settings); } }
 
@@ -108,6 +111,8 @@ public sealed class SimulatedGrbl : IGrblTransport
             _homed = false;
             PowerUpCounters();
             ResetController(fromMotion: false);
+            // Like a board that does not restart when the port opens: the welcome was sent long ago.
+            if (!WelcomeOnOpen) while (_out.TryDequeue(out _)) { }
         }
         _lastTick = _clock.Elapsed.TotalSeconds;
         _timer ??= new Timer(_ => Tick(), null, 20, 20);

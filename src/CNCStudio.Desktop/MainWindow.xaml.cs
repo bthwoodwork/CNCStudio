@@ -1293,9 +1293,9 @@ public partial class MainWindow : Window
         RememberChange();
         _document.Name = NameBox.Text;
         _document.MaterialWidth = w; _document.MaterialHeight = h; _document.MaterialThickness = t;
-        if (MachineSetupValidation.Validate(_document) is string setupError)
-        { RestoreSnapshot(_undo.Pop()); Error(setupError); return; }
         Render(); FitToMaterial();
+        if (MachineSetupValidation.StockProblem(_document) is string outside)
+            StatusText.Text = outside + " Flytta materialet under Maskin → Materialplacering – inga körbanor beräknas så länge.";
     }
 
     private void OpenInlay_Click(object sender, RoutedEventArgs e)
@@ -1424,7 +1424,8 @@ public partial class MainWindow : Window
         if (_document.Inlay is not null && InlayValidation.GetError(_document.Inlay, t) is string inlayError)
         { Error("Inlay-inställningarna passar inte materialtjockleken: " + inlayError); return; }
         _document.Name = NameBox.Text; _document.MaterialWidth = w; _document.MaterialHeight = h; _document.MaterialThickness = t;
-        if (MachineSetupValidation.Validate(_document) is string setupError) { Error(setupError); return; }
+        // Saving the project only needs a valid profile; material outside the work area is shown in CAM instead.
+        if ((MachineSetupValidation.ValidateProfile(_document.Machine) ?? MachineSetupValidation.FixtureValues(_document)) is string setupError) { Error(setupError); return; }
         if (_path is null) { var dialog = new SaveFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json", FileName = SafeFileName(_document.Name) + ".cncstudio.json", InitialDirectory = ProjectsFolder() }; if (dialog.ShowDialog(this) != true) return; _path = dialog.FileName; }
         try { DocumentStorage.Save(_path, _document); StatusText.Text = "Sparat: " + _path; }
         catch (Exception ex) { Error("Kunde inte spara: " + ex.Message); }

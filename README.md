@@ -265,3 +265,10 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.8.6 – Efter första maskintestet
+- Första testet mot den riktiga X-Carve (GRBL 1.1g Inventables, 500 × 500 × 100 mm) gick igenom alla steg.
+- **Version utan välkomstmeddelande:** kontroller som inte startar om när porten öppnas känns nu igen som GRBL 1.1 via `$I` (`[VER:1.1g…]`). Varningen visar vad kontrollern faktiskt svarade.
+- **Maskininställningar kan alltid sparas** när profilen är giltig. Material eller fastspänningar som inte längre ryms (t.ex. efter mindre arbetsområde) blockerar bara körbanorna: kritiskt CAM-fel, röd kant i maskinvyn och knappen "Gå till materialplacering". Projekt kan sparas och öppnas ändå.
+
+**Tester:** 328 tester.

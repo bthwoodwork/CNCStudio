@@ -94,10 +94,42 @@ public sealed class GrblClient : IDisposable
         lock (_sync) _welcomeWaiter = null;
         if (got == welcome.Task) return welcome.Task.Result.Raw;
         var status = await RequestStatusAsync(TimeSpan.FromSeconds(1.5), ct);
-        if (status is not null) return $"GRBL svarar (status {status.State}); inget välkomstmeddelande mottogs.";
+        if (status is not null)
+        {
+            // Many boards do not restart when the port opens, so no welcome was sent. Ask for the
+            // build info instead: "$I" answers "[VER:1.1h.20190825:]" (Commands wiki), also in Alarm.
+            var ver = await ReadVersionAsync(ct);
+            if (ver is not null) Version = "Grbl " + ver;
+            return ver is null
+                ? $"GRBL svarar (status {status.State}); inget välkomstmeddelande och ingen version från $I."
+                : $"Grbl {ver} (läst med $I; status {status.State})";
+        }
         _transport.Close();
         throw new InvalidOperationException("Ingen GRBL-kontroller svarade på porten (inget välkomstmeddelande och ingen status).");
     }
+
+    /// <summary>
+    /// The firmware version from "$I" ("[VER:1.1h.20190825:]" → "1.1h.20190825"), or null if the
+    /// controller does not answer it. Used when no welcome message arrived on connect.
+    /// </summary>
+    public async Task<string?> ReadVersionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var r = await SendLineAsync("$I", ct, TimeSpan.FromSeconds(2));
+            var line = r.Lines.FirstOrDefault(l => l.Raw.StartsWith("[VER:", StringComparison.Ordinal))?.Raw;
+            if (line is null) return null;
+            var body = line[5..^1];                                  // "1.1h.20190825:" (build info after ':')
+            int colon = body.IndexOf(':');
+            var ver = (colon >= 0 ? body[..colon] : body).Trim();
+            return ver.Length == 0 ? null : ver;
+        }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>True if the version text is GRBL 1.1 (welcome "Grbl 1.1h ['$' for help]" or $I "1.1h.20190825").</summary>
+    public static bool IsGrbl11(string? version) =>
+        version is not null && System.Text.RegularExpressions.Regex.IsMatch(version, @"(^|[^0-9.])1\.1[a-z]?([^0-9]|$)");
 
     public void Disconnect()
     {

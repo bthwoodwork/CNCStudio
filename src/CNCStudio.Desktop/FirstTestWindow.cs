@@ -218,9 +218,10 @@ public sealed class FirstTestWindow : Window
                 var hello = await g.ConnectAsync();
                 g.StartStatusPolling(TimeSpan.FromMilliseconds(250));
                 _g = g;
-                bool v11 = (g.Version ?? hello).Contains("1.1");
+                bool v11 = GrblClient.IsGrbl11(g.Version);
                 Complete($"Ansluten till {port}: {hello}");
-                if (!v11) Note("Kontrollern svarade inte som GRBL 1.1. CNC Studio är bara kontrollerat mot GRBL 1.1 – fortsätt inte om det inte är 1.1.", Bad);
+                if (!v11) Note($"Kunde inte bekräfta att kontrollern kör GRBL 1.1. Svar: \"{g.Version ?? hello}\". " +
+                    "CNC Studio är bara kontrollerat mot GRBL 1.1 – kontrollera versionen (skriv $I i GRBL-konsolen) innan du fortsätter.", Bad);
             }
             catch (Exception ex) { Note("Kunde inte ansluta: " + ex.Message, Bad); connect.IsEnabled = true; }
         };

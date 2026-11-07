@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace CNCStudio.Core;
@@ -277,10 +277,16 @@ public sealed class CameraSetup
 
 public static class MachineSetupValidation
 {
-    public static string? Validate(CncDocument d)
+    /// <summary>Profile, stock and fixtures together (used where something is placed on the table).</summary>
+    public static string? Validate(CncDocument d) => ValidateProfile(d.Machine) ?? PlacementProblem(d);
+
+    /// <summary>
+    /// The machine profile on its own. Machine settings can always be saved when this passes – even if
+    /// material or fixtures placed earlier no longer fit a smaller work area (that only blocks CAM).
+    /// </summary>
+    public static string? ValidateProfile(MachineProfile? m)
     {
-        var m = d.Machine; var stock = d.Stock;
-        if (m is null || stock is null || d.Fixtures is null) return "Maskininställningar saknas.";
+        if (m is null) return "Maskininställningar saknas.";
         if (!double.IsFinite(m.WorkWidthMm) || !double.IsFinite(m.WorkLengthMm) ||
             m.WorkWidthMm <= 0 || m.WorkLengthMm <= 0 || m.WorkWidthMm > 10000 || m.WorkLengthMm > 10000)
             return "Maskinens arbetsområde måste ha giltiga mått.";
@@ -301,20 +307,55 @@ public static class MachineSetupValidation
             return "$23 har bit 4 (Z) satt, så Z homar nedåt. CNC Studio kräver att Z homar uppåt mot en brytare upptill.";
         if (string.IsNullOrWhiteSpace(m.Name))
             return "Ange ett namn på maskinprofilen.";
+        return null;
+    }
+
+    /// <summary>Fixtures with impossible values (not about where they are) – checked when loading a project.</summary>
+    public static string? FixtureValues(CncDocument d)
+    {
+        if (d.Stock is null || d.Fixtures is null) return "Maskininställningar saknas.";
+        if (!double.IsFinite(d.Stock.X) || !double.IsFinite(d.Stock.Y)) return "Materialets placering är ogiltig.";
+        foreach (var f in d.Fixtures)
+            if (!double.IsFinite(f.X) || !double.IsFinite(f.Y) || !double.IsFinite(f.Width) || !double.IsFinite(f.Length) ||
+                !double.IsFinite(f.HeightAboveStockMm) || !double.IsFinite(f.ClearanceMm) ||
+                f.Width <= 0 || f.Length <= 0 || f.HeightAboveStockMm < 0 || f.ClearanceMm < 0)
+                return $"Fastspänningen '{f.Name}' har ogiltiga mått.";
+        return null;
+    }
+
+    /// <summary>Material or a fixture outside the machine's work area, or null. Blocks toolpaths, not saving.</summary>
+    public static string? PlacementProblem(CncDocument d)
+    {
+        var m = d.Machine; var stock = d.Stock;
+        if (m is null || stock is null || d.Fixtures is null) return "Maskininställningar saknas.";
+        if (FixtureValues(d) is string bad) return bad;
+        return StockProblem(d) ?? d.Fixtures.Select(f => FixtureProblem(d, f)).FirstOrDefault(p => p is not null);
+    }
+
+    /// <summary>The material outside the work area, or null.</summary>
+    public static string? StockProblem(CncDocument d)
+    {
+        var m = d.Machine; var stock = d.Stock;
+        if (m is null || stock is null) return "Maskininställningar saknas.";
         if (!double.IsFinite(stock.X) || !double.IsFinite(stock.Y) || stock.X < 0 || stock.Y < 0 ||
             stock.X + d.MaterialWidth > m.WorkWidthMm + 0.00001 ||
             stock.Y + d.MaterialHeight > m.WorkLengthMm + 0.00001)
-            return "Materialet ligger utanför maskinens planerade arbetsområde.";
-        foreach (var f in d.Fixtures)
-        {
-            if (!double.IsFinite(f.X) || !double.IsFinite(f.Y) ||
-                !double.IsFinite(f.Width) || !double.IsFinite(f.Length) ||
-                !double.IsFinite(f.HeightAboveStockMm) || !double.IsFinite(f.ClearanceMm) ||
-                f.Width <= 0 || f.Length <= 0 || f.HeightAboveStockMm < 0 || f.ClearanceMm < 0 ||
-                f.X < 0 || f.Y < 0 || f.X + f.Width > m.WorkWidthMm + .00001 ||
-                f.Y + f.Length > m.WorkLengthMm + .00001)
-                return $"Fastspänningen '{f.Name}' har ogiltig placering eller mått.";
-        }
+            return $"Materialet ({d.MaterialWidth:0.#} × {d.MaterialHeight:0.#} mm) ligger utanför maskinens arbetsområde " +
+                   $"({m.WorkWidthMm:0.#} × {m.WorkLengthMm:0.#} mm).";
+        return null;
+    }
+
+    /// <summary>One fixture with impossible values or outside the work area, or null.</summary>
+    public static string? FixtureProblem(CncDocument d, FixtureBlock f)
+    {
+        var m = d.Machine;
+        if (m is null) return "Maskininställningar saknas.";
+        if (!double.IsFinite(f.X) || !double.IsFinite(f.Y) || !double.IsFinite(f.Width) || !double.IsFinite(f.Length) ||
+            !double.IsFinite(f.HeightAboveStockMm) || !double.IsFinite(f.ClearanceMm) ||
+            f.Width <= 0 || f.Length <= 0 || f.HeightAboveStockMm < 0 || f.ClearanceMm < 0)
+            return $"Fastspänningen '{f.Name}' har ogiltiga mått.";
+        if (f.X < 0 || f.Y < 0 || f.X + f.Width > m.WorkWidthMm + .00001 || f.Y + f.Length > m.WorkLengthMm + .00001)
+            return $"Fastspänningen '{f.Name}' ligger utanför maskinens arbetsområde.";
         return null;
     }
 }
@@ -375,7 +416,7 @@ public static class DocumentStorage
             throw new InvalidDataException("Ogiltiga förflyttningsinställningar: " + motionError);
         document.Fixtures ??= new List<FixtureBlock>();
         document.Camera ??= new CameraSetup();
-        if (MachineSetupValidation.Validate(document) is string setupError)
+        if ((MachineSetupValidation.ValidateProfile(document.Machine) ?? MachineSetupValidation.FixtureValues(document)) is string setupError)
             throw new InvalidDataException(setupError);
         document.CamOperations ??= new();
         if (document.Inlay is not null && InlayValidation.GetError(document.Inlay, document.MaterialThickness) is string inlayError)

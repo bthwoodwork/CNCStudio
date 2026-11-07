@@ -5,6 +5,27 @@ namespace CNCStudio.Core.Tests;
 public class SimulatedGrblTests
 {
     [Fact(Timeout = 30000)]
+    public async Task Board_without_welcome_is_still_recognised_as_grbl_11_via_dollar_I()
+    {
+        var sim = new SimulatedGrbl(speedFactor: 40) { WelcomeOnOpen = false };
+        var client = new GrblClient(sim);
+        var hello = await client.ConnectAsync(TimeSpan.FromMilliseconds(300));
+        Assert.Contains("$I", hello);
+        Assert.Equal("Grbl 1.1h.20190825", client.Version);
+        Assert.True(GrblClient.IsGrbl11(client.Version));
+        client.Dispose();
+    }
+
+    [Theory]
+    [InlineData("Grbl 1.1h ['$' for help]", true)]
+    [InlineData("Grbl 1.1f ['$' for help]", true)]
+    [InlineData("Grbl 1.1h.20190825", true)]
+    [InlineData("Grbl 0.9j ['$' for help]", false)]
+    [InlineData("Grbl 1.10", false)]
+    [InlineData(null, false)]
+    public void Recognises_grbl_11_versions(string? version, bool expected) => Assert.Equal(expected, GrblClient.IsGrbl11(version));
+
+    [Fact(Timeout = 30000)]
     public async Task Switch_with_hard_limits_requires_reset_and_lines_fail_at_once()
     {
         var sim = new SimulatedGrbl(speedFactor: 40);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -153,6 +153,8 @@ public sealed class CamPlanner
         foreach (var op in document.CamOperations)
             if (document.Shapes.FirstOrDefault(s => s.Id == op.ShapeId) is DesignShape s && !geometryKeys.ContainsKey(s.Id))
                 geometryKeys[s.Id] = GeometryKey(s);
+        // Material or fixtures outside the work area: no toolpath is computed until it is fixed.
+        var placement = MachineSetupValidation.PlacementProblem(document);
         foreach (var op in document.CamOperations)
         {
             live.Add(op.ShapeId);
@@ -165,6 +167,13 @@ public sealed class CamPlanner
                 continue;
             }
             var findings = new List<CamFinding>();
+            if (placement is not null)
+            {
+                findings.Add(new CamFinding(CamSeverity.Critical, "PlacementOutsideMachine",
+                    placement + " Inga körbanor beräknas förrän det är rättat – flytta materialet eller ändra dess storlek.", shape.Id));
+                results.Add(new CamOperationResult(op, shape, null, findings));
+                continue;
+            }
             if (CamValidation.GetError(op, document.MaterialThickness) is string settingsError)
             {
                 findings.Add(new CamFinding(CamSeverity.Critical, "InvalidSettings",
