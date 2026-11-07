@@ -16,28 +16,44 @@ public sealed class AppSettings
 }
 
 /// <summary>
-/// Where CNC Studio keeps projects and shared settings. With a sync folder (e.g. "G:\Min enhet\CNC Studio",
-/// synced by Google Drive for desktop) the projects, the tool library and the default machine profile are
-/// shared between computers. Machine-specific things stay local on purpose: interrupted jobs, logs and
-/// $$ backups belong to the computer connected to the machine.
+/// Where CNC Studio keeps its files. One data folder ("CNC Studio") – the sync folder when one is chosen
+/// (e.g. "G:\Min enhet\CNC Studio"), otherwise Dokument\CNC Studio – with these subfolders:
+/// <list type="bullet">
+/// <item>Projekt – the projects</item>
+/// <item>Verktyg – the tool library (cutters in categories, with cutting data per material)</item>
+/// <item>Material – the material library</item>
+/// <item>Inställningar – the default machine profile for new projects</item>
+/// </list>
+/// Machine-specific things stay local on purpose: interrupted jobs, logs and $$ backups belong to the
+/// computer connected to the machine.
 /// </summary>
 public sealed class AppStorage
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
-    public const string SettingsFolderName = "Inställningar";
     public const string ProjectsFolderName = "Projekt";
+    public const string ToolsFolderName = "Verktyg";
+    public const string MaterialsFolderName = "Material";
+    public const string SettingsFolderName = "Inställningar";
+
+    private static readonly string[] SharedFiles =
+    {
+        Path.Combine(ToolsFolderName, "verktyg.json"),
+        Path.Combine(MaterialsFolderName, "material.json"),
+        Path.Combine(SettingsFolderName, "maskinprofil.json"),
+    };
 
     private readonly string _local;
-    private readonly string _defaultProjects;
+    private readonly string _defaultData;
 
-    public AppStorage(string localFolder, string defaultProjectsFolder)
+    public AppStorage(string localFolder, string defaultDataFolder)
     {
         _local = localFolder;
-        _defaultProjects = defaultProjectsFolder;
+        _defaultData = defaultDataFolder;
         Settings = LoadSettings();
+        MigrateOldFiles();
     }
 
-    /// <summary>The storage the app uses: %APPDATA%\CNCStudio and Dokument\CNC Studio.</summary>
+    /// <summary>The storage the app uses: settings in %APPDATA%\CNCStudio, data in Dokument\CNC Studio or the sync folder.</summary>
     public static AppStorage Current { get; } = new(
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CNCStudio"),
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "CNC Studio"));
@@ -50,15 +66,19 @@ public sealed class AppStorage
     public string? ActiveSyncFolder => Settings.SyncFolder is string f && Directory.Exists(f) ? f : null;
     public bool SyncFolderMissing => Settings.SyncFolder is not null && ActiveSyncFolder is null;
 
-    public string SharedSettingsFolder => ActiveSyncFolder is string f ? Path.Combine(f, SettingsFolderName) : _local;
-    public string ProjectsFolder => ActiveSyncFolder is string f ? Path.Combine(f, ProjectsFolderName) : _defaultProjects;
-    public string ToolLibraryPath => Path.Combine(SharedSettingsFolder, "tools.json");
-    public string MachineProfilePath => Path.Combine(SharedSettingsFolder, "maskinprofil.json");
+    /// <summary>The "CNC Studio" folder that holds Projekt, Verktyg, Material and Inställningar.</summary>
+    public string DataFolder => ActiveSyncFolder ?? _defaultData;
+    public string ProjectsFolder => Path.Combine(DataFolder, ProjectsFolderName);
+    public string ToolsFolder => Path.Combine(DataFolder, ToolsFolderName);
+    public string MaterialsFolder => Path.Combine(DataFolder, MaterialsFolderName);
+    public string ToolLibraryPath => Path.Combine(ToolsFolder, "verktyg.json");
+    public string MaterialLibraryPath => Path.Combine(MaterialsFolder, "material.json");
+    public string MachineProfilePath => Path.Combine(DataFolder, SettingsFolderName, "maskinprofil.json");
 
     /// <summary>
     /// Uses <paramref name="folder"/> as the sync folder (null = stop syncing). Creates its subfolders and
-    /// copies this computer's tool library and machine profile there if the folder has none yet – files
-    /// already in the sync folder (from another computer) are never overwritten.
+    /// copies this computer's tool library, material library and machine profile there if the folder has
+    /// none yet – files already in the sync folder (from another computer) are never overwritten.
     /// </summary>
     public IReadOnlyList<string> SetSyncFolder(string? folder)
     {
@@ -66,19 +86,27 @@ public sealed class AppStorage
         if (folder is not null)
         {
             folder = Path.GetFullPath(folder);
-            Directory.CreateDirectory(Path.Combine(folder, SettingsFolderName));
-            Directory.CreateDirectory(Path.Combine(folder, ProjectsFolderName));
-            foreach (var name in new[] { "tools.json", "maskinprofil.json" })
+            foreach (var sub in new[] { ProjectsFolderName, ToolsFolderName, MaterialsFolderName, SettingsFolderName })
+                Directory.CreateDirectory(Path.Combine(folder, sub));
+            foreach (var rel in SharedFiles)
             {
-                var from = Path.Combine(SharedSettingsFolder, name);
-                var to = Path.Combine(folder, SettingsFolderName, name);
-                if (File.Exists(from) && !File.Exists(to)) { File.Copy(from, to); copied.Add(name); }
+                var from = Path.Combine(DataFolder, rel);
+                var to = Path.Combine(folder, rel);
+                if (File.Exists(from) && !File.Exists(to)) { File.Copy(from, to); copied.Add(rel); }
             }
         }
         Settings = new AppSettings { SyncFolder = folder };
         Directory.CreateDirectory(_local);
         WriteAtomic(SettingsFile, JsonSerializer.Serialize(Settings, Json));
+        MigrateOldFiles();
         return copied;
+    }
+
+    /// <summary>Creates Projekt, Verktyg, Material and Inställningar in the data folder.</summary>
+    public void EnsureFolders()
+    {
+        foreach (var sub in new[] { ProjectsFolderName, ToolsFolderName, MaterialsFolderName, SettingsFolderName })
+            Directory.CreateDirectory(Path.Combine(DataFolder, sub));
     }
 
     public MachineProfile? LoadMachineProfile()
@@ -87,10 +115,29 @@ public sealed class AppStorage
         catch (Exception) { return null; }
     }
 
-    public void SaveMachineProfile(MachineProfile profile)
+    public void SaveMachineProfile(MachineProfile profile) => WriteAtomic(MachineProfilePath, JsonSerializer.Serialize(profile, Json));
+
+    /// <summary>
+    /// Earlier versions kept tools.json and maskinprofil.json directly in %APPDATA%\CNCStudio or in the
+    /// sync folder's Inställningar. They are copied to the new places once (the originals are left alone).
+    /// </summary>
+    private void MigrateOldFiles()
     {
-        Directory.CreateDirectory(SharedSettingsFolder);
-        WriteAtomic(MachineProfilePath, JsonSerializer.Serialize(profile, Json));
+        try
+        {
+            CopyIfMissing(new[] { Path.Combine(DataFolder, SettingsFolderName, "tools.json"), Path.Combine(_local, "tools.json") }, ToolLibraryPath);
+            CopyIfMissing(new[] { Path.Combine(_local, "maskinprofil.json") }, MachineProfilePath);
+        }
+        catch (Exception) { /* a missing or read-only folder must never stop the program */ }
+    }
+
+    private static void CopyIfMissing(IEnumerable<string> oldPaths, string target)
+    {
+        if (File.Exists(target)) return;
+        var source = oldPaths.FirstOrDefault(File.Exists);
+        if (source is null) return;
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.Copy(source, target);
     }
 
     /// <summary>

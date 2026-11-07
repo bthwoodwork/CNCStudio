@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.8.4";
+    private const string AppTitle = "CNC Studio 0.8.5";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;

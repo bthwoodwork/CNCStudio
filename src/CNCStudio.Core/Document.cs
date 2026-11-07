@@ -322,6 +322,10 @@ public static class MachineSetupValidation
 public sealed class CncDocument
 {
     public string Name { get; set; } = "Nytt projekt";
+    /// <summary>The material from the material library (decides which cutting data tools use).</summary>
+    public Guid? MaterialId { get; set; }
+    /// <summary>The material's name, kept so the project still says what it is on a computer without that material.</summary>
+    public string? MaterialName { get; set; }
     public MachineProfile Machine { get; set; } = new();
     public StockPlacement Stock { get; set; } = new();
     public MotionSettings Motion { get; set; } = new();

@@ -12,12 +12,19 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     private ToolLibrary _tools = LoadTools();
-    private static readonly ToolDefinition CustomTool = new() { Name = "(egen – fyll i nedan)" };
+    private MaterialLibrary _materials = LoadMaterials();
+    private static readonly ToolDefinition CustomTool = new() { Name = "(fyll i värdena nedan)", Category = "Egen fräs" };
 
     private static ToolLibrary LoadTools()
     {
         try { return ToolLibrary.Load(AppStorage.Current.ToolLibraryPath); }
         catch (Exception) { return ToolLibrary.Defaults(); }
+    }
+
+    private static MaterialLibrary LoadMaterials()
+    {
+        try { return MaterialLibrary.Load(AppStorage.Current.MaterialLibraryPath); }
+        catch (Exception) { return MaterialLibrary.Defaults(); }
     }
 
     private void RefreshToolPicker()
@@ -28,7 +35,8 @@ public partial class MainWindow
         try
         {
             CamToolPicker.ItemsSource = null;
-            CamToolPicker.ItemsSource = new[] { CustomTool }.Concat(_tools.Tools).ToList();
+            CamToolPicker.ItemsSource = new[] { CustomTool }
+                .Concat(_tools.Tools.OrderBy(t => t.CategoryOrDefault).ThenBy(t => t.Diameter).ThenBy(t => t.Name)).ToList();
             CamToolPicker.SelectedIndex = 0;
         }
         finally { _loadingCam = keep; }
@@ -41,25 +49,32 @@ public partial class MainWindow
         CamToolPicker.SelectedItem = items.FirstOrDefault(t => t != CustomTool && t.Name == name) ?? CustomTool;
     }
 
-    /// <summary>Choosing a tool fills its diameter and default cutting settings (they can still be changed).</summary>
+    /// <summary>
+    /// Choosing a tool fills its diameter and its cutting data for the project's material – or its
+    /// default values when the tool has no data for that material (they can still be changed).
+    /// </summary>
     private void CamTool_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_loadingCam || CamToolPicker.SelectedItem is not ToolDefinition t || t == CustomTool) return;
+        var v = t.CuttingFor(_document.MaterialId);
         CamDiameter.Text = F(t.Diameter);
-        CamFeed.Text = F(t.FeedRate);
-        CamPlunge.Text = F(t.PlungeRate);
-        CamPass.Text = F(t.DepthPerPass);
-        CamRpm.Text = F(t.SpindleRpm);
+        CamFeed.Text = F(v.FeedRate);
+        CamPlunge.Text = F(v.PlungeRate);
+        CamPass.Text = F(v.DepthPerPass);
+        CamRpm.Text = F(v.SpindleRpm);
         UpdateCamSummary();
-        if (t.Kind == ToolKind.VBit)
-            StatusText.Text = "V-fräs vald: den kan inte användas för kontur eller ficka (V-carving kommer senare).";
+        StatusText.Text = t.Kind == ToolKind.VBit
+            ? "V-fräs vald: den kan inte användas för kontur eller ficka (V-carving kommer senare)."
+            : v.Material is string m ? $"Skärdata för {t.Name} i {m} från verktygsbiblioteket."
+            : _document.MaterialName is string pm ? $"{t.Name} har ingen skärdata för {pm} – standardvärdena används. Lägg till den i Verktygsbiblioteket."
+            : $"{t.Name}: standardvärden (välj materialtyp under Projekt och material för materialets skärdata).";
     }
 
     private ToolDefinition? SelectedTool => CamToolPicker?.SelectedItem is ToolDefinition t && t != CustomTool ? t : null;
 
     private void ManageTools_Click(object sender, RoutedEventArgs e)
     {
-        var w = new ToolLibraryWindow(_tools) { Owner = this };
+        var w = new ToolLibraryWindow(_tools, _materials, AppStorage.Current.ToolLibraryPath) { Owner = this };
         if (w.ShowDialog() != true || w.Result is null) return;
         try
         {
@@ -71,6 +86,71 @@ public partial class MainWindow
             StatusText.Text = $"Verktygsbiblioteket sparat ({_tools.Tools.Count} fräsar): {AppStorage.Current.ToolLibraryPath}";
         }
         catch (Exception ex) { Error("Kunde inte spara verktygsbiblioteket: " + ex.Message); }
+    }
+
+    // ---- Materials ----
+
+    private bool _syncingMaterial;
+
+    private void ManageMaterials_Click(object sender, RoutedEventArgs e)
+    {
+        var w = new MaterialLibraryWindow(_materials, _tools, AppStorage.Current.MaterialLibraryPath) { Owner = this };
+        if (w.ShowDialog() != true || w.Result is null) return;
+        try
+        {
+            w.Result.Save(AppStorage.Current.MaterialLibraryPath);
+            _materials = w.Result;
+            RefreshMaterialPicker();
+            StatusText.Text = $"Materialbiblioteket sparat ({_materials.Materials.Count} material): {AppStorage.Current.MaterialLibraryPath}";
+        }
+        catch (Exception ex) { Error("Kunde inte spara materialbiblioteket: " + ex.Message); }
+    }
+
+    private static readonly MaterialDefinition NoMaterial = new() { Name = "(ej valt – fräsarnas standardvärden)", Category = "–" };
+
+    /// <summary>Shows the library's materials and selects the project's material (also one missing from this library).</summary>
+    private void RefreshMaterialPicker()
+    {
+        if (MaterialPicker is null) return;
+        _syncingMaterial = true;
+        try
+        {
+            var items = new List<MaterialDefinition> { NoMaterial };
+            items.AddRange(_materials.Materials.OrderBy(m => m.Category).ThenBy(m => m.Name));
+            if (_document.MaterialId is Guid id && _materials.Find(id) is null)
+                items.Add(new MaterialDefinition { Id = id, Name = (_document.MaterialName ?? "okänt") + " (finns inte i biblioteket)", Category = "Projekt" });
+            MaterialPicker.ItemsSource = items;
+            MaterialPicker.SelectedItem = items.FirstOrDefault(m => _document.MaterialId is Guid g && m.Id == g) ?? NoMaterial;
+        }
+        finally { _syncingMaterial = false; }
+    }
+
+    /// <summary>
+    /// A new material for the project. Operations made with library tools can take that tool's cutting
+    /// data for the material – only after confirmation, since it changes feeds and depths.
+    /// </summary>
+    private void Material_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingMaterial || MaterialPicker.SelectedItem is not MaterialDefinition m) return;
+        Guid? id = m == NoMaterial ? null : m.Id;
+        if (id == _document.MaterialId) return;
+        RememberChange();
+        _document.MaterialId = id;
+        _document.MaterialName = id is null ? null : _materials.Find(id)?.Name ?? _document.MaterialName;
+        var affected = _document.CamOperations
+            .Select(op => (op, tool: _tools.Tools.FirstOrDefault(t => t.Name == op.ToolName && Math.Abs(t.Diameter - op.ToolDiameter) < 1e-9)))
+            .Where(x => x.tool is not null).ToList();
+        if (affected.Count > 0 && AppDialog.Show(this,
+                $"Materialet är nu {(id is null ? "inte valt" : m.Name)}.\n\nUppdatera matning, nedmatning, djup per pass och varvtal för {affected.Count} operation(er) " +
+                "med fräsarnas skärdata för materialet (eller standardvärden där skärdata saknas)?",
+                "Byt material", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+        {
+            foreach (var (op, tool) in affected) tool!.ApplyTo(op, id);
+            _camPlanner.Clear();
+            RefreshCamSelection();
+        }
+        Render();
+        StatusText.Text = id is null ? "Ingen materialtyp vald – fräsarnas standardvärden används." : $"Materialtyp: {m.Name}.";
     }
 
     // ---- Work zero ----

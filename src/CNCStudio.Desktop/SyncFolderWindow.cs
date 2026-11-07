@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -49,9 +49,10 @@ public sealed class SyncFolderWindow : Window
         var info = new Border { Background = B(0x1F, 0x2E, 0x3F), CornerRadius = new CornerRadius(6), Padding = new Thickness(14, 10, 14, 10), Margin = new Thickness(0, 10, 0, 12) };
         var list = new StackPanel();
         list.Children.Add(Line("Delas mellan datorerna:", FontWeights.SemiBold, Ink));
-        list.Children.Add(Line("•  Projekt (mappen Projekt) – Öppna och Spara börjar där", FontWeights.Normal, Soft));
-        list.Children.Add(Line("•  Fräsbiblioteket (Inställningar\\tools.json)", FontWeights.Normal, Soft));
-        list.Children.Add(Line("•  Standardmaskinprofilen för nya projekt (Inställningar\\maskinprofil.json)", FontWeights.Normal, Soft));
+        list.Children.Add(Line("•  Projekt – dina projekt; Öppna och Spara börjar där", FontWeights.Normal, Soft));
+        list.Children.Add(Line("•  Verktyg – verktygsbiblioteket med fräsar i kategorier och skärdata per material", FontWeights.Normal, Soft));
+        list.Children.Add(Line("•  Material – materialbiblioteket", FontWeights.Normal, Soft));
+        list.Children.Add(Line("•  Inställningar – standardmaskinprofilen för nya projekt", FontWeights.Normal, Soft));
         list.Children.Add(Line("Stannar på varje dator (hör till datorn vid maskinen):", FontWeights.SemiBold, Ink, 8));
         list.Children.Add(Line("•  Avbrutna jobb, loggar och säkerhetskopior av $$", FontWeights.Normal, Soft));
         info.Child = list;
@@ -102,8 +103,8 @@ public sealed class SyncFolderWindow : Window
     private void Choose(string folder)
     {
         if (AppDialog.Show(this, $"Använda {folder} som synkmapp?\n\n" +
-                "• Mapparna Projekt och Inställningar skapas där.\n" +
-                "• Den här datorns fräsbibliotek och maskinprofil kopieras dit om mappen inte redan har några (från en annan dator).\n" +
+                "• Mapparna Projekt, Verktyg, Material och Inställningar skapas där.\n" +
+                "• Den här datorns verktygs- och materialbibliotek och maskinprofil kopieras dit om mappen inte redan har några (från en annan dator).\n" +
                 "• Gör samma val på den andra datorn så delar de projekt och inställningar.",
                 "Synkmapp", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
         try

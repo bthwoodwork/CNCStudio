@@ -256,3 +256,10 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Projekt och inställningar sparas via en tillfällig fil så att synken aldrig får en halv fil.
 
 **Tester:** 311 tester. Inte testad mot riktig maskin ännu.
+## 0.8.5 – Verktygs- och materialbibliotek
+- **CAM → Verktygsbibliotek:** fräsar i kategorier (Raka fräsar, Kulfräsar, V-fräsar eller egna), standardvärden och **skärdata per material** (matning, nedmatning, djup per pass, varvtal).
+- **CAM → Materialbibliotek:** material i kategorier (Trä, Skivmaterial, Plast, Metall, Övrigt); visar vilka fräsar som har skärdata för materialet.
+- **Materialtyp per projekt** (Projekt och material): när du väljer fräs i CAM fylls skärdatan för projektets material i, annars fräsens standardvärden. Byte av material erbjuder att uppdatera befintliga operationer.
+- **Mappar** under CNC Studio-mappen (synkmappen eller Dokument\CNC Studio): `Projekt`, `Verktyg`, `Material`, `Inställningar`. Det gamla verktygsbiblioteket flyttas in automatiskt.
+
+**Tester:** 316 tester. Inte testad mot riktig maskin ännu.

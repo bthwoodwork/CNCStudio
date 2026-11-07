@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using CNCStudio.Core;
 
@@ -16,6 +16,8 @@ public partial class MainWindow
         w.ShowDialog();
         if (!w.Changed) return;
         _tools = LoadTools();
+        _materials = LoadMaterials();
+        RefreshMaterialPicker();
         var current = SelectedTool?.Name;
         RefreshToolPicker();
         SelectTool(current);
@@ -25,6 +27,7 @@ public partial class MainWindow
     private void ShowStorageStatus()
     {
         var s = AppStorage.Current;
+        try { s.EnsureFolders(); } catch (Exception) { /* shown below if the sync folder is missing */ }
         if (s.SyncFolderMissing)
         {
             StatusText.Text = $"Synkmappen {s.Settings.SyncFolder} hittas inte (är Google Drive igång?) – sparar bara på den här datorn tills den syns.";

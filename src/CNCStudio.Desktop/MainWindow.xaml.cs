@@ -201,7 +201,7 @@ public partial class MainWindow : Window
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
         FitToMaterial(); InitGrblUi();
         ShowStorageStatus();
-        RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); SyncWorkZero();
+        RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); RefreshMaterialPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);
         OpenFromCommandLine();
     }
@@ -1415,7 +1415,7 @@ public partial class MainWindow : Window
     { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
       RefreshMachineSummary();
       ShowStockFields();
-      RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); SyncWorkZero(); }
+      RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); SyncWorkZero(); RefreshMaterialPicker(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!Parse(MaterialWidthBox, out var w) || !Parse(MaterialHeightBox, out var h) || !Parse(MaterialThicknessBox, out var t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000) { Error("Kontrollera materialmåtten innan du sparar (bredd och höjd 1–5000 mm, tjocklek större än 0).", MaterialWidthBox); return; }

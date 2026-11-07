@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,8 +24,33 @@ public sealed class ToolDefinition
     public double SpindleRpm { get; set; } = 18000;
     public string Notes { get; set; } = "";
 
+    /// <summary>Group in the library, e.g. "Raka fräsar", "V-fräsar". Empty = by tool type.</summary>
+    public string Category { get; set; } = "";
+
+    /// <summary>Cutting data for this tool in specific materials (overrides the defaults above).</summary>
+    public List<MaterialCuttingData> CuttingData { get; set; } = new();
+
+    [JsonIgnore] public string CategoryOrDefault => string.IsNullOrWhiteSpace(Category) ? DefaultCategory(Kind) : Category.Trim();
+    [JsonIgnore] public string DisplayName => $"{CategoryOrDefault}: {Name}";
+
+    public static string DefaultCategory(ToolKind kind) => kind switch
+    {
+        ToolKind.BallNose => "Kulfräsar", ToolKind.VBit => "V-fräsar", _ => "Raka fräsar"
+    };
+
+    /// <summary>Cutting data for a material, or the tool's defaults (Material = null) when there is none.</summary>
+    public CuttingValues CuttingFor(Guid? materialId)
+    {
+        var d = materialId is Guid id ? CuttingData.FirstOrDefault(c => c.MaterialId == id) : null;
+        return d is null
+            ? new CuttingValues(FeedRate, PlungeRate, DepthPerPass, SpindleRpm, null)
+            : new CuttingValues(d.FeedRate, d.PlungeRate, d.DepthPerPass, d.SpindleRpm, d.MaterialName);
+    }
+
     public string? Validate()
     {
+        foreach (var c in CuttingData ?? new())
+            if (c.Validate() is string e) return $"Skärdata för {c.MaterialName}: {e}";
         if (string.IsNullOrWhiteSpace(Name)) return "Ange ett namn på fräsen.";
         if (!double.IsFinite(Diameter) || Diameter <= 0 || Diameter > 100) return "Diametern måste vara större än 0 och högst 100 mm.";
         if (Kind == ToolKind.VBit && (!double.IsFinite(AngleDeg) || AngleDeg <= 0 || AngleDeg >= 180)) return "V-fräsens vinkel måste vara mellan 0 och 180 grader.";
@@ -37,13 +62,43 @@ public sealed class ToolDefinition
         return null;
     }
 
-    public ToolDefinition Clone() => (ToolDefinition)MemberwiseClone();
-
-    /// <summary>Copies the tool's geometry and default settings into a CAM operation.</summary>
-    public void ApplyTo(CamOperation op)
+    public ToolDefinition Clone()
     {
+        var c = (ToolDefinition)MemberwiseClone();
+        c.CuttingData = (CuttingData ?? new()).Select(d => d with { }).ToList();
+        return c;
+    }
+
+    /// <summary>Copies the tool's geometry and its cutting data for the material (or the defaults) into a CAM operation.</summary>
+    public void ApplyTo(CamOperation op, Guid? materialId = null)
+    {
+        var v = CuttingFor(materialId);
         op.ToolName = Name; op.ToolKind = Kind; op.ToolDiameter = Diameter;
-        op.FeedRate = FeedRate; op.PlungeRate = PlungeRate; op.DepthPerPass = DepthPerPass; op.SpindleRpm = SpindleRpm;
+        op.FeedRate = v.FeedRate; op.PlungeRate = v.PlungeRate; op.DepthPerPass = v.DepthPerPass; op.SpindleRpm = v.SpindleRpm;
+    }
+}
+
+/// <summary>Feed, plunge, depth per pass and speed; Material is the material they are for (null = tool defaults).</summary>
+public sealed record CuttingValues(double FeedRate, double PlungeRate, double DepthPerPass, double SpindleRpm, string? Material);
+
+/// <summary>Cutting data for one tool in one material.</summary>
+public sealed record MaterialCuttingData
+{
+    public Guid MaterialId { get; init; }
+    /// <summary>Kept for readability of the file and in case the material is removed.</summary>
+    public string MaterialName { get; init; } = "";
+    public double FeedRate { get; init; }
+    public double PlungeRate { get; init; }
+    public double DepthPerPass { get; init; }
+    public double SpindleRpm { get; init; }
+
+    public string? Validate()
+    {
+        if (!double.IsFinite(FeedRate) || FeedRate < 1 || FeedRate > 20000) return "matningen måste vara 1–20000 mm/min.";
+        if (!double.IsFinite(PlungeRate) || PlungeRate < 1 || PlungeRate > 20000) return "nedmatningen måste vara 1–20000 mm/min.";
+        if (!double.IsFinite(DepthPerPass) || DepthPerPass <= 0 || DepthPerPass > 50) return "djup per pass måste vara större än 0 och högst 50 mm.";
+        if (!double.IsFinite(SpindleRpm) || SpindleRpm < 0 || SpindleRpm > 60000) return "varvtalet måste vara 0–60000 varv/min.";
+        return null;
     }
 }
 
@@ -77,7 +132,9 @@ public sealed class ToolLibrary
         if (!File.Exists(path)) return Defaults();
         var lib = JsonSerializer.Deserialize<ToolLibrary>(File.ReadAllText(path), Options) ?? Defaults();
         lib.Tools ??= new();
-        lib.Tools.RemoveAll(t => t is null || t.Validate() is not null);
+        lib.Tools.RemoveAll(t => t is null);
+        foreach (var t in lib.Tools) t.CuttingData ??= new();
+        lib.Tools.RemoveAll(t => t.Validate() is not null);
         return lib;
     }
 
