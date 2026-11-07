@@ -201,7 +201,7 @@ public partial class MainWindow : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
-        FitToMaterial(); InitGrblUi();
+        FitToMaterial(); InitGrblUi(); InitGamepad();
         ShowStorageStatus();
         RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); RefreshMaterialPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);

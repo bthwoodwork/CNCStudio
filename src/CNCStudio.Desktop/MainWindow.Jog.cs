@@ -235,7 +235,7 @@ public partial class MainWindow
     private async Task StepJogAsync(string tag)
     {
         if (Grbl is not GrblClient g || !ReadJog(tag, out var dx, out var dy, out var dz, out var feed, step: true)) return;
-        if (GrblMachineCommands.CheckJog(g.LastStatus, _document.Machine, dx, dy, dz) is string problem)
+        if (GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz) is string problem)
         { JogStatusText.Text = problem; return; }
         if (await SendAsync(g, GrblMachineCommands.Jog(dx, dy, dz, feed))) JogStatusText.Text = "";
     }
@@ -252,7 +252,7 @@ public partial class MainWindow
         JogStatusText.Text = "";
         while (_jogHeld && Grbl is not null)
         {
-            if (GrblMachineCommands.CheckJog(start, _document.Machine, tx + dx, ty + dy, tz + dz) is string problem)
+            if (GrblMachineCommands.CheckJog(start, JogLimits, tx + dx, ty + dy, tz + dz) is string problem)
             { JogStatusText.Text = problem; break; }
             if (!await SendAsync(g, GrblMachineCommands.Jog(dx, dy, dz, feed))) break;
             tx += dx; ty += dy; tz += dz;

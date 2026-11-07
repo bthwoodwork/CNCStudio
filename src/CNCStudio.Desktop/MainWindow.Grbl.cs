@@ -22,6 +22,12 @@ public partial class MainWindow
     private SessionLogFile? _sessionLog;
     /// <summary>The connected machine's $$ settings (read on connect and after homing); null = not known.</summary>
     private IReadOnlyDictionary<int, double>? _grblSettings;
+
+    /// <summary>
+    /// Limits for jogging: the connected machine's own travel, homing direction and pull-off ($$, read on
+    /// connect and after homing) – not the project's profile, which may be for another machine.
+    /// </summary>
+    private MachineProfile JogLimits => _grblSettings is { } s ? GrblSettings.ApplyToProfile(_document.Machine, s) : _document.Machine;
     private System.Windows.Threading.DispatcherTimer? _sessionLogTimer;
 
     internal GrblClient? Grbl => _grbl is { IsConnected: true } ? _grbl : null;

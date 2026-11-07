@@ -266,6 +266,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.8.9 – Gamepad
+- **Styr maskinen med en gamepad.** Xbox-kompatibla kontroller läses via XInput, utan extra program. Upplägget liknar gSender:
+  - **Spärrknapp** (standard **LB**) måste hållas in för att något ska hända. Undantaget är **STOPP** (standard **Back**), som alltid fungerar. STOPP avbryter joggen, och under ett program pausar den programmet.
+  - **Spakarna joggar steglöst.** Ju längre spaken förs, desto fortare går det, upp till max X/Y respektive Z. Vänster spak styr X/Y och höger spak upp/ned styr Z, och diagonalt fungerar. Joggen sker i korta $J=-steg, och ett joggavbrott (0x85) skickas så fort spaken släpps, spärren släpps eller kontrollen kopplas från. Mjuka gränser och maskinens arbetsområde gäller som vid vanlig jogg.
+  - **Knappar som standard:** styrkorset joggar X/Y ett steg, Y/A joggar Z+/Z− ett steg, X nollar X+Y, B nollar Z, vänsterspakens tryck byter Precis/Normal/Snabb, Start är Fortsätt och Back är STOPP.
+  - **Andra funktion** (standard **RB**, som Shift): X blir Gå till X0 Y0, B öppnar probning, Y kör homing och Start pausar.
+  - **Maskin → Gamepad…** (eller knappen i JOGG): varje knapp kan få en åtgärd och en andra åtgärd. Där väljs också spärrknapp, Shift-knapp, vilken spak som styr vilken axel, invertering, nollgräns (standard 0,25) och maxhastigheter. Knapparna lyser grönt live när de trycks. Inställningarna sparas i `Inställningar\gamepad.json` och följer med via synkmappen.
+  - Under ett program fungerar bara Paus, Fortsätt och STOPP från kontrollen.
+- **Joggränserna kommer från den anslutna maskinen** ($130–$132, $23 och $27, som läses vid anslutning och efter homing), inte från projektets profil. Tidigare kunde ett projekt gjort för 500 × 500 hindra en 750-maskin från att jogga mot brytarna, fast fräsen stod mitt på bordet.
+
+**Tester:** 386 tester.
+
 ## 0.8.8 – Rampfart, slutposition och snabb nedgång
 Förbättringarna kommer från ett program som har fungerat på maskinen (Kapsylöppnare.nc). Alla värden går att ändra.
 - **Rampens matning** ställs in per bearbetning, i % av matningen (standard 70 %, 5–100 %). Fältet "Matning %" ligger bredvid rampvinkeln. Tidigare rampade programmet i full skärhastighet. Tidsuppskattningen räknar med rampens matning.

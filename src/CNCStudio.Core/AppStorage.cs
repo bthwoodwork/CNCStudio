@@ -139,6 +139,17 @@ public sealed class AppStorage
 
     public void SaveProbeSettings(Grbl.ProbeSettings settings) => WriteAtomic(ProbeSettingsPath, JsonSerializer.Serialize(settings, Json));
 
+    /// <summary>The gamepad setup (Inställningar\gamepad.json) – shared like the other settings.</summary>
+    public string GamepadProfilePath => Path.Combine(DataFolder, SettingsFolderName, "gamepad.json");
+
+    public GamepadProfile LoadGamepadProfile()
+    {
+        try { return File.Exists(GamepadProfilePath) ? JsonSerializer.Deserialize<GamepadProfile>(File.ReadAllText(GamepadProfilePath), Json) ?? new() : new(); }
+        catch (Exception) { return new(); }
+    }
+
+    public void SaveGamepadProfile(GamepadProfile profile) => WriteAtomic(GamepadProfilePath, JsonSerializer.Serialize(profile, Json));
+
     /// <summary>
     /// Earlier versions kept tools.json and maskinprofil.json directly in %APPDATA%\CNCStudio or in the
     /// sync folder's Inställningar. They are copied to the new places once (the originals are left alone).
