@@ -16,7 +16,7 @@ public static class CamDirection
 {
     public static ContourPreview Apply(ContourPreview p, DesignShape shape, CamOperation op)
     {
-        if (op.Direction == MillingDirection.Default || p.IsDrill) return p;   // a drilled hole has no direction
+        if (op.Direction == MillingDirection.Default || p.IsDrill || p.IsFace) return p;   // a drilled hole has no direction
         bool wantRight = op.Direction == MillingDirection.Climb;
         var paths = p.Centerlines.Count > 0 ? p.Centerlines : new[] { p.Centerline };
         var outline = CamGeometryChecks.Outline(shape);

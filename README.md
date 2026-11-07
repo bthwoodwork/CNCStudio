@@ -266,6 +266,19 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.9.0 – Planfräsning
+- **Planfräsning (Face)** är en ny bearbetning som fräser hela objektets yta plan (rektangelns eller formens omslutande rektangel).
+  - Den fräser rad för rad, fram och tillbaka. Varje rad går ut förbi båda kanterna med fräsradien plus *Ut förbi kanten* (standard 2 mm), så att fräsen lämnar materialet helt.
+  - Nedmatningen sker bredvid materialet.
+  - Den sista raden ligger alltid på bortre kanten.
+  - Stegning (% av fräsdiametern), djup och djup per pass och *Rader längs X eller Y* går att ställa in.
+  - Planfräsningen körs alltid **först** och blir eget program om den har en egen fräs.
+  - Andra banor får gå över planfräsningsytan utan varning, och planfräsningen varnar inte för delarna under sig.
+- **CAM → Planfräs hela materialet…** lägger en rektangel över hela materialet och förbereder en planfräsning. Du väljer fräs och djup och klickar Spara CAM. Planfräsning är aldrig obligatorisk: hoppa över den om materialet redan är hyvlat.
+- För att planfräsa offerskivan gör du ett projekt med offerskivans mått som material och planfräsar det.
+
+**Tester:** 391 tester.
+
 ## 0.8.9 – Gamepad
 - **Styr maskinen med en gamepad.** Xbox-kompatibla kontroller läses via XInput, utan extra program. Upplägget liknar gSender:
   - **Spärrknapp** (standard **LB**) måste hållas in för att något ska hända. Undantaget är **STOPP** (standard **Back**), som alltid fungerar. STOPP avbryter joggen, och under ett program pausar den programmet.

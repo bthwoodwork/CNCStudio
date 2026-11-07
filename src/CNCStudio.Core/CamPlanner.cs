@@ -154,7 +154,8 @@ public sealed class CamPlanner
         var live = new HashSet<Guid>();
         // Geometry keys of every part with CAM, computed once per review for the part-to-part check.
         var geometryKeys = new Dictionary<Guid, string>();
-        foreach (var op in document.CamOperations)
+        // A facing area is not a part: other paths may cross it (it is flattened first).
+        foreach (var op in document.CamOperations.Where(o => o.Kind != CamOperationKind.Face))
             if (document.Shapes.FirstOrDefault(s => s.Id == op.ShapeId) is DesignShape s && !geometryKeys.ContainsKey(s.Id))
                 geometryKeys[s.Id] = GeometryKey(s);
         // Material or fixtures outside the work area: no toolpath is computed until it is fixed.

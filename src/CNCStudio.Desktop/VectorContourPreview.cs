@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -28,6 +28,8 @@ internal static class VectorContourPreview
             return PocketToolpaths.Generate(shape, operation, materialThickness); // Clipper2, handles holes/islands
         if (operation.Kind == CamOperationKind.Drill)
             return DrillToolpaths.Generate(shape, operation);                    // centre of the imported circle
+        if (operation.Kind == CamOperationKind.Face)
+            return FaceToolpaths.Generate(shape, operation);                     // the shape's bounding box
         if (shape.Contours is null || shape.Contours.Count == 0 ||
             shape.Contours.Any(c => !c.Closed || c.Points.Count < 3))
             throw new ArgumentException("Konturfräsning kräver slutna konturer med minst tre punkter.");

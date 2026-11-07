@@ -36,7 +36,8 @@ public sealed class DesignShape
 }
 
 /// <summary>Drill: straight plunges at the shape's centre (the hole gets the tool's diameter), in pecks of DepthPerPass.</summary>
-public enum CamOperationKind { Outside, Inside, Pocket, Drill }
+/// <para>Face: the shape's whole area cut flat in rows, running out past the edges (planfräsning).</para>
+public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face }
 
 public enum PlungeMode { Vertical, Ramp }
 
@@ -84,7 +85,12 @@ public sealed class CamOperation
     /// <summary>Spindle speed for M3 S, in RPM. Mapped by GRBL to PWM via $30/$31.</summary>
     public double SpindleRpm { get; set; } = 18000;
 
-    /// <summary>Pocket only: distance between neighbouring loops, as % of the tool diameter.</summary>
+    /// <summary>Facing: how far past the edge each row runs, in addition to the tool radius (the cutter leaves the material).</summary>
+    public double FaceOverhangMm { get; set; } = 2;
+    /// <summary>Facing: rows along Y instead of along X.</summary>
+    public bool FaceAlongY { get; set; }
+
+    /// <summary>Pocket and facing: distance between neighbouring loops/rows, as % of the tool diameter.</summary>
     public double StepoverPercent { get; set; } = 40;
 
     /// <summary>A copy with every setting, for another shape (used when duplicating).</summary>
@@ -118,6 +124,14 @@ public static class CamValidation
             return "Hållflikar används inte för fickfräsning.";
         if (operation.Kind == CamOperationKind.Drill && operation.UseTabs)
             return "Hållflikar används inte för borrning.";
+        if (operation.Kind == CamOperationKind.Face && operation.UseTabs)
+            return "Hållflikar används inte för planfräsning.";
+        if (operation.Kind == CamOperationKind.Face &&
+            (!double.IsFinite(operation.StepoverPercent) || operation.StepoverPercent < 5 || operation.StepoverPercent > 95))
+            return "Stegningen för planfräsning måste vara 5–95 % av fräsdiametern.";
+        if (operation.Kind == CamOperationKind.Face &&
+            (!double.IsFinite(operation.FaceOverhangMm) || operation.FaceOverhangMm < 0 || operation.FaceOverhangMm > 50))
+            return "Utgången utanför kanten måste vara 0–50 mm.";
         if (operation.Kind == CamOperationKind.Pocket &&
             (!double.IsFinite(operation.StepoverPercent) || operation.StepoverPercent < 5 || operation.StepoverPercent > 90))
             return "Stegningen för fickfräsning måste vara 5–90 % av fräsdiametern.";

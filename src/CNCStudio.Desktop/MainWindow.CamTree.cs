@@ -207,6 +207,23 @@ public partial class MainWindow
         RefreshCamSelection(); Render();
     }
 
+    /// <summary>
+    /// CAM → Planfräs hela materialet: a rectangle over the whole material with a facing operation set up
+    /// in the CAM panel (pick the cutter and depth, then Spara CAM). Facing always runs first.
+    /// </summary>
+    private void FaceStock_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_document.HasMaterial) { Error("Lägg till material först (Egenskaper → Projekt och material)."); return; }
+        RememberChange();
+        var rect = new DesignShape { Kind = ShapeKind.Rectangle, X = 0, Y = 0, Width = _document.MaterialWidth, Height = _document.MaterialHeight };
+        _document.Shapes.Insert(0, rect);
+        SetWorkspace(Workspace.Cam);
+        SelectOnly(new[] { rect });
+        CamKind.SelectedIndex = (int)CamOperationKind.Face;
+        CamDepth.Text = "0.5";
+        CamPass.Text = "0.5";
+        StatusText.Text = "Planfräsning över hela materialet: välj fräs (gärna en planfräs), kontrollera djup och stegning och klicka Spara CAM.";
+    }
     private ContextMenu ProgramMenu(CamTreeProgram program)
     {
         var menu = new ContextMenu();

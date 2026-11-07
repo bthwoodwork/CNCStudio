@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -28,7 +28,7 @@ public sealed record CamTree(IReadOnlyList<CamTreeProgram> Programs, IReadOnlyLi
     public static string KindLabel(CamOperationKind kind) => kind switch
     {
         CamOperationKind.Outside => "Kontur ut", CamOperationKind.Inside => "Kontur in",
-        CamOperationKind.Pocket => "Ficka", CamOperationKind.Drill => "Borrning", _ => kind.ToString()
+        CamOperationKind.Pocket => "Ficka", CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", _ => kind.ToString()
     };
 
     public static CamTree Build(CncDocument doc, CamReport report)
@@ -42,7 +42,8 @@ public sealed record CamTree(IReadOnlyList<CamTreeProgram> Programs, IReadOnlyLi
             int k = order.IndexOf(i);
             if (k >= 0) return k;
             // Not planned (error or stale): same rule as the planner – outside contours last, else document order.
-            return 100_000 + (report.Operations[i].Operation.Kind == CamOperationKind.Outside ? 50_000 : 0) + i;
+            var kind = report.Operations[i].Operation.Kind;
+            return 100_000 + (kind == CamOperationKind.Face ? -50_000 : kind == CamOperationKind.Outside ? 50_000 : 0) + i;
         }
 
         var items = new List<(CamTreeOperation Item, (string, double, ToolKind) Tool, int Rank)>();

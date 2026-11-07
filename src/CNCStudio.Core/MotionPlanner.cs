@@ -72,8 +72,9 @@ public static class MotionPlanner
 
         var moves = new List<MotionMove>();
         // Pockets and inside contours never free the part, so they go before outside contours.
+        // Facing first (it flattens the top everything else is measured from), outside contours last.
         var order = analyzed
-            .OrderBy(x => x.Result.Operation.Kind == CamOperationKind.Outside ? 1 : 0)
+            .OrderBy(x => x.Result.Operation.Kind == CamOperationKind.Face ? -1 : x.Result.Operation.Kind == CamOperationKind.Outside ? 1 : 0)
             .ThenBy(x => x.Index).ToList();
         CamPoint? at = null; double z = startHeight;
 
@@ -169,6 +170,11 @@ public static class MotionPlanner
                 PlanDrill(preview, opIndex);
                 continue;
             }
+            if (preview.IsFace)
+            {
+                PlanFace(preview, opIndex);
+                continue;
+            }
             var pathOrder = Enumerable.Range(0, paths.Count).OrderBy(i => BoxArea(paths[i])).ToList();
             foreach (int pi in pathOrder)
             {
@@ -216,6 +222,26 @@ public static class MotionPlanner
                 moves.Add(new MotionMove(MoveKind.Rapid, start.X, start.Y, z, start.X, start.Y, m.TravelHeightMm,
                     "Lyft ur spåret"));
                 z = m.TravelHeightMm; at = start;
+            }
+        }
+
+        // Facing: per depth, rapid to the start (beside the material), feed straight down there (in the air),
+        // cut the whole zigzag, lift and go back to the start for the next depth.
+        void PlanFace(ContourPreview preview, int opIndex)
+        {
+            var path = preview.Centerline;
+            if (path.Count < 2) return;
+            double length = PathMath.Length(path);
+            var start = path[0];
+            foreach (var depth in preview.PassDepths)
+            {
+                TravelTo(start);
+                moves.Add(new MotionMove(MoveKind.Feed, start.X, start.Y, z, start.X, start.Y, -depth, $"Ned till {F(depth)} mm bredvid materialet", opIndex));
+                z = -depth;
+                AddCut(moves, path, opIndex, 0, 0, length, -depth, "Planfräsning");
+                var end = path[^1];
+                moves.Add(new MotionMove(MoveKind.Rapid, end.X, end.Y, z, end.X, end.Y, m.TravelHeightMm, "Lyft efter planfräsning"));
+                z = m.TravelHeightMm; at = end;
             }
         }
 

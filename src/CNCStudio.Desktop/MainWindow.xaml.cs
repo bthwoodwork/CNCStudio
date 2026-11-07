@@ -1498,6 +1498,8 @@ public partial class MainWindow : Window
             CamTabWidth.Text = F(operation?.TabWidth ?? defaults.TabWidth);
             CamTabHeight.Text = F(operation?.TabHeight ?? defaults.TabHeight);
             CamStepover.Text = F(operation?.StepoverPercent ?? defaults.StepoverPercent);
+            CamFaceOverhang.Text = F(operation?.FaceOverhangMm ?? defaults.FaceOverhangMm);
+            CamFaceDirection.SelectedIndex = operation?.FaceAlongY == true ? 1 : 0;
             CamPlungeMode.SelectedIndex = (int)(operation?.Plunge ?? defaults.Plunge);
             CamRampAngle.Text = F(operation?.RampAngleDeg ?? defaults.RampAngleDeg);
             CamRampFeed.Text = F(operation?.RampFeedPercent ?? defaults.RampFeedPercent);
@@ -1522,11 +1524,14 @@ public partial class MainWindow : Window
             PlungeModePanel is null || CamPassLabel is null || RampAnglePanel is null || RampFeedPanel is null || CamPlungeMode is null) return;
         bool pocket = CamKind.SelectedIndex == (int)CamOperationKind.Pocket;
         bool drill = CamKind.SelectedIndex == (int)CamOperationKind.Drill;
-        PocketSettingsPanel.Visibility = pocket ? Visibility.Visible : Visibility.Collapsed;
-        CamTabs.Visibility = pocket || drill ? Visibility.Collapsed : Visibility.Visible;
-        TabSettingsPanel.Visibility = !pocket && !drill && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        // Drilling always plunges straight down; ramping does not apply.
-        if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill ? Visibility.Collapsed : Visibility.Visible;
+        bool face = CamKind.SelectedIndex == (int)CamOperationKind.Face;
+        PocketSettingsPanel.Visibility = pocket || face ? Visibility.Visible : Visibility.Collapsed;
+        if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
+        if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
+        CamTabs.Visibility = pocket || drill || face ? Visibility.Collapsed : Visibility.Visible;
+        TabSettingsPanel.Visibility = !pocket && !drill && !face && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        // Drilling plunges straight down, facing plunges beside the material: ramping does not apply.
+        if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill || face ? Visibility.Collapsed : Visibility.Visible;
         if (CamPassLabel is not null) CamPassLabel.Text = drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
         if (RampAnglePanel is not null && CamPlungeMode is not null)
             RampAnglePanel.Visibility = RampFeedPanel.Visibility = CamPlungeMode.SelectedIndex == (int)PlungeMode.Ramp ? Visibility.Visible : Visibility.Hidden;
@@ -1539,12 +1544,13 @@ public partial class MainWindow : Window
             return null;
         var kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex);
         bool pocket = kind == CamOperationKind.Pocket;
-        bool useTabs = !pocket && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets or holes
+        bool face = kind == CamOperationKind.Face;
+        bool useTabs = !pocket && !face && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets, holes or facing
         var defaults = new CamOperation();
         double stepover = defaults.StepoverPercent;
         if (CamStepover is not null && !Parse(CamStepover, out stepover))
         {
-            if (pocket) return null;
+            if (pocket || face) return null;
             stepover = defaults.StepoverPercent;
         }
         int tabCount = defaults.TabCount; double tabWidth = defaults.TabWidth, tabHeight = defaults.TabHeight;
@@ -1585,6 +1591,8 @@ public partial class MainWindow : Window
             ToolName = fromLibrary ? tool!.Name : null,
             ToolKind = fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
             Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
+            FaceOverhangMm = CamFaceOverhang is not null && Parse(CamFaceOverhang, out var overhang) ? overhang : defaults.FaceOverhangMm,
+            FaceAlongY = CamFaceDirection?.SelectedIndex == 1,
             Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
     }
     private void UpdateCamSummary()
@@ -1596,8 +1604,14 @@ public partial class MainWindow : Window
         string kind = op.Kind switch
         {
             CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur",
-            CamOperationKind.Drill => "Borrning", _ => "Ficka"
+            CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", _ => "Ficka"
         };
+        if (error is null && op.Kind == CamOperationKind.Face)
+        {
+            CamSummary.Text = $"Planfräsning · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm totalt i {Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9):0} pass · " +
+                $"rader längs {(op.FaceAlongY ? "Y" : "X")} med {F(op.ToolDiameter * op.StepoverPercent / 100)} mm stegning · {F(op.FaceOverhangMm)} mm ut förbi kanten · körs först";
+            return;
+        }
         if (error is null && op.Kind == CamOperationKind.Drill)
         {
             int pecks = (int)Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9);
