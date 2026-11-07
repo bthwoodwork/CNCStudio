@@ -198,7 +198,9 @@ public partial class MainWindow : Window
     public MainWindow() { InitializeComponent(); RefreshInlaySettings(); Render(); }
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
         FitToMaterial(); InitGrblUi();
+        ShowStorageStatus();
         RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);
         OpenFromCommandLine();
@@ -1408,7 +1410,7 @@ public partial class MainWindow : Window
     }
 
     private void New_Click(object sender, RoutedEventArgs e)
-    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = new CncDocument(); _camPlanner.Clear(); View3DPanel?.ResetView(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
+    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = NewDocument(); _camPlanner.Clear(); View3DPanel?.ResetView(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); }
     private void SyncMetadata()
     { NameBox.Text = _document.Name; MaterialWidthBox.Text = F(_document.MaterialWidth); MaterialHeightBox.Text = F(_document.MaterialHeight); MaterialThicknessBox.Text = F(_document.MaterialThickness);
       RefreshMachineSummary();
@@ -1423,13 +1425,13 @@ public partial class MainWindow : Window
         { Error("Inlay-inställningarna passar inte materialtjockleken: " + inlayError); return; }
         _document.Name = NameBox.Text; _document.MaterialWidth = w; _document.MaterialHeight = h; _document.MaterialThickness = t;
         if (MachineSetupValidation.Validate(_document) is string setupError) { Error(setupError); return; }
-        if (_path is null) { var dialog = new SaveFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json", FileName = "projekt.cncstudio.json" }; if (dialog.ShowDialog(this) != true) return; _path = dialog.FileName; }
+        if (_path is null) { var dialog = new SaveFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json", FileName = SafeFileName(_document.Name) + ".cncstudio.json", InitialDirectory = ProjectsFolder() }; if (dialog.ShowDialog(this) != true) return; _path = dialog.FileName; }
         try { DocumentStorage.Save(_path, _document); StatusText.Text = "Sparat: " + _path; }
         catch (Exception ex) { Error("Kunde inte spara: " + ex.Message); }
     }
     private void Open_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json|JSON|*.json" };
+        var dialog = new OpenFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json|JSON|*.json", InitialDirectory = ProjectsFolder() };
         if (dialog.ShowDialog(this) != true) return;
         try { var document = DocumentStorage.Load(dialog.FileName); _document = document; _camPlanner.Clear(); View3DPanel?.ResetView(); _path = dialog.FileName; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
         catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); }

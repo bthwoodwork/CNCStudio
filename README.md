@@ -249,3 +249,10 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ## 0.8.3 – Egen ikon
 - Ny programikon: en fräs som skär en grön verktygsbana i ett material, i appens mörkblå färger. Syns i Utforskaren, aktivitetsfältet och alla fönsters titelrad.
 - Ritas av `tools/make-icon.ps1` i alla storlekar 16–256 px (små storlekar förenklade så att de syns tydligt).
+## 0.8.4 – Synkmapp (Google Drive)
+- **Arkiv → Synkmapp (Google Drive)…**: välj en mapp som Google Drive för datorn (eller OneDrive/Dropbox) synkar. CNC Studio hittar Google Drive själv ("Min enhet"/"My Drive") och föreslår `…\CNC Studio`.
+- Delas mellan datorer: projekt (Öppna/Spara börjar i mappen Projekt), fräsbiblioteket och standardmaskinprofilen för nya projekt (Inställningar). Stannar lokalt: avbrutna jobb, loggar och $$-kopior.
+- Befintliga filer i synkmappen (från en annan dator) skrivs aldrig över. Hittas inte mappen vid start varnar programmet och sparar lokalt.
+- Projekt och inställningar sparas via en tillfällig fil så att synken aldrig får en halv fil.
+
+**Tester:** 311 tester. Inte testad mot riktig maskin ännu.

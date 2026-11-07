@@ -268,6 +268,7 @@ public partial class MainWindow
             {
                 RememberChange();
                 _document.Machine = GrblSettings.ApplyToProfile(_document.Machine, settings);
+                SaveDefaultMachineProfile(_document.Machine);
                 RefreshMachineSummary(); ShowStockFields(); Render();
                 return _document.Machine;
             }) { Owner = this };

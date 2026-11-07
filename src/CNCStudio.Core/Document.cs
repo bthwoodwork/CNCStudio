@@ -350,7 +350,8 @@ public sealed class CncDocument
 public static class DocumentStorage
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
-    public static void Save(string path, CncDocument document) => File.WriteAllText(path, JsonSerializer.Serialize(document, Options));
+    /// <summary>Written via a temporary file, so a sync client (Google Drive) never uploads half a project.</summary>
+    public static void Save(string path, CncDocument document) => AppStorage.WriteAtomic(path, JsonSerializer.Serialize(document, Options));
     public static CncDocument Load(string path)
     {
         var document = JsonSerializer.Deserialize<CncDocument>(File.ReadAllText(path), Options)

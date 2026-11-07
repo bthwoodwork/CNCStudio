@@ -16,7 +16,7 @@ public partial class MainWindow
 
     private static ToolLibrary LoadTools()
     {
-        try { return ToolLibrary.Load(ToolLibrary.DefaultPath); }
+        try { return ToolLibrary.Load(AppStorage.Current.ToolLibraryPath); }
         catch (Exception) { return ToolLibrary.Defaults(); }
     }
 
@@ -63,12 +63,12 @@ public partial class MainWindow
         if (w.ShowDialog() != true || w.Result is null) return;
         try
         {
-            w.Result.Save(ToolLibrary.DefaultPath);
+            w.Result.Save(AppStorage.Current.ToolLibraryPath);
             _tools = w.Result;
             var current = SelectedTool?.Name;
             RefreshToolPicker();
             SelectTool(current);
-            StatusText.Text = $"Verktygsbiblioteket sparat ({_tools.Tools.Count} fräsar): {ToolLibrary.DefaultPath}";
+            StatusText.Text = $"Verktygsbiblioteket sparat ({_tools.Tools.Count} fräsar): {AppStorage.Current.ToolLibraryPath}";
         }
         catch (Exception ex) { Error("Kunde inte spara verktygsbiblioteket: " + ex.Message); }
     }

@@ -152,6 +152,7 @@ public partial class MainWindow
         if (dialog.ShowDialog() != true || dialog.Result is null) return;
         RememberChange();
         _document.Machine = dialog.Result;
+        SaveDefaultMachineProfile(dialog.Result);
         RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields();
         _selectedFixture = null; Render();
         StatusText.Text = $"Maskininställningar sparade: {dialog.Result.Name} (ej GRBL-kalibrerad).";
