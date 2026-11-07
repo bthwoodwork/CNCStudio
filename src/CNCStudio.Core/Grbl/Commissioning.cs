@@ -73,6 +73,18 @@ public static class Commissioning
     }
 
     /// <summary>
+    /// Where the tool stands, in mm from the X and Y switches (the home corner), from MPos and the
+    /// machine's own $23/$130/$131 – independent of any project profile. Machine space is −$13x…0
+    /// (limits.c): a plus-homed switch sits at MPos 0, a minus-homed one at −$13x.
+    /// </summary>
+    public static (double X, double Y) DistanceFromSwitches(double[] mpos, IReadOnlyDictionary<int, double> s)
+    {
+        int mask = (int)s.GetValueOrDefault(23);
+        double D(int i) => (mask & (1 << i)) != 0 ? mpos[i] + s.GetValueOrDefault(130 + i) : -mpos[i];
+        return (D(0), D(1));
+    }
+
+    /// <summary>
     /// An air run: a square drawn in the air, starting where the machine stands after homing and going
     /// away from the switches (inward). Z first goes near the top in machine coordinates (G53 G0), all
     /// XY moves are incremental (G91) at a slow feed, and the program returns to its start and to G90.

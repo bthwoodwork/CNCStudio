@@ -1,4 +1,4 @@
-# CNC Studio – källkod (senaste: 0.7.2)
+﻿# CNC Studio – källkod (senaste: 0.7.2)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,17 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.8.7 – Loggar på Drive
+- **Loggarna ligger i CNC Studio-mappen:** `Loggar\<datornamn>`. Varje dator skriver i sin egen mapp, så två datorer skriver aldrig i samma fil. Med en synkmapp (Google Drive) går alla datorers loggar att läsa från vilken dator som helst.
+- Befintliga loggar i `%APPDATA%\CNCStudio\logs` kopieras dit en gång. Felloggen, Första test och ``-kopiorna skrivs nu där.
+- **Maskinstyrningen loggas till fil:** varje anslutning blir `maskin-ååååMMdd-HHmmss.txt` med allt som skickats och tagits emot. Filen skrivs varannan sekund, inte för varje rad, så att Drive inte behöver ladda upp den hela tiden.
+- **Loggvisaren** (Hjälp → Loggar och fellogg) har en datorväljare och en ny grupp, Maskinstyrning. Andra datorers fellogg kan läsas men bara rensas på den egna datorn.
+- **Fräsens position (röda korset) räknas från maskinens egna inställningar** ($23, $130, $131, som läses med $$ vid anslutning och efter homing), inte från projektets profil. Tidigare stod korset på X 251 / Y 251 efter homing när projektet var gjort för 750 × 750 och maskinen är 500 × 500.
+- **Vid anslutning jämförs maskinen med projektets maskinprofil** (homingriktning, pull-off, X/Y/Z-rörelse). Om de skiljer sig frågar programmet om maskinens värden ska användas.
+- Avbrutna jobb (återupptagning) ligger kvar lokalt, eftersom de hör till datorn som är kopplad till maskinen.
+
+**Tester:** 336 tester.
 
 ## 0.8.6 – Efter första maskintestet
 - Första testet mot den riktiga X-Carve (GRBL 1.1g Inventables, 500 × 500 × 100 mm) gick igenom alla steg.

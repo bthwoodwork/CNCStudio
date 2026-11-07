@@ -56,7 +56,7 @@ public sealed class FirstTestWindow : Window
         Width = 1060; Height = 820; MinWidth = 900; MinHeight = 640;
         Background = B(0x17, 0x21, 0x2C); Foreground = Ink; FontFamily = new FontFamily("Segoe UI");
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CNCStudio", "logs");
+        var folder = ErrorLog.Folder;                             // CNC Studio\Loggar\<dator>
         Directory.CreateDirectory(folder);
         LogPath = Path.Combine(folder, $"forsta-test-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
         _log = new StreamWriter(LogPath, append: false) { AutoFlush = true };

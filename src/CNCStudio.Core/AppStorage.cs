@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,9 +23,9 @@ public sealed class AppSettings
 /// <item>Verktyg – the tool library (cutters in categories, with cutting data per material)</item>
 /// <item>Material – the material library</item>
 /// <item>Inställningar – the default machine profile for new projects</item>
+/// <item>Loggar\&lt;dator&gt; – each computer's logs (error log, machine sessions, first test, $$ backups)</item>
 /// </list>
-/// Machine-specific things stay local on purpose: interrupted jobs, logs and $$ backups belong to the
-/// computer connected to the machine.
+/// Interrupted jobs stay local on purpose: they belong to the computer connected to the machine.
 /// </summary>
 public sealed class AppStorage
 {
@@ -34,6 +34,7 @@ public sealed class AppStorage
     public const string ToolsFolderName = "Verktyg";
     public const string MaterialsFolderName = "Material";
     public const string SettingsFolderName = "Inställningar";
+    public const string LogsFolderName = "Loggar";
 
     private static readonly string[] SharedFiles =
     {
@@ -75,6 +76,12 @@ public sealed class AppStorage
     public string MaterialLibraryPath => Path.Combine(MaterialsFolder, "material.json");
     public string MachineProfilePath => Path.Combine(DataFolder, SettingsFolderName, "maskinprofil.json");
 
+    /// <summary>This computer's name; each computer writes its logs in its own folder, so no two write the same file.</summary>
+    public static string ComputerName => Environment.MachineName;
+    /// <summary>Loggar – one subfolder per computer, readable from every computer when synced.</summary>
+    public string LogsRoot => Path.Combine(DataFolder, LogsFolderName);
+    public string LogsFolder => Path.Combine(LogsRoot, ComputerName);
+
     /// <summary>
     /// Uses <paramref name="folder"/> as the sync folder (null = stop syncing). Creates its subfolders and
     /// copies this computer's tool library, material library and machine profile there if the folder has
@@ -94,6 +101,8 @@ public sealed class AppStorage
                 var to = Path.Combine(folder, rel);
                 if (File.Exists(from) && !File.Exists(to)) { File.Copy(from, to); copied.Add(rel); }
             }
+            // This computer's logs follow along (files already there are kept).
+            if (CopyFolderContents(LogsFolder, Path.Combine(folder, LogsFolderName, ComputerName)) > 0) copied.Add(Path.Combine(LogsFolderName, ComputerName));
         }
         Settings = new AppSettings { SyncFolder = folder };
         Directory.CreateDirectory(_local);
@@ -107,6 +116,7 @@ public sealed class AppStorage
     {
         foreach (var sub in new[] { ProjectsFolderName, ToolsFolderName, MaterialsFolderName, SettingsFolderName })
             Directory.CreateDirectory(Path.Combine(DataFolder, sub));
+        Directory.CreateDirectory(LogsFolder);
     }
 
     public MachineProfile? LoadMachineProfile()
@@ -127,8 +137,26 @@ public sealed class AppStorage
         {
             CopyIfMissing(new[] { Path.Combine(DataFolder, SettingsFolderName, "tools.json"), Path.Combine(_local, "tools.json") }, ToolLibraryPath);
             CopyIfMissing(new[] { Path.Combine(_local, "maskinprofil.json") }, MachineProfilePath);
+            // Logs used to live in %APPDATA%\CNCStudio\logs on each computer.
+            CopyFolderContents(Path.Combine(_local, "logs"), LogsFolder);
         }
         catch (Exception) { /* a missing or read-only folder must never stop the program */ }
+    }
+
+    /// <summary>Copies files that the target does not have yet; returns how many were copied.</summary>
+    private static int CopyFolderContents(string from, string to)
+    {
+        if (!Directory.Exists(from) || Path.GetFullPath(from).TrimEnd('\\') == Path.GetFullPath(to).TrimEnd('\\')) return 0;
+        int n = 0;
+        foreach (var file in Directory.GetFiles(from))
+        {
+            var target = Path.Combine(to, Path.GetFileName(file));
+            if (File.Exists(target)) continue;
+            Directory.CreateDirectory(to);
+            File.Copy(file, target);
+            n++;
+        }
+        return n;
     }
 
     private static void CopyIfMissing(IEnumerable<string> oldPaths, string target)

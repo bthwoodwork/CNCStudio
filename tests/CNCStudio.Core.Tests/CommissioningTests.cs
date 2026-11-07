@@ -48,6 +48,26 @@ public class CommissioningTests
     }
 
     [Fact]
+    public void Tool_position_after_homing_is_the_pull_off_from_the_switches_whatever_the_project_says()
+    {
+        // The real machine: $23=3 (front-left), 500 × 500, $27=1. A project made for 750 × 750 used to show X 251 / Y 251.
+        var s = Settings(); s[130] = 500; s[131] = 500; s[27] = 1;
+        var home = Commissioning.ExpectedHomePosition(s);
+        var (x, y) = Commissioning.DistanceFromSwitches(home, s);
+        Assert.Equal(1, x, 6);
+        Assert.Equal(1, y, 6);
+        Assert.Equal((101.0, 51.0), Commissioning.DistanceFromSwitches(new[] { -399.0, -449.0, -1.0 }, s));
+    }
+
+    [Fact]
+    public void Plus_homed_axes_count_from_machine_zero()
+    {
+        var s = Settings(); s[23] = 0; s[27] = 2;
+        Assert.Equal((2.0, 2.0), Commissioning.DistanceFromSwitches(Commissioning.ExpectedHomePosition(s), s));
+        Assert.Equal((300.0, 10.0), Commissioning.DistanceFromSwitches(new[] { -300.0, -10.0, 0 }, s));
+    }
+
+    [Fact]
     public async Task Air_square_runs_inward_from_the_switch_corner_and_returns()
     {
         var sim = new SimulatedGrbl(speedFactor: 40);

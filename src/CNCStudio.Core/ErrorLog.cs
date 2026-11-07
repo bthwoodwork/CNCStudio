@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -11,15 +11,15 @@ namespace CNCStudio.Core;
 public sealed record ErrorLogEntry(DateTime Time, string Kind, string Message, string Details);
 
 /// <summary>
-/// The error log (%APPDATA%\CNCStudio\logs\fel.txt). Each entry is a timestamp line followed by the
+/// The error log (CNC Studio\Loggar\&lt;dator&gt;\fel.txt). Each entry is a timestamp line followed by the
 /// exception text and a blank line. Kept as plain text so it can also be read in any editor.
 /// </summary>
 public static class ErrorLog
 {
     private static readonly Regex Stamp = new(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", RegexOptions.Compiled);
 
-    public static string Folder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CNCStudio", "logs");
+    /// <summary>This computer's log folder: CNC Studio\Loggar\<datornamn> (synced when a sync folder is used).</summary>
+    public static string Folder => AppStorage.Current.LogsFolder;
 
     public static string FilePath => Path.Combine(Folder, "fel.txt");
 

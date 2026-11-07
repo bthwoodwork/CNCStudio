@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
+using CNCStudio.Core;
 using CNCStudio.Core.Grbl;
 
 namespace CNCStudio.Desktop;
@@ -17,6 +18,11 @@ public partial class MainWindow
     private const string DemoPort = "DEMO (simulerad X-Carve 750)";
     private SimulatedGrbl? _demoMachine;
     private readonly List<string> _grblLog = new();
+    /// <summary>The connection's log on disk (CNC Studio\Loggar\<dator>), written every couple of seconds.</summary>
+    private SessionLogFile? _sessionLog;
+    /// <summary>The connected machine's $$ settings (read on connect and after homing); null = not known.</summary>
+    private IReadOnlyDictionary<int, double>? _grblSettings;
+    private System.Windows.Threading.DispatcherTimer? _sessionLogTimer;
 
     internal GrblClient? Grbl => _grbl is { IsConnected: true } ? _grbl : null;
     internal IReadOnlyList<string> GrblLog => _grblLog;
@@ -46,6 +52,7 @@ public partial class MainWindow
         bool demo = port == DemoPort;
         IGrblTransport transport = demo ? (_demoMachine ??= new SimulatedGrbl()) : new SerialGrblTransport(port);
         var client = new GrblClient(transport);
+        StartSessionLog(port);
         client.LineReceived += line =>
         {
             Log("← " + GrblSettings.Describe(line));
@@ -71,10 +78,13 @@ public partial class MainWindow
             SetMachineControlsEnabled(true);
             UpdateJobButtons(); RefreshRecoveryBanner();
             await ReadActiveWcsAsync(client);
+            await ReadMachineSettingsAsync(client, offerProfileUpdate: true);
         }
         catch (Exception ex)
         {
             client.Dispose();
+            Log($"Kunde inte ansluta: {ex.Message}");
+            StopSessionLog();
             SetConnectionBanner("EJ ANSLUTEN", "Anslutningen misslyckades.", Color.FromRgb(83, 60, 52));
             Error($"Kunde inte ansluta till {port}: {ex.Message}");
         }
@@ -92,7 +102,7 @@ public partial class MainWindow
         }
         ConnectButton.Content = "Anslut";
         ResetGrblButton.IsEnabled = false; ResetGrblButton.ClearValue(BackgroundProperty);
-        _homedThisSession = false; _lastLiveState = null;
+        _homedThisSession = false; _lastLiveState = null; _grblSettings = null;
         UpdateJobButtons();
         if (_machineView) RenderMachine(refreshCam: false);
         SetConnectionBanner("EJ ANSLUTEN", reason, Color.FromRgb(83, 60, 52));
@@ -100,6 +110,63 @@ public partial class MainWindow
         _jogHeld = false;
         SetMachineControlsEnabled(false);
         Log(reason);
+        StopSessionLog();
+    }
+
+    /// <summary>
+    /// Reads $$ (allowed in Idle and Alarm, refused only during a cycle or hold – verified, system.c) so
+    /// the tool marker uses the machine's own travel and homing corner. If the project's machine profile
+    /// does not match the machine (e.g. a project made for 750 × 750 on a 500 × 500 machine), offers to
+    /// take the machine's values.
+    /// </summary>
+    private async Task ReadMachineSettingsAsync(GrblClient g, bool offerProfileUpdate)
+    {
+        IReadOnlyDictionary<int, double> settings;
+        try { settings = await g.ReadSettingsAsync(); }
+        catch (Exception ex) { Log("Kunde inte läsa $$: " + ex.Message); return; }
+        if (_grbl != g || settings.Count == 0) return;
+        _grblSettings = settings;
+        UpdateToolMarker();
+        if (!offerProfileUpdate) return;
+        var geometry = new[] { 23, 27, 130, 131, 132 };
+        var diffs = GrblSettings.CompareWithProfile(_document.Machine, settings).Where(d => geometry.Contains(d.Setting)).ToList();
+        if (diffs.Count == 0) return;
+        Log("Maskinprofilen skiljer sig från maskinen: " + string.Join(", ", diffs.Select(d => $"${d.Setting} {d.ProfileValue}→{d.MachineValue}")));
+        if (AppDialog.Show(this,
+                "Projektets maskinprofil stämmer inte med den anslutna maskinen:\n\n" +
+                string.Join("\n", diffs.Select(d => $"  {d.What} (${d.Setting}): projektet {d.ProfileValue}, maskinen {d.MachineValue}")) +
+                "\n\nMaskinvyn, fräsens position och CAM-kontrollen räknar med projektets värden. Använda maskinens värden i projektet (och som standard för nya projekt)?",
+                "Maskinprofil", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.OK) != MessageBoxResult.OK) return;
+        RememberChange();
+        _document.Machine = GrblSettings.ApplyToProfile(_document.Machine, settings);
+        SaveDefaultMachineProfile(_document.Machine);
+        RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields(); Render();
+        StatusText.Text = $"Maskinprofilen uppdaterad från maskinen: {_document.Machine.WorkWidthMm:0.#} × {_document.Machine.WorkLengthMm:0.#} mm.";
+        if (MachineSetupValidation.PlacementProblem(_document) is string placement)
+            AppDialog.Show(this, placement + "\n\nInga körbanor beräknas förrän materialet och fastspänningarna ligger inom arbetsområdet.",
+                "Materialplacering", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
+    private void StartSessionLog(string port)
+    {
+        StopSessionLog();
+        try
+        {
+            _sessionLog = new SessionLogFile(ErrorLog.Folder, DateTime.Now,
+                $"{AppTitle} – maskinstyrning på {AppStorage.ComputerName}, port {port}, {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        }
+        catch (Exception) { _sessionLog = null; return; }       // no log folder: keep the in-memory log only
+        _sessionLogTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _sessionLogTimer.Tick += (_, _) => _sessionLog?.Flush();
+        _sessionLogTimer.Start();
+    }
+
+    /// <summary>Writes what is left and closes the file (on disconnect and when the program closes).</summary>
+    private void StopSessionLog()
+    {
+        _sessionLogTimer?.Stop(); _sessionLogTimer = null;
+        var log = _sessionLog; _sessionLog = null;
+        log?.Dispose();
     }
 
     private (string Title, string Detail, Color Color) _connectedBanner;
@@ -182,6 +249,7 @@ public partial class MainWindow
     private void Log(string text)
     {
         var line = $"{DateTime.Now:HH:mm:ss}  {text}";
+        _sessionLog?.Append(line);                               // thread-safe; written in batches
         Dispatcher.BeginInvoke(() =>
         {
             _grblLog.Add(line);

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -69,6 +69,7 @@ public partial class MainWindow
             {
                 _homedThisSession = true;
                 JogStatusText.Text = "Homing klar – maskinkoordinaterna är kända.";
+                await ReadMachineSettingsAsync(g, offerProfileUpdate: false);   // $130/$131 may have changed since connecting
                 if (_machineView) RenderMachine(refreshCam: false);
             }
             else JogStatusText.Text = "Homing misslyckades: " + r.Describe();
@@ -110,9 +111,19 @@ public partial class MainWindow
         var mpos = _grbl?.LastStatus?.MPos;
         if (mpos is not { Length: >= 3 } || _grbl?.LastStatus?.State == "Alarm") { _toolMarker.Visibility = Visibility.Collapsed; return; }
         _toolMarker.Visibility = Visibility.Visible;
-        double x = _document.Machine.WorkWidthMm + mpos[0], y = -mpos[1];
+        double tx, ty, x, y;
+        if (_grblSettings is { } s)
+        {
+            // From the machine's own $23/$130/$131: right even when the project's profile is another size.
+            (tx, ty) = Commissioning.DistanceFromSwitches(mpos, s);
+            (x, y) = FromTable(tx, ty, 0, 0);
+        }
+        else
+        {
+            x = _document.Machine.WorkWidthMm + mpos[0]; y = -mpos[1];
+            (tx, ty) = ToTable(x, y, 0, 0);
+        }
         Canvas.SetLeft(_toolMarker, x); Canvas.SetTop(_toolMarker, y);
-        var (tx, ty) = ToTable(x, y, 0, 0);
         if (_toolMarker.Tag is TextBlock label)
             label.Text = $"X {tx.ToString("0.0", CultureInfo.InvariantCulture)}  Y {ty.ToString("0.0", CultureInfo.InvariantCulture)}";
     }
