@@ -242,6 +242,12 @@ public sealed class GrblClient : IDisposable
     /// controller reports Idle or Alarm. Stops at the first error, then reads $$ back and checks
     /// every written value.
     /// </summary>
+    /// <summary>
+    /// Called with the machine's settings just before WriteSettingsAsync changes any (and with what will
+    /// change). The app saves a copy there, so every change made from CNC Studio can be undone.
+    /// </summary>
+    public static Action<IReadOnlyDictionary<int, double>, IReadOnlyList<(int Number, double Value)>>? BeforeSettingsWrite { get; set; }
+
     public async Task<SettingWriteResult> WriteSettingsAsync(IReadOnlyList<(int Number, double Value)> changes,
         CancellationToken ct = default)
     {
@@ -258,6 +264,12 @@ public sealed class GrblClient : IDisposable
         if (!GrblProtocol.StateAllowsSettingsWrite(status.State))
             return new SettingWriteResult(false, $"Maskinen är i läge \"{status.State}\". Inställningar kan bara skrivas i Idle eller Alarm – inget skrevs.");
 
+        // A copy of every setting as it is now, before anything changes (so each change can be undone).
+        if (BeforeSettingsWrite is { } backup)
+        {
+            try { backup(await ReadSettingsAsync(ct), changes); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { /* a failed copy must not stop the write */ }
+        }
         int written = 0;
         foreach (var (n, _, line) in lines)
         {

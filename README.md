@@ -266,6 +266,14 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.9.1 – Säkerhetskopia av $$
+- **Maskin → Säkerhetskopia av inställningar ($$)…** sparar en kopia av alla GRBL-inställningar, med en valfri anteckning. Kopiorna ligger i `Inställningar\GRBL-kopior` på Drive och är vanlig text i samma form som GRBL skriver dem (`$n=värde`) plus datum, dator, firmware och anledning.
+- **Jämför och återställ:** välj en kopia, så visas den mot maskinens inställningar. *Visa bara skillnader* är förvalt, och skillnaderna är markerade och förbockade. *Återställ markerade…* skriver dem en i taget med kontrolläsning och varnar om riktningar, steg/mm, arbetsområde eller gränslägen ändras.
+- **Automatisk kopia före varje ändring:** innan CNC Studio ändrar en inställning (maskininställningar, Arbetsområde hit, Första test, brytartest, återställning) sparas nuvarande inställningar med anledningen *Före ändring: $n=…*. Varje ändring går därför att ångra. Rader som skrivs direkt i GRBL-konsolen omfattas inte.
+- Kopiorna från Första test (`Loggar\<dator>\$$-backup-*.txt`) visas också i listan.
+
+**Tester:** 395 tester.
+
 ## 0.9.0 – Planfräsning
 - **Planfräsning (Face)** är en ny bearbetning som fräser hela objektets yta plan (rektangelns eller formens omslutande rektangel).
   - Den fräser rad för rad, fram och tillbaka. Varje rad går ut förbi båda kanterna med fräsradien plus *Ut förbi kanten* (standard 2 mm), så att fräsen lämnar materialet helt.

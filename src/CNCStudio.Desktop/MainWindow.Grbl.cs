@@ -73,6 +73,7 @@ public partial class MainWindow
         try
         {
             var hello = await client.ConnectAsync();
+            _connectedFirmware = hello;
             _grbl = client;
             client.StartStatusPolling(TimeSpan.FromMilliseconds(250));
             _connectedBanner = (demo ? "ANSLUTEN – DEMOMASKIN" : "ANSLUTEN", $"{port} · {hello}", demo ? Color.FromRgb(92, 60, 140) : Color.FromRgb(36, 98, 63));
@@ -152,6 +153,20 @@ public partial class MainWindow
             AppDialog.Show(this, placement + "\n\nInga körbanor beräknas förrän materialet och fastspänningarna ligger inom arbetsområdet.",
                 "Materialplacering", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
+
+    /// <summary>What the controller said when connecting (welcome or $I), written into setting copies.</summary>
+    private string? _connectedFirmware;
+
+    /// <summary>A copy of the settings before every change from CNC Studio (GrblClient.WriteSettingsAsync).</summary>
+    private void InitSettingsBackup()
+    {
+        GrblClient.BeforeSettingsWrite = (settings, changes) =>
+            GrblBackup.Save(AppStorage.Current.GrblBackupFolder, settings, DateTime.Now, AppStorage.ComputerName, _connectedFirmware,
+                "Före ändring: " + string.Join(", ", changes.Select(c => $"${c.Number}={GrblBackup.Value(c.Number, c.Value)}")));
+    }
+
+    private void GrblBackup_Click(object sender, RoutedEventArgs e) =>
+        new GrblBackupWindow(Grbl, _connectedFirmware) { Owner = this }.ShowDialog();
 
     private void StartSessionLog(string port)
     {

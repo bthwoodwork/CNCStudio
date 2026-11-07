@@ -139,6 +139,9 @@ public sealed class AppStorage
 
     public void SaveProbeSettings(Grbl.ProbeSettings settings) => WriteAtomic(ProbeSettingsPath, JsonSerializer.Serialize(settings, Json));
 
+    /// <summary>Copies of the machine's GRBL settings ($$): Inställningar\GRBL-kopior.</summary>
+    public string GrblBackupFolder => Path.Combine(DataFolder, SettingsFolderName, Grbl.GrblBackup.FolderName);
+
     /// <summary>The gamepad setup (Inställningar\gamepad.json) – shared like the other settings.</summary>
     public string GamepadProfilePath => Path.Combine(DataFolder, SettingsFolderName, "gamepad.json");
 
