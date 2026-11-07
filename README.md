@@ -263,3 +263,5 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - **Mappar** under CNC Studio-mappen (synkmappen eller Dokument\CNC Studio): `Projekt`, `Verktyg`, `Material`, `Inställningar`. Det gamla verktygsbiblioteket flyttas in automatiskt.
 
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
+### Release-bygge
+`powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
