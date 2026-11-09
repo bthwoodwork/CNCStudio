@@ -115,12 +115,11 @@ public partial class MainWindow
     {
         if (RequireIdle("Probning") is not GrblClient g) return;
         if (!_homedThisSession) { Error("Kör homing först (⌂ Homing). Probningen flyttar i maskinkoordinater och behöver veta var maskinen står."); return; }
-        if (_probeWindow is { IsLoaded: true }) { _probeWindow.Activate(); return; }
         double tool = _loadedJob?.ToolDiameter ?? SelectedTool?.Diameter
                       ?? _document.CamOperations.Select(o => (double?)o.ToolDiameter).FirstOrDefault() ?? 6;
         _probeWindow = new ProbeWindow(g, AppStorage.Current.LoadProbeSettings(), tool, _document.WorkZero == WorkZero.Center,
             r => Dispatcher.Invoke(() => OnProbed(r))) { Owner = this };
-        _probeWindow.Show();
+        _probeWindow.ShowDialog();                               // modal: the machine is busy with the probe
     }
 
     /// <summary>After probing: Z probed → the stock top (MPos Z) is known, so the Z checks and a waiting program use it.</summary>

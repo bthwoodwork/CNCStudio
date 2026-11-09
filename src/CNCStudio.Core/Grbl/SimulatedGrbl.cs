@@ -56,6 +56,7 @@ public sealed class SimulatedGrbl : IGrblTransport
     private readonly double[][] _wcs = Enumerable.Range(0, 6).Select(_ => new double[3]).ToArray();
 
     // Physical machine: carriage position relative to the switches (0 = on the switch, −travel = far end).
+    // Starts as an X-Carve 750; with a state file the frame follows the saved $130–$132 (the demo is then the size you set).
     private readonly double[] _physTravel = { 750, 750, 65 };
     private readonly double[] _phys = { -375, -375, -30 };
     /// <summary>Where the switches physically sit: X and Y at the front-left (minus) end, Z at the top.</summary>
@@ -63,7 +64,50 @@ public sealed class SimulatedGrbl : IGrblTransport
     private readonly double _speed;
 
     /// <param name="speedFactor">Runs time faster (tests); 1 = real time.</param>
-    public SimulatedGrbl(double speedFactor = 1) { _speed = Math.Max(0.1, speedFactor); }
+    /// <param name="stateFile">Where the demo machine keeps its "EEPROM" ($$ and G54–G59) between program starts. Null = in memory only.</param>
+    public SimulatedGrbl(double speedFactor = 1, string? stateFile = null)
+    {
+        _speed = Math.Max(0.1, speedFactor);
+        StateFile = stateFile;
+        LoadState();
+    }
+
+    /// <summary>The file the settings are saved to, or null.</summary>
+    public string? StateFile { get; }
+
+    private sealed class SavedState
+    {
+        public Dictionary<int, double> Settings { get; set; } = new();
+        public double[][] Wcs { get; set; } = Array.Empty<double[]>();
+    }
+
+    private void LoadState()
+    {
+        if (StateFile is null || !global::System.IO.File.Exists(StateFile)) return;
+        try
+        {
+            var s = global::System.Text.Json.JsonSerializer.Deserialize<SavedState>(global::System.IO.File.ReadAllText(StateFile));
+            if (s is null) return;
+            foreach (var (k, v) in s.Settings) if (_settings.ContainsKey(k)) _settings[k] = v;
+            for (int i = 0; i < Math.Min(6, s.Wcs.Length); i++)
+                if (s.Wcs[i] is { Length: 3 } w) Array.Copy(w, _wcs[i], 3);
+            // The demo frame is as big as the travel it was set to.
+            for (int i = 0; i < 3; i++) if (_settings[130 + i] > 0) _physTravel[i] = _settings[130 + i];
+            for (int i = 0; i < 3; i++) _phys[i] = -_physTravel[i] / 2;
+        }
+        catch (Exception) { /* a damaged file: start from the defaults */ }
+    }
+
+    private void SaveState()
+    {
+        if (StateFile is null) return;
+        try
+        {
+            var json = global::System.Text.Json.JsonSerializer.Serialize(new SavedState { Settings = new Dictionary<int, double>(_settings), Wcs = _wcs.Select(w => (double[])w.Clone()).ToArray() });
+            AppStorage.WriteAtomic(StateFile, json);
+        }
+        catch (Exception) { /* the demo keeps running even if the file cannot be written */ }
+    }
     private readonly bool[] _pressedByHand = new bool[3];
     private bool[] _lastPins = new bool[3];
 
@@ -219,6 +263,8 @@ public sealed class SimulatedGrbl : IGrblTransport
             _settings.Clear();
             foreach (var (k, v) in DefaultSettings) _settings[k] = v;
             foreach (var w in _wcs) Array.Clear(w);
+            for (int i = 0; i < 3; i++) _physTravel[i] = _settings[130 + i];
+            SaveState();
         }
     }
 
@@ -274,8 +320,8 @@ public sealed class SimulatedGrbl : IGrblTransport
             Ok();
         }
         else if (u.StartsWith("$J=")) Jog(u[3..]);
-        else if (u == "$RST=$") { foreach (var (k, v) in DefaultSettings) _settings[k] = v; Ok(); }
-        else if (u == "$RST=#") { foreach (var w in _wcs) Array.Clear(w); Ok(); }
+        else if (u == "$RST=$") { foreach (var (k, v) in DefaultSettings) _settings[k] = v; SaveState(); Ok(); }
+        else if (u == "$RST=#") { foreach (var w in _wcs) Array.Clear(w); SaveState(); Ok(); }
         else if (GrblProtocol.TryParseSetting(u, out var n, out var value)) WriteSetting(n, value);
         else Error(3);
     }
@@ -287,6 +333,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         if (!_settings.ContainsKey(n)) { Error(3); return; }
         if (n == 20 && value == 1 && _settings[22] != 1) { Error(10); return; } // soft limits need homing
         _settings[n] = value;
+        SaveState();
         Ok();
     }
 
@@ -410,6 +457,7 @@ public sealed class SimulatedGrbl : IGrblTransport
                 if (axis[i] is not double v) continue;     // axes not named keep their stored value
                 _wcs[index][i] = l == 20 ? _planned[i] - _g92[i] - v * k : v * k;
             }
+            SaveState();
             Ok(); return;
         }
         if (g92)

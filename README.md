@@ -266,6 +266,25 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.9.2 – Kalibrering av steg/mm
+- **Maskin → Kalibrera steg/mm…**
+  1. Välj axel och sträcka. Standard är 100 mm för X/Y och 20 mm för Z, och både sträcka och hastighet går att ändra.
+  2. Markera var fräsen står och klicka *Flytta X+ 100 mm*. Flytten görs som en $J=-jogg och kontrolleras mot maskinens gränser.
+  3. Mät hur långt fräsen gick och klicka *Räkna ut*. Nytt = gammalt × beordrat ÷ uppmätt, avrundat till tre decimaler som GRBL lagrar.
+  4. Klicka *Skriv $100 = …*. Värdet skrivs med kontrolläsning, och de gamla inställningarna sparas först som kopia, så att ändringen kan ångras.
+- Är skillnaden större än 10 % frågar programmet först, eftersom det oftast beror på ett mätfel eller en remskiva som slirar.
+- *Flytta tillbaka* tar fräsen till startpunkten, så att du kan kontrollmäta efter ändringen.
+- **Demomaskinen minns sina inställningar.** `$$ och G54–G59 sparas i `%APPDATA%\CNCStudio\demomaskin.json` och finns kvar mellan programstarter. Tidigare började den om som X-Carve 750 vid varje start. Demomaskinens ram följer de sparade `$130–`$132, så en demomaskin som är inställd på 500 × 500 *är* 500 × 500 (homing på −499). Porten heter nu *DEMO (simulerad maskin)*.
+
+- **Probning i ett modalt fönster:**
+  - Typen väljs med stora knappar (**Z**, **X**, **Y**, **XY** och **XYZ**), och för X/Y-typerna även **hörn**: fram vänster, fram höger, bak vänster eller bak höger. Probrutinen söker åt rätt håll för varje hörn.
+  - En skiss visar materialet, plattan, fräsen och sökrörelserna, och en röd punkt markerar var X0 Y0 hamnar.
+  - Bara inställningarna för vald typ visas, med hastigheterna under *Avancerat*. Senast använda typ och hörn sparas.
+  - Under probningen blir *Stäng* en **STOPP**-knapp (mjuk återställning).
+  - För X, Y och XY ställs fräsen **över** plattan som vid XYZ, och Z måste vara nollad först. Fönstret säger det och varnar om det valda hörnet inte är projektets nollpunkt.
+
+**Tester:** 410 tester.
+
 ## 0.9.1 – Säkerhetskopia av $$
 - **Maskin → Säkerhetskopia av inställningar ($$)…** sparar en kopia av alla GRBL-inställningar, med en valfri anteckning. Kopiorna ligger i `Inställningar\GRBL-kopior` på Drive och är vanlig text i samma form som GRBL skriver dem (`$n=värde`) plus datum, dator, firmware och anledning.
 - **Jämför och återställ:** välj en kopia, så visas den mot maskinens inställningar. *Visa bara skillnader* är förvalt, och skillnaderna är markerade och förbockade. *Återställ markerade…* skriver dem en i taget med kontrolläsning och varnar om riktningar, steg/mm, arbetsområde eller gränslägen ändras.

@@ -14,9 +14,11 @@ public partial class MainWindow
 {
     private GrblClient? _grbl;
     private GrblConsoleWindow? _console;
-    /// <summary>Simulated GRBL 1.1 machine (X-Carve 750). One instance per session so its "EEPROM" survives reconnects.</summary>
-    private const string DemoPort = "DEMO (simulerad X-Carve 750)";
+    /// <summary>Simulated GRBL 1.1 machine. Its "EEPROM" ($$, G54–G59) is saved in %APPDATA%\CNCStudio\demomaskin.json, so what you set stays between program starts; the frame follows the saved $130–$132.</summary>
+    private const string DemoPort = "DEMO (simulerad maskin)";
     private SimulatedGrbl? _demoMachine;
+    private static SimulatedGrbl NewDemoMachine() =>
+        new(stateFile: System.IO.Path.Combine(AppStorage.Current.LocalFolder, "demomaskin.json"));
     private readonly List<string> _grblLog = new();
     /// <summary>The connection's log on disk (CNC Studio\Loggar\<dator>), written every couple of seconds.</summary>
     private SessionLogFile? _sessionLog;
@@ -56,7 +58,7 @@ public partial class MainWindow
         ConnectButton.IsEnabled = false;
         SetConnectionBanner("ANSLUTER…", $"{port}, {GrblProtocol.BaudRate} baud", Color.FromRgb(70, 80, 40));
         bool demo = port == DemoPort;
-        IGrblTransport transport = demo ? (_demoMachine ??= new SimulatedGrbl()) : new SerialGrblTransport(port);
+        IGrblTransport transport = demo ? (_demoMachine ??= NewDemoMachine()) : new SerialGrblTransport(port);
         var client = new GrblClient(transport);
         StartSessionLog(port);
         client.LineReceived += line =>
@@ -163,6 +165,12 @@ public partial class MainWindow
         GrblClient.BeforeSettingsWrite = (settings, changes) =>
             GrblBackup.Save(AppStorage.Current.GrblBackupFolder, settings, DateTime.Now, AppStorage.ComputerName, _connectedFirmware,
                 "Före ändring: " + string.Join(", ", changes.Select(c => $"${c.Number}={GrblBackup.Value(c.Number, c.Value)}")));
+    }
+
+    private void StepsCalibration_Click(object sender, RoutedEventArgs e)
+    {
+        if (RequireIdle("Kalibrering") is not GrblClient g) return;
+        new StepsCalibrationWindow(g, (dx, dy, dz) => GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz)) { Owner = this }.ShowDialog();
     }
 
     private void GrblBackup_Click(object sender, RoutedEventArgs e) =>
@@ -352,7 +360,7 @@ public partial class MainWindow
         }
         var w = new FirstTestWindow(
             () => SerialGrblTransport.AvailablePorts().Append(DemoPort).ToList(),
-            port => port == DemoPort ? (_demoMachine ??= new SimulatedGrbl()) : new SerialGrblTransport(port),
+            port => port == DemoPort ? (_demoMachine ??= NewDemoMachine()) : new SerialGrblTransport(port),
             _document.Machine,
             settings =>
             {

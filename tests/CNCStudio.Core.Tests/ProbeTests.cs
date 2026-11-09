@@ -1,4 +1,4 @@
-using CNCStudio.Core.Grbl;
+﻿using CNCStudio.Core.Grbl;
 
 namespace CNCStudio.Core.Tests;
 
@@ -72,6 +72,30 @@ public class ProbeTests
         c.Dispose();
     }
 
+    /// <summary>
+    /// Each corner: the plate's corner is 10 mm out from the tool (−600, −600) in that corner's direction.
+    /// Z first (sets work Z), then XY: X0/Y0 land on the stock edges, the wall inside the plate's outer sides.
+    /// </summary>
+    [Theory]
+    [InlineData(ProbeCorner.FrontLeft, -610, -550, -610, -550, -600, -602)]
+    [InlineData(ProbeCorner.FrontRight, -650, -590, -610, -550, -600, -602)]
+    [InlineData(ProbeCorner.BackLeft, -610, -550, -650, -590, -600, -598)]
+    [InlineData(ProbeCorner.BackRight, -650, -590, -650, -590, -600, -598)]
+    public async Task Every_corner_can_be_probed(ProbeCorner corner, double x0, double x1, double y0, double y1, double expectedX, double expectedY)
+    {
+        var (sim, c) = await Machine();
+        sim.ProbePlate = new SimulatedGrbl.SimProbePlate(x0, y0, x1, y1, -30);
+        var s = new ProbeSettings { PlateThicknessMm = 15, PlateWallXMm = 10, PlateWallYMm = 8, Corner = corner };
+        var z = await new ProbeCycle(c, s).RunAsync(ProbeKind.Z, ToolDia);
+        Assert.True(z.Success, z.Message);
+        var r = await new ProbeCycle(c, s).RunAsync(ProbeKind.XY, ToolDia, null, default, corner);
+        Assert.True(r.Success, r.Message + "\n" + string.Join("\n", r.Steps));
+        var g54 = await G54(c);
+        Assert.Equal(expectedX, g54[0], 2);
+        Assert.Equal(expectedY, g54[1], 2);
+        Assert.Equal(-45, g54[2], 2);
+        c.Dispose();
+    }
     [Theory]
     [InlineData(-1)]
     [InlineData(0)]

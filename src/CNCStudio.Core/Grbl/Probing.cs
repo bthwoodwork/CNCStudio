@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -9,6 +9,9 @@ namespace CNCStudio.Core.Grbl;
 
 /// <summary>What to probe. Z only is the most common and the default.</summary>
 public enum ProbeKind { Z, XYZ, XY, X, Y }
+
+/// <summary>Which corner of the stock X/Y probing finds (the plate lies on that corner). +X is right, +Y is away from you.</summary>
+public enum ProbeCorner { FrontLeft, FrontRight, BackLeft, BackRight }
 
 /// <summary>
 /// The touch plate and how to probe with it. Every value is a setting (Inställningar\probplatta.json,
@@ -38,6 +41,10 @@ public sealed class ProbeSettings
     public double SideDepthMm { get; set; } = 5;
     /// <summary>Height above the stock to lift to when done (Z known).</summary>
     public double FinalLiftMm { get; set; } = 10;
+    /// <summary>What was probed last time (the dialog opens with it).</summary>
+    public ProbeKind LastKind { get; set; } = ProbeKind.Z;
+    /// <summary>The corner used last time for X/Y probing.</summary>
+    public ProbeCorner Corner { get; set; } = ProbeCorner.FrontLeft;
 }
 
 public static class ProbeValidation
@@ -50,7 +57,7 @@ public static class ProbeValidation
         if (!Pos(s.MaxTravelZMm) || !Pos(s.MaxTravelXYMm)) return "Sökavstånden måste vara större än 0.";
         if (!Pos(s.RetractMm)) return "Backavståndet måste vara större än 0.";
         if (!double.IsFinite(s.FinalLiftMm) || s.FinalLiftMm < 0) return "Lyfthöjden efteråt får inte vara negativ.";
-        if (kind is ProbeKind.Z or ProbeKind.XYZ && (!double.IsFinite(s.PlateThicknessMm) || s.PlateThicknessMm < 0))
+        if (!double.IsFinite(s.PlateThicknessMm) || s.PlateThicknessMm < 0)
             return "Plattans tjocklek får inte vara negativ.";
         if (kind != ProbeKind.Z)
         {
@@ -58,7 +65,7 @@ public static class ProbeValidation
             if (!double.IsFinite(s.PlateWallXMm) || !double.IsFinite(s.PlateWallYMm) || s.PlateWallXMm < 0 || s.PlateWallYMm < 0)
                 return "Plattans väggtjocklek får inte vara negativ.";
             if (!Pos(s.SideMoveOutMm)) return "Avståndet ut åt sidan måste vara större än 0.";
-            if (kind == ProbeKind.XYZ && (!Pos(s.SideDepthMm) || s.SideDepthMm >= s.PlateThicknessMm))
+            if (!Pos(s.SideDepthMm) || s.SideDepthMm >= s.PlateThicknessMm)
                 return "Djupet för sidoprobningen måste vara större än 0 och mindre än plattans tjocklek.";
         }
         return null;
@@ -97,7 +104,8 @@ public sealed class ProbeCycle
 
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMinutes(3);
 
-    public async Task<ProbeResult> RunAsync(ProbeKind kind, double toolDiameter, IProgress<string>? progress = null, CancellationToken ct = default)
+    public async Task<ProbeResult> RunAsync(ProbeKind kind, double toolDiameter, IProgress<string>? progress = null, CancellationToken ct = default,
+        ProbeCorner corner = ProbeCorner.FrontLeft)
     {
         _progress = progress; _ct = ct; _steps.Clear();
         if (ProbeValidation.GetError(_s, kind, toolDiameter) is string bad) return new(false, bad, null, _steps);
@@ -123,12 +131,11 @@ public sealed class ProbeCycle
                 Step($"Z0 satt på materialytan (plattan {N(_s.PlateThicknessMm)} mm).");
             }
             if (kind is ProbeKind.XYZ or ProbeKind.XY or ProbeKind.X)
-                await ProbeSide(0, start, r, kind == ProbeKind.XYZ, _s.PlateWallXMm);
+                await ProbeSide(0, Side(corner, 0), start, r, _s.PlateWallXMm);
             if (kind is ProbeKind.XYZ or ProbeKind.XY or ProbeKind.Y)
-                await ProbeSide(1, start, r, kind == ProbeKind.XYZ, _s.PlateWallYMm);
+                await ProbeSide(1, Side(corner, 1), start, r, _s.PlateWallYMm);
 
-            if (stockTop is not null)
-                await Send($"G90 G0 Z{N(_s.PlateThicknessMm + _s.FinalLiftMm)}");   // clear of the plate
+            await Send($"G90 G0 Z{N(_s.PlateThicknessMm + _s.FinalLiftMm)}");       // clear of the plate
             await Sync();
             string what = kind switch
             {
@@ -141,28 +148,30 @@ public sealed class ProbeCycle
         catch (InvalidOperationException ex) { return new(false, ex.Message, null, _steps); }
     }
 
+    /// <summary>+1 = the wall is approached moving towards plus (left side, front side), −1 = towards minus.</summary>
+    public static int Side(ProbeCorner corner, int axis) => axis == 0
+        ? (corner is ProbeCorner.FrontLeft or ProbeCorner.BackLeft ? +1 : -1)
+        : (corner is ProbeCorner.FrontLeft or ProbeCorner.FrontRight ? +1 : -1);
+
     /// <summary>
     /// One wall: from the start (above the plate), lift if needed, go out sideways, down beside the plate,
-    /// touch the outer side moving inwards (+X or +Y), set the work coordinate, back off and return.
+    /// touch the outer side moving inwards (direction <paramref name="s"/>), set the work coordinate, back off and return.
+    /// The stock edge – work 0 – is the wall plus the tool radius beyond the contact point.
     /// </summary>
-    private async Task ProbeSide(int axis, double[] start, double r, bool zKnown, double wall)
+    /// <para>Work Z must be set (Z0 on the stock): XYZ sets it first; for X, Y and XY it must be zeroed before.</para>
+    private async Task ProbeSide(int axis, int s, double[] start, double r, double wall)
     {
         string a = axis == 0 ? "X" : "Y";
-        Step($"Söker plattans {(axis == 0 ? "vänstra" : "främre")} sida ({a}) …");
-        if (zKnown)
-        {
-            await Send($"G90 G0 Z{N(_s.PlateThicknessMm + _s.RetractMm)}");                   // above the plate
-            await Send($"G53 G0 {a}{N(start[axis] - _s.SideMoveOutMm)}");                     // out beside it
-            await Send($"G90 G0 Z{N(_s.PlateThicknessMm - _s.SideDepthMm)}");                 // down beside the wall
-        }
-        else
-            await Send($"G53 G0 {a}{N(start[axis] - _s.SideMoveOutMm)}");                     // already at side height
-        double contact = await Touch(axis, +1, _s.SideMoveOutMm + _s.MaxTravelXYMm);
-        // The stock edge is the wall plus the tool radius beyond the contact point.
-        await Send($"G53 G0 {a}{N(contact - _s.RetractMm)}");
-        await Send($"G10 L20 P0 {a}{N(-(wall + r) - _s.RetractMm)}");
+        string side = axis == 0 ? (s > 0 ? "vänstra" : "högra") : (s > 0 ? "främre" : "bakre");
+        Step($"Söker plattans {side} sida ({a}) …");
+        await Send($"G90 G0 Z{N(_s.PlateThicknessMm + _s.RetractMm)}");                       // above the plate
+        await Send($"G53 G0 {a}{N(start[axis] - s * _s.SideMoveOutMm)}");                     // out beside it
+        await Send($"G90 G0 Z{N(_s.PlateThicknessMm - _s.SideDepthMm)}");                     // down beside the wall
+        double contact = await Touch(axis, s, _s.SideMoveOutMm + _s.MaxTravelXYMm);
+        await Send($"G53 G0 {a}{N(contact - s * _s.RetractMm)}");
+        await Send($"G10 L20 P0 {a}{N(-s * (wall + r + _s.RetractMm))}");
         Step($"{a}0 satt på materialets kant (vägg {N(wall)} mm + fräsradie {N(r)} mm).");
-        if (zKnown) await Send($"G90 G0 Z{N(_s.PlateThicknessMm + _s.RetractMm)}");
+        await Send($"G90 G0 Z{N(_s.PlateThicknessMm + _s.RetractMm)}");
         await Send($"G53 G0 {a}{N(start[axis])}");                                           // back over the plate
     }
 
