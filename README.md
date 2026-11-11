@@ -266,6 +266,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.9.4 – En profil per maskin
+- **Maskinkontroll → Maskin:** varje maskin har en egen maskinprofil i `Inställningar\Maskiner`, och **demomaskinen är en egen maskin**. Den kan ställas in och testas precis som en riktig maskin nummer två.
+  - **Maskin → Maskiner…** (eller ☰ vid väljaren, eller *Maskiner…* under MASKIN) visar alla maskiner. För varje maskin syns mått, hemhörn och port, och märken visar *VALD*, *ANSLUTEN* och *DEMO*. Där kan du välja, ändra (Inställningar…), lägga till och ta bort maskiner.
+  - Ansluter du på DEMO-porten väljs demomaskinen. En COM-port väljer maskinen som senast var ansluten där.
+  - **＋** skapar en ny maskin som kopia av den valda och öppnar Maskininställningar. **−** tar bort en maskin. Demomaskinen och den sista riktiga maskinen kan inte tas bort.
+  - Maskinen byts bara när du är frånkopplad. Den valda maskinen är den som nya projekt får.
+  - Den gamla `maskinprofil.json` blir första maskinen ("Min maskin") och demomaskinen startar som en kopia av den.
+- **Profil mot maskin:** när profilen och maskinens $$ skiljer sig vid anslutning kan du välja *Använd maskinens värden i profilen*, *Skriv profilens arbetsyta till maskinen* ($130–$132, kopia av $$ först) eller *Låt det vara*. Sparar du Maskininställningar medan du är ansluten och arbetsytan skiljer sig från maskinens, frågar programmet om den ska skrivas till maskinen.
+- Kopior av demomaskinens $$ hamnar i `GRBL-kopior\Demomaskin`, skilt från den riktiga maskinens.
+
+**Tester:** 418 tester.
+
 ## 0.9.3 – Kalibreringen säger varför den inte öppnas
 - **Maskin → Kalibrera steg/mm…** visar nu en ruta med orsaken när maskinen inte är redo, till exempel "maskinen är i larm – kör homing ($H) först" eller "går bara när maskinen är Idle". Förut hamnade texten bara i jogg-panelens statusrad, så det såg ut som att inget hände.
 

@@ -115,6 +115,22 @@ public static class GrblSettings
         return list;
     }
 
+    /// <summary>The travel settings ($130–$132) that may be written from the profile to the machine.</summary>
+    public static readonly int[] TravelSettings = { 130, 131, 132 };
+
+    /// <summary>
+    /// The other direction: the $130–$132 writes that make the machine's travel match the profile's work
+    /// area (e.g. a demo machine left at 750 × 750 when the real one is 500 × 500). Only travel is written –
+    /// homing direction and pull-off decide where the machine drives and are left to the settings window.
+    /// </summary>
+    public static IReadOnlyList<(int Number, double Value)> TravelWritesFromProfile(MachineProfile p, IReadOnlyDictionary<int, double> s)
+    {
+        var list = new List<(int, double)>();
+        foreach (var (n, v) in new[] { (130, p.WorkWidthMm), (131, p.WorkLengthMm), (132, p.ZTravelMm) })
+            if (s.TryGetValue(n, out var current) && Math.Abs(current - v) > 0.0005) list.Add((n, v));
+        return list;
+    }
+
     /// <summary>
     /// A copy of the profile updated with the controller's values. Values that are missing from
     /// $$ keep the profile's value.
@@ -138,7 +154,8 @@ public static class GrblSettings
             MaxRateY = s.TryGetValue(111, out var ry) ? ry : p.MaxRateY,
             MaxRateZ = s.TryGetValue(112, out var rz) ? rz : p.MaxRateZ,
             Spindle = p.Spindle, // not a GRBL setting: keep the user's choice
-            CalibratedToGrbl = true
+            CalibratedToGrbl = true,
+            Id = p.Id, Port = p.Port   // still the same machine
         };
     }
 

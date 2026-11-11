@@ -229,6 +229,12 @@ public sealed class MachineProfile
     public double? MaxRateY { get; set; }
     public double? MaxRateZ { get; set; }
     public bool CalibratedToGrbl { get; set; } = false;
+    /// <summary>Which machine in the machine library (Inställningar\Maskiner) this profile belongs to. Null = not from the library (old project).</summary>
+    public string? Id { get; set; }
+    /// <summary>The port this machine was last connected on (COM3, or the demo port). Connecting there picks this machine.</summary>
+    public string? Port { get; set; }
+
+    public override string ToString() => Name;
 }
 
 /// <summary>

@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using CNCStudio.Core;
+using CNCStudio.Core.Grbl;
 
 namespace CNCStudio.Desktop;
 
@@ -143,7 +144,7 @@ public partial class MainWindow
         StatusText.Text = "Materialplacering sparad i projektet (ej GRBL-kalibrerad).";
     }
 
-    private void MachineSettings_Click(object sender, RoutedEventArgs e)
+    private async void MachineSettings_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new MachineSettingsWindow(_document.Machine, d =>
         {
@@ -158,6 +159,14 @@ public partial class MainWindow
         RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields();
         _selectedFixture = null; Render();
         StatusText.Text = $"Maskininställningar sparade: {dialog.Result.Name} (ej GRBL-kalibrerad).";
+        // Connected: the machine's own travel ($130–$132) should match, or the next connect offers the old size back.
+        if (Grbl is GrblClient g && _grblSettings is { } machine &&
+            GrblSettings.TravelWritesFromProfile(dialog.Result, machine) is { Count: > 0 } writes &&
+            AppDialog.Show(this, "Profilen är sparad, men den anslutna maskinen har en annan arbetsyta:\n\n" +
+                string.Join("\n", writes.Select(w => $"  ${w.Number}: maskinen {machine[w.Number]:0.###}, profilen {w.Value:0.###}")) +
+                "\n\nSkriva profilens arbetsyta till maskinen också? En kopia av $$ sparas först.",
+                "Arbetsyta", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes) == MessageBoxResult.Yes)
+            await WriteTravelToMachineAsync(g, writes);
         if (MachineSetupValidation.PlacementProblem(_document) is string placement)
             AppDialog.Show(this, "Maskininställningarna är sparade.\n\n" + placement + "\n\nInga körbanor beräknas förrän materialet och fastspänningarna ligger inom arbetsområdet. " +
                 "Flytta materialet under Maskin → Materialplacering (eller dra det i maskinvyn), eller ändra dess storlek.",
@@ -166,6 +175,7 @@ public partial class MainWindow
 
     private void RefreshMachineSummary()
     {
+        RefreshMachinePicker();
         if (MachineSummaryText is null) return;
         var m = _document.Machine;
         string corner = m.HomeCorner switch

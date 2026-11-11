@@ -102,6 +102,9 @@ public sealed class AppStorage
                 var to = Path.Combine(folder, rel);
                 if (File.Exists(from) && !File.Exists(to)) { File.Copy(from, to); copied.Add(rel); }
             }
+            if (CopyFolderContents(Path.Combine(DataFolder, SettingsFolderName, MachineLibrary.FolderName),
+                    Path.Combine(folder, SettingsFolderName, MachineLibrary.FolderName)) > 0)
+                copied.Add(Path.Combine(SettingsFolderName, MachineLibrary.FolderName));
             // This computer's logs follow along (files already there are kept).
             if (CopyFolderContents(LogsFolder, Path.Combine(folder, LogsFolderName, ComputerName)) > 0) copied.Add(Path.Combine(LogsFolderName, ComputerName));
         }
@@ -120,13 +123,30 @@ public sealed class AppStorage
         Directory.CreateDirectory(LogsFolder);
     }
 
+    /// <summary>The machines (one profile each, the demo machine included) in Inställningar\Maskiner.</summary>
+    public MachineLibrary Machines => new(Path.Combine(DataFolder, SettingsFolderName));
+
+    /// <summary>The active machine's profile (what new projects get).</summary>
     public MachineProfile? LoadMachineProfile()
     {
-        try { return File.Exists(MachineProfilePath) ? JsonSerializer.Deserialize<MachineProfile>(File.ReadAllText(MachineProfilePath), Json) : null; }
+        try { return Machines.Active; }
         catch (Exception) { return null; }
     }
 
-    public void SaveMachineProfile(MachineProfile profile) => WriteAtomic(MachineProfilePath, JsonSerializer.Serialize(profile, Json));
+    /// <summary>
+    /// Saves the profile to its machine. A profile without a known machine (e.g. from an old project) is
+    /// saved to the active machine.
+    /// </summary>
+    public void SaveMachineProfile(MachineProfile profile)
+    {
+        var machines = Machines;
+        if (machines.Find(profile.Id) is null)
+        {
+            var active = machines.Active;
+            profile.Id = active.Id; profile.Port = active.Port;
+        }
+        machines.Save(profile);
+    }
 
     /// <summary>The touch plate and probing speeds (Inställningar\probplatta.json) – shared like the machine profile.</summary>
     public string ProbeSettingsPath => Path.Combine(DataFolder, SettingsFolderName, "probplatta.json");

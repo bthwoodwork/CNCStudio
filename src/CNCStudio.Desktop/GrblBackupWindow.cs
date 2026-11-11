@@ -87,6 +87,8 @@ public sealed class GrblBackupWindow : Window
     private static IEnumerable<string> Folders()
     {
         yield return AppStorage.Current.GrblBackupFolder;
+        // Each extra machine (the demo machine) keeps its copies in a subfolder.
+        if (Directory.Exists(AppStorage.Current.GrblBackupFolder)) foreach (var d in Directory.GetDirectories(AppStorage.Current.GrblBackupFolder)) yield return d;
         // Copies the first test made, on every computer.
         var root = AppStorage.Current.LogsRoot;
         if (Directory.Exists(root)) foreach (var d in Directory.GetDirectories(root)) yield return d;

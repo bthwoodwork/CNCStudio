@@ -64,6 +64,20 @@ public sealed class AppDialog : Window
         return d._result;
     }
 
+    /// <summary>Like Show, but with the caller's own button texts (first = primary).</summary>
+    public static MessageBoxResult Choose(Window? owner, string message, string title,
+        IReadOnlyList<(string Text, MessageBoxResult Result)> buttons, MessageBoxImage image = MessageBoxImage.Question,
+        MessageBoxResult defaultResult = MessageBoxResult.None)
+    {
+        var d = new AppDialog(owner, title);
+        var (accent, glyph) = Look(image);
+        var body = new StackPanel();
+        AddFormattedText(body, message);
+        d.Build(title, accent, glyph, body, buttons, defaultResult);
+        d.ShowDialog();
+        return d._result;
+    }
+
     /// <summary>
     /// Problems with fixes. Clicking an issue's action closes the dialog and then runs the action,
     /// so the main window can switch view and put focus on the right field.

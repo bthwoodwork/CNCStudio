@@ -15,7 +15,7 @@ public partial class MainWindow
     private GrblClient? _grbl;
     private GrblConsoleWindow? _console;
     /// <summary>Simulated GRBL 1.1 machine. Its "EEPROM" ($$, G54–G59) is saved in %APPDATA%\CNCStudio\demomaskin.json, so what you set stays between program starts; the frame follows the saved $130–$132.</summary>
-    private const string DemoPort = "DEMO (simulerad maskin)";
+    private const string DemoPort = MachineLibrary.DemoPort;
     private SimulatedGrbl? _demoMachine;
     private static SimulatedGrbl NewDemoMachine() =>
         new(stateFile: System.IO.Path.Combine(AppStorage.Current.LocalFolder, "demomaskin.json"));
@@ -58,6 +58,8 @@ public partial class MainWindow
         ConnectButton.IsEnabled = false;
         SetConnectionBanner("ANSLUTER…", $"{port}, {GrblProtocol.BaudRate} baud", Color.FromRgb(70, 80, 40));
         bool demo = port == DemoPort;
+        _connectedIsDemo = demo;
+        UseMachineForPort(port);
         IGrblTransport transport = demo ? (_demoMachine ??= NewDemoMachine()) : new SerialGrblTransport(port);
         var client = new GrblClient(transport);
         StartSessionLog(port);
@@ -85,6 +87,7 @@ public partial class MainWindow
             Log($"Ansluten till {port}: {hello}");
             StatusText.Text = $"Ansluten till GRBL på {port}. Inga kommandon skickas utan att du väljer det.";
             SetMachineControlsEnabled(true);
+            RefreshMachinePicker();
             UpdateJobButtons(); RefreshRecoveryBanner();
             await ReadActiveWcsAsync(client);
             await ReadMachineSettingsAsync(client, offerProfileUpdate: true);
@@ -118,6 +121,7 @@ public partial class MainWindow
         LiveStateText.Text = "–";
         _jogHeld = false;
         SetMachineControlsEnabled(false);
+        RefreshMachinePicker();
         Log(reason);
         StopSessionLog();
     }
@@ -141,11 +145,22 @@ public partial class MainWindow
         var diffs = GrblSettings.CompareWithProfile(_document.Machine, settings).Where(d => geometry.Contains(d.Setting)).ToList();
         if (diffs.Count == 0) return;
         Log("Maskinprofilen skiljer sig från maskinen: " + string.Join(", ", diffs.Select(d => $"${d.Setting} {d.ProfileValue}→{d.MachineValue}")));
-        if (AppDialog.Show(this,
-                "Projektets maskinprofil stämmer inte med den anslutna maskinen:\n\n" +
-                string.Join("\n", diffs.Select(d => $"  {d.What} (${d.Setting}): projektet {d.ProfileValue}, maskinen {d.MachineValue}")) +
-                "\n\nMaskinvyn, fräsens position och CAM-kontrollen räknar med projektets värden. Använda maskinens värden i projektet (och som standard för nya projekt)?",
-                "Maskinprofil", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.OK) != MessageBoxResult.OK) return;
+        var travelWrites = GrblSettings.TravelWritesFromProfile(_document.Machine, settings);
+        var buttons = new List<(string, MessageBoxResult)> { ("Använd maskinens värden i profilen", MessageBoxResult.Yes) };
+        if (travelWrites.Count > 0) buttons.Add(("Skriv profilens arbetsyta till maskinen", MessageBoxResult.No));
+        buttons.Add(("Låt det vara", MessageBoxResult.Cancel));
+        var choice = AppDialog.Choose(this,
+            $"Maskinprofilen \"{_document.Machine.Name}\" stämmer inte med den anslutna maskinen:\n\n" +
+            string.Join("\n", diffs.Select(d => $"  {d.What} (${d.Setting}): profilen {d.ProfileValue}, maskinen {d.MachineValue}")) +
+            "\n\nMaskinvyn, fräsens position och CAM-kontrollen räknar med profilens värden.\n\n" +
+            $"• Använd maskinens värden – profilen \"{_document.Machine.Name}\" får maskinens värden.\n" +
+            (travelWrites.Count > 0
+                ? "• Skriv profilens arbetsyta till maskinen – " + string.Join(", ", travelWrites.Select(w => $"${w.Number}={w.Value:0.###}")) +
+                  " skrivs till GRBL (en kopia av $$ sparas först). Välj det om profilen är rätt."
+                : ""),
+            "Maskinprofil", buttons, MessageBoxImage.Question, MessageBoxResult.Yes);
+        if (choice == MessageBoxResult.No) { await WriteTravelToMachineAsync(g, travelWrites); return; }
+        if (choice != MessageBoxResult.Yes) return;
         RememberChange();
         _document.Machine = GrblSettings.ApplyToProfile(_document.Machine, settings);
         SaveDefaultMachineProfile(_document.Machine);
@@ -156,15 +171,48 @@ public partial class MainWindow
                 "Materialplacering", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
+    /// <summary>
+    /// Writes $130–$132 from the profile to the controller (backup copy first, values read back) and
+    /// refreshes the settings the jog limits and the machine view use.
+    /// </summary>
+    private async Task<bool> WriteTravelToMachineAsync(GrblClient g, IReadOnlyList<(int Number, double Value)> writes)
+    {
+        var state = g.LastStatus?.State;
+        if (state is not ("Idle" or "Alarm"))
+        {
+            Error($"Inställningar kan bara skrivas när maskinen är Idle eller i larm (nu: {state ?? "okänt"}).");
+            return false;
+        }
+        var result = await g.WriteSettingsAsync(writes);
+        if (!result.Success) { Error("Arbetsytan kunde inte skrivas till maskinen: " + result.Message); return false; }
+        var text = string.Join(", ", writes.Select(w => $"${w.Number}={w.Value:0.###}"));
+        Log("Profilens arbetsyta skriven till maskinen: " + text);
+        await ReadMachineSettingsAsync(g, offerProfileUpdate: false);
+        StatusText.Text = $"Maskinen har nu profilens arbetsyta ({text}).";
+        if (state == "Idle" && _document.Machine.HomeOnStartup)
+            AppDialog.Show(this, $"Skrivet: {text}.\n\nKör homing ($H) igen så att maskinens gränser räknas från den nya arbetsytan.",
+                "Arbetsyta skriven", MessageBoxButton.OK, MessageBoxImage.Information);
+        return true;
+    }
+
     /// <summary>What the controller said when connecting (welcome or $I), written into setting copies.</summary>
     private string? _connectedFirmware;
+    /// <summary>True while connected to the simulated demo machine (its $$ copies go in a folder of their own).</summary>
+    private bool _connectedIsDemo;
+
+    /// <summary>Where copies of the connected machine's $$ go: the demo machine's in GRBL-kopior\Demomaskin, apart from the real machine's.</summary>
+    private string ConnectedBackupFolder => _connectedIsDemo
+        ? System.IO.Path.Combine(AppStorage.Current.GrblBackupFolder, MachineLibrary.DemoName)
+        : AppStorage.Current.GrblBackupFolder;
 
     /// <summary>A copy of the settings before every change from CNC Studio (GrblClient.WriteSettingsAsync).</summary>
     private void InitSettingsBackup()
     {
         GrblClient.BeforeSettingsWrite = (settings, changes) =>
-            GrblBackup.Save(AppStorage.Current.GrblBackupFolder, settings, DateTime.Now, AppStorage.ComputerName, _connectedFirmware,
+        {
+            GrblBackup.Save(ConnectedBackupFolder, settings, DateTime.Now, AppStorage.ComputerName, _connectedFirmware,
                 "Före ändring: " + string.Join(", ", changes.Select(c => $"${c.Number}={GrblBackup.Value(c.Number, c.Value)}")));
+        };
     }
 
     private void StepsCalibration_Click(object sender, RoutedEventArgs e)

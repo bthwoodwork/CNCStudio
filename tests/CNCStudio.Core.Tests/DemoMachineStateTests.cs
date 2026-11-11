@@ -31,6 +31,34 @@ public class DemoMachineStateTests
     }
 
     [Fact]
+    public async Task The_profiles_work_area_can_be_written_to_the_demo_machine_and_survives_a_restart()
+    {
+        var file = Path.Combine(Path.GetTempPath(), "cncstudio-demo-" + Guid.NewGuid().ToString("N") + ".json");
+        var profile = new CNCStudio.Core.MachineProfile { WorkWidthMm = 500, WorkLengthMm = 500, ZTravelMm = 100 };
+        using (var c = new GrblClient(new SimulatedGrbl(speedFactor: 60, stateFile: file)))
+        {
+            await c.ConnectAsync(TimeSpan.FromSeconds(1));
+            var writes = GrblSettings.TravelWritesFromProfile(profile, await c.ReadSettingsAsync());
+            Assert.Contains((130, 500.0), writes);                               // the demo starts as a 750 × 750 X-Carve
+            Assert.Contains((131, 500.0), writes);
+            Assert.True((await c.WriteSettingsAsync(writes)).Success);
+        }
+        using var c2 = new GrblClient(new SimulatedGrbl(speedFactor: 60, stateFile: file));   // "the program was restarted"
+        await c2.ConnectAsync(TimeSpan.FromSeconds(1));
+        var s = await c2.ReadSettingsAsync();
+        Assert.Equal((500.0, 500.0, 100.0), (s[130], s[131], s[132]));
+        Assert.Empty(GrblSettings.TravelWritesFromProfile(profile, s));          // nothing left to offer at the next connect
+    }
+
+    [Fact]
+    public void Only_travel_that_differs_is_written()
+    {
+        var profile = new CNCStudio.Core.MachineProfile { WorkWidthMm = 500, WorkLengthMm = 500, ZTravelMm = 65, HomingDirInvertMask = 0 };
+        var machine = new Dictionary<int, double> { [23] = 3, [130] = 750, [131] = 500, [132] = 65 };
+        Assert.Equal(new[] { (130, 500.0) }, GrblSettings.TravelWritesFromProfile(profile, machine));   // $23 is never written from here
+    }
+
+    [Fact]
     public void Without_a_file_it_is_an_XCarve_750_as_before()
     {
         var sim = new SimulatedGrbl();

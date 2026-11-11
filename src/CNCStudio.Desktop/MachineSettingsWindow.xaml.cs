@@ -37,6 +37,7 @@ public partial class MachineSettingsWindow : Window
     public MachineSettingsWindow(MachineProfile current, Func<MachineProfile, string?> validate, GrblClient? grbl = null)
     {
         InitializeComponent();
+        Title = "Maskininställningar – " + current.Name;
         _original = current;
         _validate = validate;
         _grbl = grbl;
@@ -228,7 +229,8 @@ public partial class MachineSettingsWindow : Window
             CalibratedToGrbl = _calibrated || _original.CalibratedToGrbl,
             Spindle = SpindleGrblBox.IsChecked == true ? SpindleControl.Grbl : SpindleControl.Manual,
             MaxRateX = (_applied ?? _original).MaxRateX, MaxRateY = (_applied ?? _original).MaxRateY,
-            MaxRateZ = (_applied ?? _original).MaxRateZ
+            MaxRateZ = (_applied ?? _original).MaxRateZ,
+            Id = _original.Id, Port = _original.Port
         };
     }
 
@@ -250,7 +252,8 @@ public partial class MachineSettingsWindow : Window
             CalibratedToGrbl = _calibrated || _original.CalibratedToGrbl,
             Spindle = SpindleGrblBox.IsChecked == true ? SpindleControl.Grbl : SpindleControl.Manual,
             MaxRateX = (_applied ?? _original).MaxRateX, MaxRateY = (_applied ?? _original).MaxRateY,
-            MaxRateZ = (_applied ?? _original).MaxRateZ
+            MaxRateZ = (_applied ?? _original).MaxRateZ,
+            Id = _original.Id, Port = _original.Port
         };
         if (_validate(candidate) is string error) { Show(error); return; }
         Result = candidate;
