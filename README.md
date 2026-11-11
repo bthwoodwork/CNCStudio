@@ -266,6 +266,11 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.9.3 – Kalibreringen säger varför den inte öppnas
+- **Maskin → Kalibrera steg/mm…** visar nu en ruta med orsaken när maskinen inte är redo, till exempel "maskinen är i larm – kör homing ($H) först" eller "går bara när maskinen är Idle". Förut hamnade texten bara i jogg-panelens statusrad, så det såg ut som att inget hände.
+
+**Tester:** 410 tester.
+
 ## 0.9.2 – Kalibrering av steg/mm
 - **Maskin → Kalibrera steg/mm…**
   1. Välj axel och sträcka. Standard är 100 mm för X/Y och 20 mm för Z, och både sträcka och hastighet går att ändra.

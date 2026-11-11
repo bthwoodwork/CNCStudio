@@ -169,7 +169,7 @@ public partial class MainWindow
 
     private void StepsCalibration_Click(object sender, RoutedEventArgs e)
     {
-        if (RequireIdle("Kalibrering") is not GrblClient g) return;
+        if (RequireIdle("Kalibrering", dialog: true) is not GrblClient g) return;
         new StepsCalibrationWindow(g, (dx, dy, dz) => GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz)) { Owner = this }.ShowDialog();
     }
 

@@ -42,15 +42,19 @@ public partial class MainWindow
         MposZ.Text = mpos is null ? "" : "MPos " + F3(mpos, 2);
     }
 
-    private GrblClient? RequireIdle(string action)
+    /// <param name="dialog">True for actions started from a menu: the jog panel's status line may not be
+    /// on screen there, so the reason is shown in a dialog instead of silently doing nothing.</param>
+    private GrblClient? RequireIdle(string action, bool dialog = false)
     {
         if (Grbl is not GrblClient g) { Error("Inte ansluten till maskinen."); return null; }
         var state = g.LastStatus?.State;
         if (!GrblMachineCommands.StateAllowsGCode(state))
         {
-            JogStatusText.Text = state == "Alarm"
-                ? $"{action}: maskinen är i larm – kör homing ($H) i konsolen först."
+            var why = state == "Alarm"
+                ? $"{action}: maskinen är i larm – kör homing ($H) först."
                 : $"{action} går bara när maskinen är Idle (nu: {state ?? "okänt"}).";
+            JogStatusText.Text = why;
+            if (dialog) Error(why);
             return null;
         }
         return g;
