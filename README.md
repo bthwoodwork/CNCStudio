@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.7.2)
+﻿# CNC Studio – källkod (senaste: 0.9.5)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,25 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.5 – Verktygsbibliotek och saker per maskin
+Från anteckningarna på Miro-tavlan.
+- **Kalibrering och $$-kopior per maskin:** *Kalibrera steg/mm* och *Säkerhetskopia av inställningar ($$)* finns inte längre i Maskin-menyn. De finns i **Maskin → Maskiner…** (eller ☰ vid maskinväljaren), på varje maskins rad:
+  - **$$-kopior…** visar bara den maskinens kopior. Jämföra, spara och återställa går när just den maskinen är ansluten.
+  - **Kalibrera steg/mm…** går bara på den anslutna maskinen. På de andra är knappen grå med en förklaring.
+  - Nya kopior hamnar i `Inställningar\GRBL-kopior\<maskinens namn>`, och varje kopia säger vilken maskin den kommer från (`; Maskin-id:`). Byter du namn på maskinen följer kopiorna med.
+  - Äldre kopior, som inte säger vilken maskin de kommer från, visas hos alla riktiga maskiner och märks *äldre kopia, maskin okänd*. Demomaskinens gamla kopior i `GRBL-kopior\Demomaskin` visas bara hos demomaskinen.
+- **＋ och − vid maskinväljaren är borta.** Maskiner läggs till och tas bort i Maskiner-fönstret (☰).
+- **Huvudfönstret minns sin storlek och sitt läge** när programmet stängs, även om det var maximerat. Det sparas per dator i `%APPDATA%\CNCStudio\settings.json`. Om fönstret skulle hamna utanför skärmen, till exempel för att en extra skärm har kopplats bort, öppnas det i standardläget.
+- **Verktygsbiblioteket:**
+  - **Spara fräsen** sparar fräsen i biblioteket direkt, och fönstret stängs inte. Det går därför att lägga in flera fräsar i rad. *Ny fräs*, *Kopiera*, *Ta bort* och ändringar av kategorier sparas också direkt. **Stäng** stänger fönstret. Har du ändrat i en fräs utan att spara frågar programmet först (*Spara fräsen*, *Släng ändringarna* eller *Avbryt*). Samma fråga kommer när du byter till en annan fräs i listan. *Ångra ändringar* visar fräsen som den är sparad.
+  - **Verktygsnummer** (T-nummer, t.ex. numret på asken), med knappen *Nästa lediga*. Numret visas före namnet i listan och i CAM-panelens fräsväljare. Två fräsar kan inte ha samma nummer. Numret skrivs aldrig i G-code, eftersom maskinen saknar verktygsväxlare.
+  - **Inköp:** *Inköpt från*, *Artikelnummer* och *Länk*, med en knapp som öppnar länken i webbläsaren.
+  - **Mått som i Fusions verktygsbibliotek:** skaftdiameter, total längd, skärlängd och utstick under spännhylsan. För V-fräsar finns också spetsdiameter. Dessutom skärmaterial (hårdmetall, HSS …). Alla fält är frivilliga. Är skärlängden längre än utsticket visas en varning, men fräsen kan sparas ändå.
+  - **Kategorier:** *Ny…*, *Byt namn…* (alla fräsar i kategorin följer med) och *Ta bort…* (en kategori med fräsar kräver att du väljer vart fräsarna ska). Ordningen sparas, och listan och fräsväljaren i CAM visar kategorierna i den ordningen. En tom kategori syns i listan över kategorier när du väljer kategori för en fräs.
+  - Gamla bibliotek öppnas som förut, med de nya fälten tomma.
+
+**Tester:** 439 tester. Kompilerad utan fel, men WPF-delen är inte körd i Windows ännu.
 
 ## 0.9.4 – En profil per maskin
 - **Maskinkontroll → Maskin:** varje maskin har en egen maskinprofil i `Inställningar\Maskiner`, och **demomaskinen är en egen maskin**. Den kan ställas in och testas precis som en riktig maskin nummer två.

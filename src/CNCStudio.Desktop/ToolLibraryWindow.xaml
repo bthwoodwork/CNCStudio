@@ -1,33 +1,44 @@
-<Window x:Class="CNCStudio.Desktop.ToolLibraryWindow"
+﻿<Window x:Class="CNCStudio.Desktop.ToolLibraryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Verktygsbibliotek" Width="1060" Height="760" MinWidth="860" MinHeight="600"
-        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Background="#17212C" Foreground="#E8F1FA">
+        Title="Verktygsbibliotek" Width="1120" Height="820" MinWidth="900" MinHeight="620"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Background="#17212C" Foreground="#E8F1FA"
+        Closing="Window_Closing">
   <Window.Resources>
     <Style TargetType="Button"><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="12,5"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
     <Style TargetType="TextBox"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="5"/><Setter Property="Foreground" Value="#152332"/><Setter Property="Background" Value="#F5F8FB"/></Style>
     <Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="3,3,10,3"/></Style>
+    <Style x:Key="Section" TargetType="TextBlock"><Setter Property="FontWeight" Value="Bold"/><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="#A5C0D9"/><Setter Property="Margin" Value="3,14,3,2"/></Style>
+    <Style x:Key="Small" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="Margin" Value="3,3,3,0"/></Style>
   </Window.Resources>
   <DockPanel Margin="12">
     <StackPanel DockPanel.Dock="Top" Margin="3,0,3,8">
       <TextBlock Text="VERKTYGSBIBLIOTEK" FontSize="18" FontWeight="Bold" Margin="0,0,0,2"/>
       <TextBlock TextWrapping="Wrap" Foreground="#BDCEE0" Margin="0"
-                 Text="Dina fräsar i kategorier. Varje fräs har standardvärden och kan ha egen skärdata per material. När du väljer fräs i CAM-panelen används skärdatan för projektets material, annars standardvärdena."/>
+                 Text="Dina fräsar i kategorier. Varje fräs har standardvärden och kan ha egen skärdata per material. När du väljer fräs i CAM-panelen används skärdatan för projektets material, annars standardvärdena. Spara fräsen sparar direkt i biblioteket."/>
       <TextBlock x:Name="PathText" Foreground="#8CA3BA" FontSize="11" Margin="0,2,0,0"/>
     </StackPanel>
-    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-      <Button Content="Spara" Background="#24618C" IsDefault="True" Click="Save_Click"/>
-      <Button Content="Avbryt" IsCancel="True"/>
-    </StackPanel>
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+      <Button DockPanel.Dock="Right" Content="Stäng" IsCancel="True" ToolTip="Stäng (Esc). Har du ändrat i en fräs utan att spara får du frågan först."/>
+      <TextBlock x:Name="SavedText" Foreground="#7CD99C" Margin="3" TextTrimming="CharacterEllipsis"/>
+    </DockPanel>
     <Grid>
-      <Grid.ColumnDefinitions><ColumnDefinition Width="290"/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
       <DockPanel>
-        <UniformGrid DockPanel.Dock="Bottom" Columns="3">
-          <Button Content="Ny" Click="New_Click"/>
-          <Button Content="Kopiera" Click="Copy_Click"/>
-          <Button Content="Ta bort" Click="Delete_Click"/>
-        </UniformGrid>
-        <ListBox x:Name="ToolList" DisplayMemberPath="Name" SelectionChanged="ToolList_SelectionChanged"
+        <StackPanel DockPanel.Dock="Bottom">
+          <UniformGrid Columns="3">
+            <Button Content="Ny fräs" Click="New_Click" ToolTip="En ny fräs i samma kategori som den markerade"/>
+            <Button Content="Kopiera" Click="Copy_Click" ToolTip="En kopia av den markerade fräsen"/>
+            <Button Content="Ta bort" Click="Delete_Click"/>
+          </UniformGrid>
+          <TextBlock Text="KATEGORIER" Style="{StaticResource Section}" Margin="4,8,3,0"/>
+          <UniformGrid Columns="3">
+            <Button Content="Ny…" Click="NewCategory_Click" ToolTip="Lägg till en kategori (den visas i listan när en fräs ligger i den)"/>
+            <Button Content="Byt namn…" Click="RenameCategory_Click" ToolTip="Byt namn på en kategori – alla fräsar i den följer med"/>
+            <Button Content="Ta bort…" Click="DeleteCategory_Click" ToolTip="Ta bort en kategori och flytta dess fräsar till en annan"/>
+          </UniformGrid>
+        </StackPanel>
+        <ListBox x:Name="ToolList" DisplayMemberPath="ListName" SelectionChanged="ToolList_SelectionChanged"
                  Background="#1C2A39" Foreground="#E8F1FA" BorderBrush="#50657D">
           <ListBox.GroupStyle>
             <GroupStyle>
@@ -38,58 +49,94 @@
           </ListBox.GroupStyle>
         </ListBox>
       </DockPanel>
-      <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
-      <StackPanel x:Name="Editor">
-        <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <Grid.RowDefinitions>
-            <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
-          </Grid.RowDefinitions>
-          <TextBlock Text="Namn"/><TextBox x:Name="NameBox" Grid.Column="1"/>
-          <TextBlock Grid.Row="1" Text="Kategori"/>
-          <ComboBox x:Name="CategoryBox" Grid.Row="1" Grid.Column="1" Margin="3" IsEditable="True"
-                    ToolTip="Välj en kategori eller skriv en ny, t.ex. &quot;Raka fräsar&quot;, &quot;Kompressionsfräsar&quot;, &quot;Planfräsar&quot;"/>
-          <TextBlock Grid.Row="2" Text="Typ"/>
-          <ComboBox x:Name="KindBox" Grid.Row="2" Grid.Column="1" Margin="3" SelectionChanged="KindBox_SelectionChanged">
-            <ComboBoxItem Content="Rak fräs (plan botten)"/><ComboBoxItem Content="Kulfräs"/><ComboBoxItem Content="V-fräs"/>
-          </ComboBox>
-          <TextBlock Grid.Row="3" Text="Diameter (mm)"/><TextBox x:Name="DiameterBox" Grid.Row="3" Grid.Column="1"/>
-          <TextBlock Grid.Row="4" Text="Vinkel (grader)" x:Name="AngleLabel"/><TextBox x:Name="AngleBox" Grid.Row="4" Grid.Column="1" ToolTip="V-fräsens spetsvinkel, t.ex. 60 eller 90"/>
-          <TextBlock Grid.Row="5" Text="Antal skär"/><TextBox x:Name="FlutesBox" Grid.Row="5" Grid.Column="1"/>
-          <TextBlock Grid.Row="6" Text="Anteckning"/><TextBox x:Name="NotesBox" Grid.Row="6" Grid.Column="1"/>
-        </Grid>
+      <DockPanel Grid.Column="2">
+        <Border DockPanel.Dock="Bottom" Background="#1C2A39" CornerRadius="5" Padding="6" Margin="0,8,0,0">
+          <DockPanel>
+            <Button x:Name="SaveToolButton" DockPanel.Dock="Left" Content="Spara fräsen" Click="SaveTool_Click" Background="#24618C" IsDefault="True"
+                    ToolTip="Sparar fräsen i verktygsbiblioteket direkt (Enter). Fönstret stängs inte."/>
+            <Button DockPanel.Dock="Left" Content="Ångra ändringar" Click="Revert_Click" ToolTip="Visa fräsen som den är sparad"/>
+            <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="#FFB38A" Margin="6,3,3,3"/>
+          </DockPanel>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel x:Name="Editor">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+              </Grid.RowDefinitions>
+              <TextBlock Text="Namn"/><TextBox x:Name="NameBox" Grid.Column="1"/>
+              <TextBlock Grid.Row="1" Text="Verktygsnummer"/>
+              <DockPanel Grid.Row="1" Grid.Column="1">
+                <Button DockPanel.Dock="Right" Content="Nästa lediga" Click="NextNumber_Click" Padding="8,3" Margin="3"/>
+                <TextBox x:Name="NumberBox" ToolTip="Ditt eget nummer på fräsen, t.ex. numret på asken (T3). Tomt = inget nummer. Skrivs aldrig i G-code – maskinen har ingen verktygsväxlare."/>
+              </DockPanel>
+              <TextBlock Grid.Row="2" Text="Kategori"/>
+              <ComboBox x:Name="CategoryBox" Grid.Row="2" Grid.Column="1" Margin="3" IsEditable="True"
+                        ToolTip="Välj en kategori eller skriv en ny, t.ex. &quot;Raka fräsar&quot;, &quot;Kompressionsfräsar&quot;, &quot;Planfräsar&quot;"/>
+              <TextBlock Grid.Row="3" Text="Typ"/>
+              <ComboBox x:Name="KindBox" Grid.Row="3" Grid.Column="1" Margin="3" SelectionChanged="KindBox_SelectionChanged">
+                <ComboBoxItem Content="Rak fräs (plan botten)"/><ComboBoxItem Content="Kulfräs"/><ComboBoxItem Content="V-fräs"/>
+              </ComboBox>
+              <TextBlock Grid.Row="4" Text="Diameter (mm)"/><TextBox x:Name="DiameterBox" Grid.Row="4" Grid.Column="1" ToolTip="Skärdiametern (för V-fräs: största diametern)"/>
+              <TextBlock Grid.Row="5" Text="Vinkel (grader)" x:Name="AngleLabel"/><TextBox x:Name="AngleBox" Grid.Row="5" Grid.Column="1" ToolTip="V-fräsens spetsvinkel, t.ex. 60 eller 90"/>
+              <TextBlock Grid.Row="6" Text="Spetsdiameter (mm)" x:Name="TipLabel"/><TextBox x:Name="TipBox" Grid.Row="6" Grid.Column="1" ToolTip="V-fräsens platta spets. 0 = spetsig. Tomt = okänt."/>
+              <TextBlock Grid.Row="7" Text="Antal skär"/><TextBox x:Name="FlutesBox" Grid.Row="7" Grid.Column="1"/>
+              <TextBlock Grid.Row="8" Text="Skärmaterial"/>
+              <ComboBox x:Name="CutterMaterialBox" Grid.Row="8" Grid.Column="1" Margin="3" IsEditable="True" ToolTip="Vad fräsen är gjord av. Välj eller skriv."/>
+              <TextBlock Grid.Row="9" Text="Anteckning"/><TextBox x:Name="NotesBox" Grid.Row="9" Grid.Column="1"/>
+            </Grid>
 
-        <TextBlock Text="STANDARDVÄRDEN – när materialet saknar egen skärdata" FontWeight="Bold" FontSize="11" Foreground="#A5C0D9" Margin="3,12,3,2"/>
-        <UniformGrid Columns="4">
-          <StackPanel><TextBlock Text="Matning (mm/min)" FontSize="11"/><TextBox x:Name="FeedBox"/></StackPanel>
-          <StackPanel><TextBlock Text="Nedmatning (mm/min)" FontSize="11"/><TextBox x:Name="PlungeBox"/></StackPanel>
-          <StackPanel><TextBlock Text="Djup per pass (mm)" FontSize="11"/><TextBox x:Name="PassBox"/></StackPanel>
-          <StackPanel><TextBlock Text="Varvtal (varv/min)" FontSize="11"/><TextBox x:Name="RpmBox"/></StackPanel>
-        </UniformGrid>
+            <TextBlock Text="MÅTT – mät med skjutmått, lämna tomt om du inte vet" Style="{StaticResource Section}"/>
+            <UniformGrid Columns="4">
+              <StackPanel><TextBlock Text="Skaftdiameter (mm)" Style="{StaticResource Small}"/><TextBox x:Name="ShankBox" ToolTip="Skaftet som spännhylsan håller i, t.ex. 6,35 (1/4&quot;) eller 3,175 (1/8&quot;)"/></StackPanel>
+              <StackPanel><TextBlock Text="Total längd (mm)" Style="{StaticResource Small}"/><TextBox x:Name="OverallBox" ToolTip="Hela fräsens längd"/></StackPanel>
+              <StackPanel><TextBlock Text="Skärlängd (mm)" Style="{StaticResource Small}"/><TextBox x:Name="FluteBox" ToolTip="Hur långa skären är – djupare raka väggar än så går inte att fräsa"/></StackPanel>
+              <StackPanel><TextBlock Text="Utstick (mm)" Style="{StaticResource Small}"/><TextBox x:Name="StickoutBox" ToolTip="Hur långt fräsen sticker ut under spännhylsan"/></StackPanel>
+            </UniformGrid>
 
-        <TextBlock Text="SKÄRDATA PER MATERIAL" FontWeight="Bold" FontSize="11" Foreground="#A5C0D9" Margin="3,14,3,2"/>
-        <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#BDCEE0" Margin="3,0,3,4"
-                   Text="Fyll i alla fyra värdena för de material du har provat fräsen i. Lämna raden tom för att använda standardvärdena. Materialen läggs upp i Materialbiblioteket."/>
-        <DataGrid x:Name="CuttingGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
-                  HeadersVisibility="Column" Margin="3" FontSize="12" MinHeight="140"
-                  Background="#F5F8FB" RowBackground="#F5F8FB" AlternatingRowBackground="#E7EEF5" Foreground="#152332">
-          <DataGrid.Columns>
-            <DataGridTextColumn Header="Material" Binding="{Binding Material}" IsReadOnly="True" Width="*"/>
-            <DataGridTextColumn Header="Matning" Binding="{Binding Feed, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
-            <DataGridTextColumn Header="Nedmatning" Binding="{Binding Plunge, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
-            <DataGridTextColumn Header="Djup/pass" Binding="{Binding Pass, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
-            <DataGridTextColumn Header="Varvtal" Binding="{Binding Rpm, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
-          </DataGrid.Columns>
-        </DataGrid>
-        <StackPanel Orientation="Horizontal">
-          <Button Content="Fyll vald rad med standardvärden" Click="FillDefaults_Click" ToolTip="Kopierar standardvärdena till markerat material som utgångspunkt"/>
-          <Button Content="Töm vald rad" Click="ClearRow_Click"/>
-        </StackPanel>
+            <TextBlock Text="INKÖP" Style="{StaticResource Section}"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+              <TextBlock Text="Inköpt från"/><TextBox x:Name="VendorBox" Grid.Column="1" ToolTip="Butik eller tillverkare"/>
+              <TextBlock Grid.Row="1" Text="Artikelnummer"/><TextBox x:Name="ArticleBox" Grid.Row="1" Grid.Column="1"/>
+              <TextBlock Grid.Row="2" Text="Länk"/>
+              <DockPanel Grid.Row="2" Grid.Column="1">
+                <Button DockPanel.Dock="Right" Content="Öppna" Click="OpenLink_Click" Padding="8,3" Margin="3" ToolTip="Öppna länken i webbläsaren"/>
+                <TextBox x:Name="LinkBox" ToolTip="Produktsidan, t.ex. för att beställa en ny"/>
+              </DockPanel>
+            </Grid>
 
-        <Button Content="Uppdatera fräsen" HorizontalAlignment="Left" Margin="3,10,3,3" Click="Apply_Click" Background="#24618C"/>
-        <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="#FFB38A" Margin="3,4,3,3"/>
-      </StackPanel>
-      </ScrollViewer>
+            <TextBlock Text="STANDARDVÄRDEN – när materialet saknar egen skärdata" Style="{StaticResource Section}" Margin="3,14,3,2"/>
+            <UniformGrid Columns="4">
+              <StackPanel><TextBlock Text="Matning (mm/min)" Style="{StaticResource Small}"/><TextBox x:Name="FeedBox"/></StackPanel>
+              <StackPanel><TextBlock Text="Nedmatning (mm/min)" Style="{StaticResource Small}"/><TextBox x:Name="PlungeBox"/></StackPanel>
+              <StackPanel><TextBlock Text="Djup per pass (mm)" Style="{StaticResource Small}"/><TextBox x:Name="PassBox"/></StackPanel>
+              <StackPanel><TextBlock Text="Varvtal (varv/min)" Style="{StaticResource Small}"/><TextBox x:Name="RpmBox"/></StackPanel>
+            </UniformGrid>
+
+            <TextBlock Text="SKÄRDATA PER MATERIAL" Style="{StaticResource Section}"/>
+            <TextBlock TextWrapping="Wrap" FontSize="11.5" Foreground="#BDCEE0" Margin="3,0,3,4"
+                       Text="Fyll i alla fyra värdena för de material du har provat fräsen i. Lämna raden tom för att använda standardvärdena. Materialen läggs upp i Materialbiblioteket."/>
+            <DataGrid x:Name="CuttingGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
+                      HeadersVisibility="Column" Margin="3" FontSize="12" MinHeight="140"
+                      Background="#F5F8FB" RowBackground="#F5F8FB" AlternatingRowBackground="#E7EEF5" Foreground="#152332">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Material" Binding="{Binding Material}" IsReadOnly="True" Width="*"/>
+                <DataGridTextColumn Header="Matning" Binding="{Binding Feed, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+                <DataGridTextColumn Header="Nedmatning" Binding="{Binding Plunge, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+                <DataGridTextColumn Header="Djup/pass" Binding="{Binding Pass, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                <DataGridTextColumn Header="Varvtal" Binding="{Binding Rpm, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+              </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Fyll vald rad med standardvärden" Click="FillDefaults_Click" ToolTip="Kopierar standardvärdena till markerat material som utgångspunkt"/>
+              <Button Content="Töm vald rad" Click="ClearRow_Click"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
     </Grid>
   </DockPanel>
 </Window>

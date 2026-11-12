@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -7,7 +7,7 @@ using CNCStudio.Core.Grbl;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Maskin → Kalibrera steg/mm: move one axis a known distance, measure how far it really went, and write
+/// Maskiner → (the connected machine) → Kalibrera steg/mm: move one axis a known distance, measure how far it really went, and write
 /// the corrected $100/$101/$102. Writing goes through WriteSettingsAsync, so the old settings are saved
 /// as a copy first and the value is read back. Repeat to check: the error should then be close to 0.
 /// </summary>
@@ -28,10 +28,10 @@ public sealed class StepsCalibrationWindow : Window
     private StepsCalibrationResult? _pending;
     private int _lastDirection;
 
-    public StepsCalibrationWindow(GrblClient grbl, Func<double, double, double, string?> checkJog)
+    public StepsCalibrationWindow(GrblClient grbl, Func<double, double, double, string?> checkJog, string? machineName = null)
     {
         _grbl = grbl; _checkJog = checkJog;
-        Title = "Kalibrera steg/mm";
+        Title = machineName is null ? "Kalibrera steg/mm" : $"Kalibrera steg/mm – {machineName}";
         Width = 600; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.CanMinimize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = B(0x17, 0x21, 0x2C); Foreground = Ink; FontFamily = new FontFamily("Segoe UI");
@@ -172,7 +172,7 @@ public sealed class StepsCalibrationWindow : Window
             _settings = result.VerifiedSettings ?? await _grbl.ReadSettingsAsync();
             ShowCurrent();
             _pending = null; _measured.Text = "";
-            Say($"${r.SettingNumber} är skrivet och kontrolläst. En kopia av de gamla inställningarna sparades först (Maskin → Säkerhetskopia). " +
+            Say($"${r.SettingNumber} är skrivet och kontrolläst. En kopia av de gamla inställningarna sparades först (Maskiner → $$-kopior). " +
                 "Kontrollera: flytta tillbaka, flytta fram igen och mät – skillnaden ska nu vara nära 0. Kör homing efteråt.", Good);
         }
         catch (Exception ex) { Say("Skrivningen avbröts: " + ex.Message, Bad); }
