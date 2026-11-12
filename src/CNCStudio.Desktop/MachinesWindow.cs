@@ -9,7 +9,7 @@ namespace CNCStudio.Desktop;
 /// <summary>
 /// Maskin → Maskiner: all machines (one profile each, the demo machine included) with their size, home
 /// corner and port. Choose, edit, add and remove machines here, and reach what belongs to one machine: its
-/// $$ copies and the steps/mm calibration (the connected machine only). Machines cannot be switched while connected.
+/// $$ copies, the steps/mm calibration and the squaring check (the last two on the connected machine only). Machines cannot be switched while connected.
 /// </summary>
 public sealed class MachinesWindow : Window
 {
@@ -21,7 +21,7 @@ public sealed class MachinesWindow : Window
     private readonly Func<string?> _chosenId;
     private readonly Func<string?> _connectedId;
     private readonly Action<MachineProfile> _use, _edit;
-    private readonly Action<MachineProfile, Window> _calibrate, _backups;
+    private readonly Action<MachineProfile, Window> _calibrate, _backups, _squaring;
     private readonly Func<MachineProfile, bool> _delete;
     private readonly Action _create;
 
@@ -29,10 +29,10 @@ public sealed class MachinesWindow : Window
     /// <param name="connectedId">The connected machine, null when not connected.</param>
     public MachinesWindow(Func<string?> chosenId, Func<string?> connectedId, Action<MachineProfile> use,
         Action<MachineProfile> edit, Func<MachineProfile, bool> delete, Action create,
-        Action<MachineProfile, Window> calibrate, Action<MachineProfile, Window> backups)
+        Action<MachineProfile, Window> calibrate, Action<MachineProfile, Window> backups, Action<MachineProfile, Window> squaring)
     {
         _chosenId = chosenId; _connectedId = connectedId; _use = use; _edit = edit; _delete = delete; _create = create;
-        _calibrate = calibrate; _backups = backups;
+        _calibrate = calibrate; _backups = backups; _squaring = squaring;
         Title = "Maskiner";
         Width = 720; SizeToContent = SizeToContent.Height; MaxHeight = 820; ResizeMode = ResizeMode.CanMinimize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -107,6 +107,12 @@ public sealed class MachinesWindow : Window
         ToolTipService.SetShowOnDisabled(calibrate, true);
         calibrate.Click += (_, _) => { _calibrate(m, this); Build(); };
         buttons.Children.Add(calibrate);
+        var square = Btn("Kontrollera vinkel…", B(0x34, 0x47, 0x5A)); square.IsEnabled = isConnected;
+        square.ToolTip = isConnected ? "XY-squaring: flytta X och Y, märk tre punkter, mät – och få veta hur mycket ena änden av gantryt ska flyttas."
+                                     : $"Anslut till {m.Name} först – kontrollen görs på den anslutna maskinen.";
+        ToolTipService.SetShowOnDisabled(square, true);
+        square.Click += (_, _) => { _squaring(m, this); Build(); };
+        buttons.Children.Add(square);
         if (!demo)
         {
             var del = Btn("Ta bort…", B(0x5A, 0x34, 0x3A)); del.IsEnabled = canSwitch && !lastReal;

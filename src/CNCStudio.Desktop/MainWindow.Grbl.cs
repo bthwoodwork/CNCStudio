@@ -222,6 +222,20 @@ public partial class MainWindow
         new StepsCalibrationWindow(g, (dx, dy, dz) => GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz), machine.Name) { Owner = owner }.ShowDialog();
     }
 
+    /// <summary>Kontrollera vinkel (XY-squaring) for <paramref name="machine"/> – only on the connected machine.</summary>
+    private void CheckSquaring(MachineProfile machine, Window owner)
+    {
+        if (_grbl is null || machine.Id != _document.Machine.Id)
+        {
+            AppDialog.Show(owner, $"Vinkelkontrollen görs på den anslutna maskinen. Anslut till {machine.Name} först (Maskinkontroll → Anslut) och kör homing.",
+                "Kontrollera vinkel", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (RequireIdle("Vinkelkontroll", dialog: true) is not GrblClient g) return;
+        new SquaringWindow(g, JogLimits, (dx, dy, dz) => GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz),
+            AppStorage.Current.Machines.SquaringLogPath(machine.Id!)) { Owner = owner }.ShowDialog();
+    }
+
     /// <summary>The $$ copies of <paramref name="machine"/>; comparing and restoring when it is the connected machine.</summary>
     private void ShowBackups(MachineProfile machine, Window owner)
     {

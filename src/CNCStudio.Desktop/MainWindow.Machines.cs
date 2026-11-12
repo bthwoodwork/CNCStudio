@@ -93,7 +93,8 @@ public partial class MainWindow
             delete: DeleteMachine,
             create: CreateMachine,
             calibrate: CalibrateMachine,
-            backups: ShowBackups) { Owner = this }.ShowDialog();
+            backups: ShowBackups,
+            squaring: CheckSquaring) { Owner = this }.ShowDialog();
     }
 
     /// <summary>A new machine as a copy of the chosen one, then Maskininställningar to name and size it.</summary>
