@@ -58,7 +58,6 @@ public partial class MainWindow
         ConnectButton.IsEnabled = false;
         SetConnectionBanner("ANSLUTER…", $"{port}, {GrblProtocol.BaudRate} baud", Color.FromRgb(70, 80, 40));
         bool demo = port == DemoPort;
-        _connectedIsDemo = demo;
         UseMachineForPort(port);
         IGrblTransport transport = demo ? (_demoMachine ??= NewDemoMachine()) : new SerialGrblTransport(port);
         var client = new GrblClient(transport);
@@ -197,32 +196,52 @@ public partial class MainWindow
 
     /// <summary>What the controller said when connecting (welcome or $I), written into setting copies.</summary>
     private string? _connectedFirmware;
-    /// <summary>True while connected to the simulated demo machine (its $$ copies go in a folder of their own).</summary>
-    private bool _connectedIsDemo;
-
-    /// <summary>Where copies of the connected machine's $$ go: the demo machine's in GRBL-kopior\Demomaskin, apart from the real machine's.</summary>
-    private string ConnectedBackupFolder => _connectedIsDemo
-        ? System.IO.Path.Combine(AppStorage.Current.GrblBackupFolder, MachineLibrary.DemoName)
-        : AppStorage.Current.GrblBackupFolder;
 
     /// <summary>A copy of the settings before every change from CNC Studio (GrblClient.WriteSettingsAsync).</summary>
     private void InitSettingsBackup()
     {
         GrblClient.BeforeSettingsWrite = (settings, changes) =>
         {
-            GrblBackup.Save(ConnectedBackupFolder, settings, DateTime.Now, AppStorage.ComputerName, _connectedFirmware,
-                "Före ändring: " + string.Join(", ", changes.Select(c => $"${c.Number}={GrblBackup.Value(c.Number, c.Value)}")));
+            // Connecting picks the machine, so the project's machine is the connected one.
+            var machine = _document.Machine;
+            GrblBackup.Save(GrblBackup.MachineFolder(AppStorage.Current.GrblBackupFolder, machine), settings, DateTime.Now, AppStorage.ComputerName,
+                _connectedFirmware, "Före ändring: " + string.Join(", ", changes.Select(c => $"${c.Number}={GrblBackup.Value(c.Number, c.Value)}")), machine);
         };
     }
 
-    private void StepsCalibration_Click(object sender, RoutedEventArgs e)
+    /// <summary>Kalibrera steg/mm for <paramref name="machine"/> – only the connected machine can be calibrated.</summary>
+    private void CalibrateMachine(MachineProfile machine, Window owner)
     {
+        if (_grbl is null || machine.Id != _document.Machine.Id)
+        {
+            AppDialog.Show(owner, $"Kalibreringen görs på den anslutna maskinen. Anslut till {machine.Name} först (Maskinkontroll → Anslut) och kör homing.",
+                "Kalibrera steg/mm", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
         if (RequireIdle("Kalibrering", dialog: true) is not GrblClient g) return;
-        new StepsCalibrationWindow(g, (dx, dy, dz) => GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz)) { Owner = this }.ShowDialog();
+        new StepsCalibrationWindow(g, (dx, dy, dz) => GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz), machine.Name) { Owner = owner }.ShowDialog();
     }
 
-    private void GrblBackup_Click(object sender, RoutedEventArgs e) =>
-        new GrblBackupWindow(Grbl, _connectedFirmware) { Owner = this }.ShowDialog();
+    /// <summary>Kontrollera vinkel (XY-squaring) for <paramref name="machine"/> – only on the connected machine.</summary>
+    private void CheckSquaring(MachineProfile machine, Window owner)
+    {
+        if (_grbl is null || machine.Id != _document.Machine.Id)
+        {
+            AppDialog.Show(owner, $"Vinkelkontrollen görs på den anslutna maskinen. Anslut till {machine.Name} först (Maskinkontroll → Anslut) och kör homing.",
+                "Kontrollera vinkel", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (RequireIdle("Vinkelkontroll", dialog: true) is not GrblClient g) return;
+        new SquaringWindow(g, JogLimits, (dx, dy, dz) => GrblMachineCommands.CheckJog(g.LastStatus, JogLimits, dx, dy, dz),
+            AppStorage.Current.Machines.SquaringLogPath(machine.Id!)) { Owner = owner }.ShowDialog();
+    }
+
+    /// <summary>The $$ copies of <paramref name="machine"/>; comparing and restoring when it is the connected machine.</summary>
+    private void ShowBackups(MachineProfile machine, Window owner)
+    {
+        bool connected = _grbl is not null && machine.Id == _document.Machine.Id;
+        new GrblBackupWindow(machine, connected ? Grbl : null, connected ? _connectedFirmware : null) { Owner = owner }.ShowDialog();
+    }
 
     private void StartSessionLog(string port)
     {

@@ -36,7 +36,7 @@ public partial class MainWindow
         {
             CamToolPicker.ItemsSource = null;
             CamToolPicker.ItemsSource = new[] { CustomTool }
-                .Concat(_tools.Tools.OrderBy(t => t.CategoryOrDefault).ThenBy(t => t.Diameter).ThenBy(t => t.Name)).ToList();
+                .Concat(_tools.Tools.OrderBy(t => _tools.CategoryOrder(t.CategoryOrDefault)).ThenBy(t => t.Diameter).ThenBy(t => t.Name)).ToList();
             CamToolPicker.SelectedIndex = 0;
         }
         finally { _loadingCam = keep; }
@@ -74,18 +74,21 @@ public partial class MainWindow
 
     private void ManageTools_Click(object sender, RoutedEventArgs e)
     {
-        var w = new ToolLibraryWindow(_tools, _materials, AppStorage.Current.ToolLibraryPath) { Owner = this };
-        if (w.ShowDialog() != true || w.Result is null) return;
-        try
+        // The window saves every change at once (Spara fräsen, new/removed tools, categories) and stays open.
+        new ToolLibraryWindow(_tools, _materials, AppStorage.Current.ToolLibraryPath, save: library =>
         {
-            w.Result.Save(AppStorage.Current.ToolLibraryPath);
-            _tools = w.Result;
-            var current = SelectedTool?.Name;
-            RefreshToolPicker();
-            SelectTool(current);
-            StatusText.Text = $"Verktygsbiblioteket sparat ({_tools.Tools.Count} fräsar): {AppStorage.Current.ToolLibraryPath}";
-        }
-        catch (Exception ex) { Error("Kunde inte spara verktygsbiblioteket: " + ex.Message); }
+            try
+            {
+                library.Save(AppStorage.Current.ToolLibraryPath);
+                var current = SelectedTool?.Name;
+                _tools = library.Clone();
+                RefreshToolPicker();
+                SelectTool(current);
+                StatusText.Text = $"Verktygsbiblioteket sparat ({_tools.Tools.Count} fräsar): {AppStorage.Current.ToolLibraryPath}";
+                return null;
+            }
+            catch (Exception ex) { return ex.Message; }
+        }) { Owner = this }.ShowDialog();
     }
 
     // ---- Materials ----

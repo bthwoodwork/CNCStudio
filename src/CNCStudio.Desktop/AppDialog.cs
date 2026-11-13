@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -76,6 +76,40 @@ public sealed class AppDialog : Window
         d.Build(title, accent, glyph, body, buttons, defaultResult);
         d.ShowDialog();
         return d._result;
+    }
+
+    /// <summary>
+    /// Asks for a text (e.g. a name). With <paramref name="choices"/> the field is a list to pick from that
+    /// can also be typed in (<paramref name="choicesOnly"/>: only the listed values). Null = cancelled.
+    /// </summary>
+    public static string? Prompt(Window? owner, string message, string title, string initial = "",
+        IReadOnlyList<string>? choices = null, bool choicesOnly = false, string okText = "OK")
+    {
+        var d = new AppDialog(owner, title);
+        var (accent, glyph) = Look(MessageBoxImage.Question);
+        var body = new StackPanel();
+        AddFormattedText(body, message);
+        Control field;
+        Func<string> read;
+        Action focus;
+        if (choices is null)
+        {
+            var box = new TextBox { Text = initial, Margin = new Thickness(0, 10, 0, 0), Padding = new Thickness(6, 4, 6, 4), FontSize = 13 };
+            field = box; read = () => box.Text;
+            focus = () => { box.Focus(); box.SelectAll(); };
+        }
+        else
+        {
+            var combo = new ComboBox { ItemsSource = choices, IsEditable = !choicesOnly, Text = initial, Margin = new Thickness(0, 10, 0, 0), FontSize = 13 };
+            if (choicesOnly) combo.SelectedItem = choices.FirstOrDefault(c => c == initial) ?? choices.FirstOrDefault();
+            field = combo; read = () => (choicesOnly ? combo.SelectedItem as string : combo.Text) ?? "";
+            focus = () => combo.Focus();
+        }
+        body.Children.Add(field);
+        d.Build(title, accent, glyph, body, new[] { (okText, MessageBoxResult.OK), ("Avbryt", MessageBoxResult.Cancel) }, MessageBoxResult.OK);
+        d.Loaded += (_, _) => focus();   // after Build's own Loaded, which focuses the OK button
+        d.ShowDialog();
+        return d._result == MessageBoxResult.OK ? read().Trim() : null;
     }
 
     /// <summary>

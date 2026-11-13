@@ -13,6 +13,35 @@ public sealed class AppSettings
     /// <summary>A folder that a sync client (Google Drive for desktop, OneDrive, Dropbox) keeps in step
     /// between computers. Null = everything stays on this computer.</summary>
     public string? SyncFolder { get; set; }
+
+    /// <summary>The main window's size and place when it was last closed (null = default size, centred).</summary>
+    public WindowPlacement? MainWindow { get; set; }
+}
+
+/// <summary>A window's size and place on the screen, in WPF units (1/96 inch).</summary>
+public sealed class WindowPlacement
+{
+    public double Left { get; set; }
+    public double Top { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public bool Maximized { get; set; }
+
+    /// <summary>
+    /// The placement to use on a screen area (the virtual screen, all monitors together), or null if the
+    /// window would end up out of sight (e.g. it was closed on a monitor that is no longer connected).
+    /// The size is kept within the minimum size and the screen; the title bar must be on the screen.
+    /// </summary>
+    public WindowPlacement? FitTo(double screenLeft, double screenTop, double screenWidth, double screenHeight, double minWidth, double minHeight)
+    {
+        if (!(Width > 0 && Height > 0) || !double.IsFinite(Left) || !double.IsFinite(Top) || screenWidth <= 0 || screenHeight <= 0) return null;
+        double w = Math.Min(Math.Max(Width, minWidth), screenWidth), h = Math.Min(Math.Max(Height, minHeight), screenHeight);
+        // At least 120 units of the title bar (its top 30 units) must be on the screen to grab the window.
+        double visibleX = Math.Min(Left + w, screenLeft + screenWidth) - Math.Max(Left, screenLeft);
+        bool titleOnScreen = Top >= screenTop - 1 && Top + 30 <= screenTop + screenHeight;
+        if (visibleX < 120 || !titleOnScreen) return null;
+        return new WindowPlacement { Left = Left, Top = Top, Width = w, Height = h, Maximized = Maximized };
+    }
 }
 
 /// <summary>
@@ -108,9 +137,8 @@ public sealed class AppStorage
             // This computer's logs follow along (files already there are kept).
             if (CopyFolderContents(LogsFolder, Path.Combine(folder, LogsFolderName, ComputerName)) > 0) copied.Add(Path.Combine(LogsFolderName, ComputerName));
         }
-        Settings = new AppSettings { SyncFolder = folder };
-        Directory.CreateDirectory(_local);
-        WriteAtomic(SettingsFile, JsonSerializer.Serialize(Settings, Json));
+        Settings.SyncFolder = folder;
+        SaveSettings();
         MigrateOldFiles();
         return copied;
     }
@@ -250,6 +278,13 @@ public sealed class AppStorage
         var tmp = path + ".tmp";
         File.WriteAllText(tmp, text);
         File.Move(tmp, path, overwrite: true);
+    }
+
+    /// <summary>Writes this computer's settings (settings.json in %APPDATA%\CNCStudio).</summary>
+    public void SaveSettings()
+    {
+        Directory.CreateDirectory(_local);
+        WriteAtomic(SettingsFile, JsonSerializer.Serialize(Settings, Json));
     }
 
     private AppSettings LoadSettings()

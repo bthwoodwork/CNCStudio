@@ -197,7 +197,34 @@ public partial class MainWindow : Window
     private void Xor_Click(object sender, RoutedEventArgs e) => BooleanApply(BooleanAction.Xor);
 
 
-    public MainWindow() { InitializeComponent(); RefreshInlaySettings(); Render(); }
+    public MainWindow() { InitializeComponent(); RestorePlacement(); RefreshInlaySettings(); Render(); }
+
+    /// <summary>The size and place the window had when it was last closed on this computer (if it still fits on the screens).</summary>
+    private void RestorePlacement()
+    {
+        var saved = AppStorage.Current.Settings.MainWindow?.FitTo(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
+            SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight, MinWidth, MinHeight);
+        if (saved is null) return;   // first start, or closed on a monitor that is gone: default size, centred
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = saved.Left; Top = saved.Top; Width = saved.Width; Height = saved.Height;
+        if (saved.Maximized) WindowState = WindowState.Maximized;
+    }
+
+    /// <summary>Remembers the window's size and place (the normal size if it is maximized; minimized counts as normal).</summary>
+    private void SavePlacement()
+    {
+        try
+        {
+            var r = WindowState == WindowState.Normal ? new Rect(Left, Top, ActualWidth, ActualHeight) : RestoreBounds;
+            if (r.IsEmpty || r.Width <= 0 || r.Height <= 0) return;
+            AppStorage.Current.Settings.MainWindow = new WindowPlacement
+            {
+                Left = r.Left, Top = r.Top, Width = r.Width, Height = r.Height, Maximized = WindowState == WindowState.Maximized
+            };
+            AppStorage.Current.SaveSettings();
+        }
+        catch (Exception) { }   // not being able to remember the window must never stop the program from closing
+    }
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
@@ -394,6 +421,7 @@ public partial class MainWindow : Window
                 "Program körs", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK)
         { e.Cancel = true; return; }
         _closingMain = true;
+        SavePlacement();
         foreach (var window in _floatingPanels.Values.ToList()) window.Close();
         if (_grbl is not null) DisconnectGrbl("Programmet stängs.");
     }

@@ -9,9 +9,10 @@ using CNCStudio.Core.Grbl;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Maskin → Säkerhetskopia av inställningar ($$): save a copy, see every copy, compare one with the
-/// machine and restore the settings that differ (written one by one and read back). A copy is also made
+/// Maskiner → (a machine) → Säkerhetskopior av $$: save a copy, see that machine's copies, compare one with
+/// the machine and restore the settings that differ (written one by one and read back). A copy is also made
 /// automatically before every change of settings from CNC Studio, so any change can be undone here.
+/// Comparing, saving and restoring need that machine to be the connected one.
 /// </summary>
 public sealed class GrblBackupWindow : Window
 {
@@ -20,6 +21,7 @@ public sealed class GrblBackupWindow : Window
 
     private readonly GrblClient? _grbl;
     private readonly string? _firmware;
+    private readonly MachineProfile _profile;
     private readonly ListBox _list = new() { Background = B(0x10, 0x1B, 0x27), Foreground = Ink, BorderBrush = B(0x3C, 0x51, 0x67) };
     private readonly StackPanel _rows = new();
     private readonly TextBlock _heading = new() { FontSize = 15, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap };
@@ -32,10 +34,11 @@ public sealed class GrblBackupWindow : Window
     private IReadOnlyDictionary<int, double>? _machine;
     private GrblBackupFile? _shown;
 
-    public GrblBackupWindow(GrblClient? grbl, string? firmware)
+    /// <param name="grbl">The connection, only when <paramref name="machine"/> is the connected machine.</param>
+    public GrblBackupWindow(MachineProfile machine, GrblClient? grbl, string? firmware)
     {
-        _grbl = grbl; _firmware = firmware;
-        Title = "Säkerhetskopia av maskinens inställningar";
+        _profile = machine; _grbl = grbl; _firmware = firmware;
+        Title = $"Säkerhetskopior av $$ – {machine.Name}";
         Width = 1000; Height = 720; MinWidth = 760; MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = B(0x17, 0x21, 0x2C); Foreground = Ink; FontFamily = new FontFamily("Segoe UI");
@@ -44,7 +47,11 @@ public sealed class GrblBackupWindow : Window
         var close = new Button { Content = "Stäng", IsCancel = true };
         _save.Click += async (_, _) => await SaveNow();
         _restore.Click += async (_, _) => await Restore();
-        open.Click += (_, _) => { Directory.CreateDirectory(AppStorage.Current.GrblBackupFolder); System.Diagnostics.Process.Start("explorer.exe", AppStorage.Current.GrblBackupFolder); };
+        open.Click += (_, _) =>
+        {
+            var folder = GrblBackup.MachineFolder(AppStorage.Current.GrblBackupFolder, _profile);
+            Directory.CreateDirectory(folder); System.Diagnostics.Process.Start("explorer.exe", folder);
+        };
         close.Click += (_, _) => Close();
         foreach (var b in new[] { _save, _restore, open, close })
         {
@@ -55,9 +62,10 @@ public sealed class GrblBackupWindow : Window
 
         var header = new StackPanel { Margin = new Thickness(16, 12, 16, 8), Children =
         {
-            new TextBlock { Text = "SÄKERHETSKOPIA AV INSTÄLLNINGAR ($$)", FontSize = 18, FontWeight = FontWeights.Bold },
+            new TextBlock { Text = "SÄKERHETSKOPIOR AV $$ – " + machine.Name.ToUpperInvariant(), FontSize = 18, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap },
             new TextBlock { Text = "Spara maskinens inställningar och återställ dem om något blir fel. En kopia sparas också automatiskt före varje ändring från CNC Studio. " +
-                                   "Kopiorna ligger i CNC Studio\\Inställningar\\GRBL-kopior och är vanlig text ($n=värde).", Foreground = Soft, TextWrapping = TextWrapping.Wrap },
+                                   $"Här visas bara kopior av {machine.Name}. De ligger i CNC Studio\\Inställningar\\GRBL-kopior\\{Path.GetFileName(GrblBackup.MachineFolder("", machine))} och är vanlig text ($n=värde).",
+                Foreground = Soft, TextWrapping = TextWrapping.Wrap },
             new WrapPanel { Margin = new Thickness(0, 10, 0, 0), Children = { new TextBlock { Text = "Anteckning:", Foreground = Soft, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) }, _note, new Border { Width = 8 }, _save, open } },
             _status
         } };
@@ -86,8 +94,8 @@ public sealed class GrblBackupWindow : Window
 
     private static IEnumerable<string> Folders()
     {
-        yield return AppStorage.Current.GrblBackupFolder;
-        // Each extra machine (the demo machine) keeps its copies in a subfolder.
+        yield return AppStorage.Current.GrblBackupFolder;        // copies from before one folder per machine
+        // Each machine keeps its copies in a subfolder.
         if (Directory.Exists(AppStorage.Current.GrblBackupFolder)) foreach (var d in Directory.GetDirectories(AppStorage.Current.GrblBackupFolder)) yield return d;
         // Copies the first test made, on every computer.
         var root = AppStorage.Current.LogsRoot;
@@ -97,12 +105,14 @@ public sealed class GrblBackupWindow : Window
     private void LoadList(string? select)
     {
         _list.Items.Clear();
-        foreach (var b in GrblBackup.List(Folders()))
+        foreach (var b in GrblBackup.ForMachine(GrblBackup.List(Folders()), AppStorage.Current.GrblBackupFolder, _profile))
         {
+            string where = b.Path.Contains(AppStorage.LogsFolderName) ? " · från Första test" : "";
+            string unknown = GrblBackup.IsUnassigned(b) && !MachineLibrary.IsDemo(_profile) ? " · äldre kopia, maskin okänd" : "";
             var item = new ListBoxItem { Tag = b, Padding = new Thickness(6, 4, 6, 4), Content = new StackPanel { Children =
             {
                 new TextBlock { Text = b.Title, TextTrimming = TextTrimming.CharacterEllipsis, Foreground = Ink },
-                new TextBlock { Text = (b.Computer ?? "") + (b.Path.Contains(AppStorage.LogsFolderName) ? " · från Första test" : ""), Foreground = Muted, FontSize = 11 }
+                new TextBlock { Text = (b.Computer ?? "") + where + unknown, Foreground = Muted, FontSize = 11 }
             } } };
             _list.Items.Add(item);
         }
@@ -112,7 +122,7 @@ public sealed class GrblBackupWindow : Window
 
     private async Task ReadMachine()
     {
-        if (_grbl is null) { _status.Text = "Ingen maskin ansluten – kopiorna kan visas men inte jämföras eller återställas."; return; }
+        if (_grbl is null) { _status.Text = $"{_profile.Name} är inte ansluten – kopiorna kan visas men inte jämföras eller återställas."; return; }
         try { _machine = await _grbl.ReadSettingsAsync(); _status.Text = $"Maskinens inställningar lästa ({_machine.Count} st)."; }
         catch (Exception ex) { _machine = null; _status.Text = "Kunde inte läsa maskinens inställningar: " + ex.Message; }
     }
@@ -165,8 +175,8 @@ public sealed class GrblBackupWindow : Window
         {
             var settings = await _grbl.ReadSettingsAsync();
             var note = _note.Text.Trim();
-            var path = GrblBackup.Save(AppStorage.Current.GrblBackupFolder, settings, DateTime.Now, AppStorage.ComputerName, _firmware,
-                note.Length == 0 ? "Sparad för hand" : note);
+            var path = GrblBackup.Save(GrblBackup.MachineFolder(AppStorage.Current.GrblBackupFolder, _profile), settings, DateTime.Now,
+                AppStorage.ComputerName, _firmware, note.Length == 0 ? "Sparad för hand" : note, _profile);
             _machine = settings;
             _status.Foreground = Good; _status.Text = $"Kopia sparad: {Path.GetFileName(path)} ({settings.Count} inställningar).";
             _note.Text = "";

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -32,6 +32,9 @@ public sealed class MachineLibrary
     private string LegacyFile => Path.Combine(_settingsFolder, "maskinprofil.json");
 
     public static bool IsDemo(MachineProfile p) => p.Port == DemoPort;
+
+    /// <summary>Where the machine's squaring checks are kept (Maskiner\Vinkelkontroll\&lt;id&gt;.json).</summary>
+    public string SquaringLogPath(string id) => Grbl.SquaringLog.PathFor(Folder, id);
 
     /// <summary>All machines: real ones by name, the demo machine last. Creates the first two if there are none.</summary>
     public IReadOnlyList<MachineProfile> All()
@@ -115,6 +118,7 @@ public sealed class MachineLibrary
         if (IsDemo(p)) return "Demomaskinen kan inte tas bort.";
         if (all.Count(x => !IsDemo(x)) <= 1) return "Det måste finnas minst en maskin.";
         File.Delete(Path.Combine(Folder, id + ".json"));
+        try { File.Delete(SquaringLogPath(id)); } catch (Exception) { }   // the machine's squaring checks go with it
         if (ReadActiveId() == id) SetActive(All().First(x => !IsDemo(x)).Id!);
         return null;
     }

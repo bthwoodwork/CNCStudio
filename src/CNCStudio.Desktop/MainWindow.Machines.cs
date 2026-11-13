@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using CNCStudio.Core;
 
@@ -25,7 +25,7 @@ public partial class MainWindow
             var id = _document.Machine.Id ?? AppStorage.Current.Machines.Active.Id;
             MachinePicker.SelectedItem = all.FirstOrDefault(p => p.Id == id);
             bool connected = _grbl is not null;
-            MachinePicker.IsEnabled = NewMachineButton.IsEnabled = DeleteMachineButton.IsEnabled = !connected;
+            MachinePicker.IsEnabled = !connected;
             MachinePicker.ToolTip = connected
                 ? "Koppla från för att byta maskin."
                 : "Vilken maskin du arbetar mot. Varje maskin har en egen profil – demomaskinen också. Ansluter du på en port väljs maskinen som senast använde den.";
@@ -82,14 +82,7 @@ public partial class MainWindow
         UseMachine(machine);
     }
 
-    private void NewMachine_Click(object sender, RoutedEventArgs e) => CreateMachine();
-
-    private void DeleteMachine_Click(object sender, RoutedEventArgs e)
-    {
-        if (MachinePicker.SelectedItem is MachineProfile p) DeleteMachine(p);
-    }
-
-    /// <summary>Maskin → Maskiner…: the list of all machines.</summary>
+    /// <summary>Maskin → Maskiner… (or ☰ by the machine picker): the list of all machines.</summary>
     private void Machines_Click(object sender, RoutedEventArgs e)
     {
         new MachinesWindow(
@@ -98,7 +91,10 @@ public partial class MainWindow
             use: p => { UseMachine(p); StatusText.Text = $"Maskin: {p.Name}."; },
             edit: EditMachine,
             delete: DeleteMachine,
-            create: CreateMachine) { Owner = this }.ShowDialog();
+            create: CreateMachine,
+            calibrate: CalibrateMachine,
+            backups: ShowBackups,
+            squaring: CheckSquaring) { Owner = this }.ShowDialog();
     }
 
     /// <summary>A new machine as a copy of the chosen one, then Maskininställningar to name and size it.</summary>
