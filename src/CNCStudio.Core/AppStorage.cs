@@ -92,6 +92,8 @@ public sealed class AppStorage
     public AppSettings Settings { get; private set; }
     public string LocalFolder => _local;
     public string SettingsFile => Path.Combine(_local, "settings.json");
+    /// <summary>Where the panels are docked, floating or hidden on this computer (the screens differ between computers).</summary>
+    public string DockLayoutPath => Path.Combine(_local, "fönsterlayout.xml");
 
     /// <summary>The sync folder if one is chosen AND reachable now (Drive may not be running).</summary>
     public string? ActiveSyncFolder => Settings.SyncFolder is string f && Directory.Exists(f) ? f : null;

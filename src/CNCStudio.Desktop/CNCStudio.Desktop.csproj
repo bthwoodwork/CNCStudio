@@ -3,6 +3,8 @@
   <ItemGroup><Resource Include="Assets\cncstudio.ico" /></ItemGroup>
   <ItemGroup><ProjectReference Include="..\CNCStudio.Core\CNCStudio.Core.csproj" /></ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Dirkster.AvalonDock" Version="4.74.1" />
+    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.74.1" />
     <PackageReference Include="HelixToolkit.Wpf" Version="3.1.2" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
