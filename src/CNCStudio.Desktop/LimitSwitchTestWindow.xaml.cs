@@ -188,14 +188,14 @@ public partial class LimitSwitchTestWindow : Window
             _closingAfterRestore = true;
             // The answer can arrive synchronously (e.g. the demo machine) while WPF is still inside
             // this Closing event; Close() is not allowed then. Close once the event has finished.
-            Dispatcher.BeginInvoke(new Action(Close), System.Windows.Threading.DispatcherPriority.Background);
+            _ = Dispatcher.BeginInvoke(new Action(Close), System.Windows.Threading.DispatcherPriority.Background);
             return;
         }
         DoneButton.IsEnabled = true;
         ResultText.Foreground = Brushes.OrangeRed;
         ResultText.Text = "HÅRDA GRÄNSER ÄR FORTFARANDE AV. " + r.Message;
         _closingAfterRestore = true; // let the user close; the warning is shown
-        Dispatcher.BeginInvoke(new Action(() => AppDialog.Show(this, "Kunde inte slå på hårda gränser igen ($21=1):\n\n" + r.Message +
+        _ = Dispatcher.BeginInvoke(new Action(() => AppDialog.Show(this, "Kunde inte slå på hårda gränser igen ($21=1):\n\n" + r.Message +
             "\n\nSkriv $21=1 i GRBL-konsolen innan maskinen körs.", "Hårda gränser är av", MessageBoxButton.OK, MessageBoxImage.Error)),
             System.Windows.Threading.DispatcherPriority.Background);
     }

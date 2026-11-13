@@ -167,7 +167,7 @@ public sealed class ProbeWindow : Window
         _cornerRow.Visibility = UsesXY ? Visibility.Visible : Visibility.Collapsed;
 
         _fields.Children.Clear();
-        _fields.Children.Add(new TextBlock { Text = "INSTÄLLNINGAR FÖR " + Name(_kind).ToUpperInvariant(), FontWeight = FontWeights.Bold, FontSize = 11.5,
+        _fields.Children.Add(new TextBlock { Text = "INSTÄLLNINGAR FÖR " + KindName(_kind).ToUpperInvariant(), FontWeight = FontWeights.Bold, FontSize = 11.5,
             Foreground = B(0xA5, 0xC0, 0xD9), Margin = new Thickness(0, 0, 0, 6) });
         _fields.Children.Add(Pair("Plattans tjocklek (mm)", _thick, "Plattans ovansida ligger så här högt över materialet.",
             UsesXY ? "Sidodjup (mm)" : null, UsesXY ? _depth : null, "Så långt under plattans ovansida fräsen rör sidorna."));
@@ -261,7 +261,7 @@ public sealed class ProbeWindow : Window
 
     private void Add(UIElement e, double x, double y) { Canvas.SetLeft(e, x); Canvas.SetTop(e, y); _sketch.Children.Add(e); }
 
-    private static string Name(ProbeKind k) => k switch { ProbeKind.Z => "Z", ProbeKind.X => "X", ProbeKind.Y => "Y", ProbeKind.XY => "XY", _ => "XYZ" };
+    private static string KindName(ProbeKind k) => k switch { ProbeKind.Z => "Z", ProbeKind.X => "X", ProbeKind.Y => "Y", ProbeKind.XY => "XY", _ => "XYZ" };
     private static string CornerText(ProbeCorner c) => c switch
     {
         ProbeCorner.FrontLeft => "främre vänstra", ProbeCorner.FrontRight => "främre högra", ProbeCorner.BackLeft => "bakre vänstra", _ => "bakre högra"

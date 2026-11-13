@@ -277,6 +277,8 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - Ett projekt utan material visar nu maskinbordet i 3D-vyn i stället för en tom vy.
 - Placeringen räknas ut i `MachineTable3D` (Core) och följer samma koordinater som maskinvyn: materialets position räknas från bordets bakre vänstra hörn.
 
+- **Inga kompileringsvarningar längre.** De fem gamla varningarna i `FirstTestWindow`, `LimitSwitchTestWindow`, `LogViewerWindow` och `ProbeWindow` är rättade. Programmet beter sig som förut.
+
 **Tester:** 461 tester. Kompilerad utan fel, men 3D-vyn är inte körd i Windows ännu.
 
 ## 0.9.6 – Kontrollera vinkel (XY-squaring)

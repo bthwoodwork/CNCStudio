@@ -253,15 +253,16 @@ public sealed class FirstTestWindow : Window
 
     private void ShowSettingsReview()
     {
-        var checks = Commissioning.ReviewSettings(_settings!, _profile);
+        var settings = _settings!;   // read before this step is shown
+        var checks = Commissioning.ReviewSettings(settings, _profile);
         foreach (var c in checks)
             Para((c.Level switch { CheckLevel.Ok => "✓ ", CheckLevel.Info => "• ", CheckLevel.Warning => "! ", _ => "✕ " }) + c.Text,
                 c.Level switch { CheckLevel.Ok => Good, CheckLevel.Info => Soft, CheckLevel.Warning => Warn, _ => Bad });
         var fixes = new List<(int, double)>();
-        if (_settings!.GetValueOrDefault(13) == 1) fixes.Add((13, 0));
-        if (_settings.GetValueOrDefault(32) == 1) fixes.Add((32, 0));
-        if (_settings.GetValueOrDefault(22) != 1) fixes.Add((22, 1));
-        if (((int)_settings.GetValueOrDefault(23) & 4) != 0) fixes.Add((23, (int)_settings.GetValueOrDefault(23) & 3));
+        if (settings.GetValueOrDefault(13) == 1) fixes.Add((13, 0));
+        if (settings.GetValueOrDefault(32) == 1) fixes.Add((32, 0));
+        if (settings.GetValueOrDefault(22) != 1) fixes.Add((22, 1));
+        if (((int)settings.GetValueOrDefault(23) & 4) != 0) fixes.Add((23, (int)settings.GetValueOrDefault(23) & 3));
         if (fixes.Count > 0)
         {
             var fix = Btn("Rätta " + string.Join(", ", fixes.Select(f => $"${f.Item1}={f.Item2}")) + "…", Warn);
