@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using CNCStudio.Core;
 
@@ -39,7 +39,7 @@ public partial class MainWindow
             "• Sätt i planfräsen och homa maskinen ($H).\n" +
             $"• Jogga till ytans främre vänstra hörn: fräsmarkören i maskinvyn ska visa X {F(x)}  Y {F(y)} (från hemhörnet). Nolla X och Y där.\n" +
             "• Sänk fräsen till offerskivans ovansida och nolla Z (eller proba Z).\n" +
-            "• Ladda program och starta. Programmet kontrolleras som vanligt innan det körs.",
+            "• Klicka Ladda från projektet under KÖR PROGRAM (Maskinkontroll) och sedan Starta. Programmet kontrolleras som vanligt innan det körs.",
             "Planfräsa offerskivan", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

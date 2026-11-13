@@ -276,6 +276,8 @@ Verktyget motsvarar gSenders *Wasteboard Surfacing* och finns under **Maskin →
 - **Instruktioner efter Skapa projekt:** en ruta talar om hur programmet körs. Homa, och jogga sedan tills fräsmarkören i maskinvyn visar X/Y för ytans främre vänstra hörn (talen räknas fram åt dig). Nolla X och Y där, nolla Z på offerskivans ovansida och ladda programmet.
 - Logiken finns i `WasteboardSurfacing` (Core). Testerna kör hela kedjan för alla fyra hemhörn: CAM-kontroll, rörelseplan, G-code och den oberoende kontrollen.
 
+- **Efter första provet:** rutan efter *Skapa projekt* sa "Ladda program", men knappen heter **Ladda från projektet**. Texten är rättad. *KÖR PROGRAM* säger nu "Inget program laddat – klicka Ladda från projektet", och när Starta är grå förklarar dess tooltip varför: inte ansluten, inget program laddat eller ett program körs redan.
+
 **Tester:** 474 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.9 – Dockning som i Visual Studio
