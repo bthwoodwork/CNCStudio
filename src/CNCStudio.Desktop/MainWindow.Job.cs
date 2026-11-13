@@ -88,7 +88,7 @@ public partial class MainWindow
         _jobLines = null; UpdateJobButtons();
         JobInfoText.Text = "Z nollades om efter att programmet laddades – det kontrolleras igen …";
         if (!LoadProgram(number, "Z nollades om – programmet är kontrollerat igen mot den nya Z-nollan."))
-            JobInfoText.Text = "Z nollades om. Programmet är inte laddat – klicka Ladda program.";
+            JobInfoText.Text = "Z nollades om. Programmet är inte laddat – klicka Ladda från projektet.";
     }
     private GCodeJob? _loadedJob;
 
@@ -228,6 +228,12 @@ public partial class MainWindow
         LoadJobButton.IsEnabled = !running;
         CheckJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null;
         StartJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null;
+        // Say why Starta is grey instead of leaving the user to guess.
+        StartJobButton.ToolTip = running ? "Ett program körs."
+            : _grbl is null ? "Anslut till maskinen först."
+            : _jobLines is null ? "Inget program laddat – klicka Ladda från projektet först. Programmet skapas och kontrolleras då mot Z-nollan."
+            : "Starta det laddade programmet.";
+        System.Windows.Controls.ToolTipService.SetShowOnDisabled(StartJobButton, true);
         PauseJobButton.IsEnabled = _grbl is not null;
         StopJobButton.IsEnabled = _grbl is not null;
     }

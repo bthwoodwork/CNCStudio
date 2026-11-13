@@ -459,7 +459,7 @@
 
             <Separator Margin="0,10"/>
             <TextBlock Text="KÖR PROGRAM" FontWeight="Bold" Margin="0,0,0,4"/>
-            <TextBlock x:Name="JobInfoText" Text="Inget program laddat." TextWrapping="Wrap" FontSize="11" Foreground="#B8CADC" Margin="3,0,3,4"/>
+            <TextBlock x:Name="JobInfoText" Text="Inget program laddat – klicka Ladda från projektet." TextWrapping="Wrap" FontSize="11" Foreground="#B8CADC" Margin="3,0,3,4"/>
             <UniformGrid Columns="2">
               <Button x:Name="LoadJobButton" Content="Ladda från projektet" Click="LoadJob_Click" ToolTip="Skapar och kontrollerar G-code från projektet (samma kontroller som Exportera)"/>
               <Button x:Name="CheckJobButton" Content="Kontrollkör ($C)" Click="CheckJob_Click" ToolTip="GRBL läser hela programmet utan att röra sig ($C) och rapporterar fel"/>
