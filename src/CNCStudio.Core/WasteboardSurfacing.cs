@@ -108,14 +108,7 @@ public static class WasteboardSurfacing
     /// Where X0 Y0 (the area's front-left corner) is, counted from the home corner as the tool marker in the
     /// machine view shows it – jog until the marker shows these numbers, then zero X and Y.
     /// </summary>
-    public static (double X, double Y) WorkZeroFromHome(CncDocument doc)
-    {
-        var m = doc.Machine;
-        bool left = m.HomeCorner is HomeCorner.BackLeft or HomeCorner.FrontLeft;
-        bool front = m.HomeCorner is HomeCorner.FrontLeft or HomeCorner.FrontRight;
-        double x = doc.Stock.X, y = doc.Stock.Y + doc.MaterialHeight;          // the front-left corner on the table canvas
-        return (left ? x : m.WorkWidthMm - x, front ? m.WorkLengthMm - y : y);
-    }
+    public static (double X, double Y) WorkZeroFromHome(CncDocument doc) => Grbl.WorkZeroPlacement.PointFromHome(doc);
 
     /// <summary>The area's nearest corner from the home corner, as the project places it (for the instructions).</summary>
     public static (double X, double Y) FromHome(CncDocument doc)

@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.11)
+﻿# CNC Studio – källkod (senaste: 0.9.12)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,20 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.12 – Nolla X/Y vid materialet
+- **Maskinkontroll → Nolla X/Y vid materialet…** sätter X0 Y0 där materialet är ritat i maskinvyn, utan att du behöver jogga dit:
+  - Nollpunkten är materialets främre vänstra hörn eller mitten, beroende på projektets nollpunkt.
+  - Programmet räknar ut punkten från materialplaceringen och maskinens egna $23, $130 och $131, på samma sätt som fräsmarkören. Rutan visar avståndet från hemhörnet och MPos innan något ändras.
+  - Nollan sätts med `G10 L20 P0` från där fräsen står, så **maskinen rör sig inte**. Z ändras inte.
+  - Efteråt läses nollan tillbaka med `$#` och jämförs med det beräknade värdet. En laddad körning kontrolleras om mot den nya nollan.
+  - Kräver att maskinen är homad. Det stämmer bara om materialet ligger där det är ritat. Vid planfräsning av offerskivan gör det alltid det.
+- **Planfräsa offerskivan** när maskinen är ansluten och homad:
+  - Maskinens Z-nolla läses in direkt (G54 Z + G92 Z + TLO, med samma kontroller som *Läs från maskinen*). Du behöver alltså inte fylla i *Maskinens Z vid materialytan* för hand. Har du bytt fräs ska du proba Z igen.
+  - Rutan efter *Skapa projekt* har knappen **Nolla X/Y vid ytan nu**.
+- Logiken finns i `WorkZeroPlacement` i Core. Testerna kör alla fyra hemhörn och kontrollerar mot den simulerade GRBL:en att G54 hamnar på den beräknade maskinpositionen.
+
+**Tester:** 487 tester. Kompilerad utan fel och varningar.
 
 ## 0.9.11 – Kontroll av X/Y-nollan före start
 Rättning efter första körningen av planfräsningen. X och Y var aldrig nollade, så X0 Y0 låg kvar på maskinens nollpunkt i hörnet mitt emot hemhörnet. Programmet gick därifrån +409 mm, och GRBL stoppade med **ALARM:2 – Soft limit** innan något rörde sig. Programmets egen kontroll granskade bara Z mot nollan, inte X och Y.
