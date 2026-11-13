@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.10 – planfräsa offerskivan" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.11 – kontroll av X/Y-nollan" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>

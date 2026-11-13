@@ -121,6 +121,7 @@ public partial class MainWindow
         if (_jobStore.LoadJob() is { Progress.Unfinished: true } &&
             AppDialog.Show(this, "Det finns ett avbrutet jobb som inte är klart. Startar du ett nytt jobb glöms det.\n\nStarta ändå?",
                 "Starta", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
+        if (!await CheckXyZero(g, _jobLines, "Starta")) return;
         if (_loadedJob is not null && !ConfirmProgram(_loadedJob, "Starta programmet", "Starta")) return;
         var g54 = await ReadG54(g);
         _jobStore.Begin(_jobName, _jobLines, 0, g54);
@@ -275,6 +276,7 @@ public partial class MainWindow
                     "Fortsätter du nu fräser maskinen på ett annat ställe än tidigare. Återuppta bara om du med flit har nollat om på exakt samma punkt.\n\nÅteruppta ändå?",
                     "Återuppta jobb", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         }
+        if (!await CheckXyZero(g, lines, "Återuppta jobb")) return;
         var plan = ResumePlanner.Plan(lines, progress.AckedLines, _document.Machine, _document.Motion);
         var text = plan.Description + "\n\n" +
             (plan.FromBeginning ? "" : "Så här kör maskinen in:\n" + string.Join("\n", plan.Preamble.Select(l => "• " + l)) + "\n\n") +
@@ -298,6 +300,37 @@ public partial class MainWindow
                 MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         _jobStore.Clear();
         RefreshRecoveryBanner();
+    }
+
+    /// <summary>
+    /// Before a run: with the work offset the machine really has (G54 + G92 from $#), does every move stay
+    /// inside GRBL's soft limits? A forgotten or wrong X/Y zero is stopped here, with what to do, instead of
+    /// by ALARM:2 after the run has begun. If the offsets cannot be read the user decides.
+    /// </summary>
+    private async Task<bool> CheckXyZero(GrblClient g, IReadOnlyList<string> lines, string title)
+    {
+        try
+        {
+            var p = await g.ReadParametersAsync();
+            if (!p.TryGetValue("G54", out var g54) || g54.Length < 3) throw new InvalidOperationException("G54 saknas i svaret på $#.");
+            var g92 = p.TryGetValue("G92", out var v) && v.Length >= 3 ? v : new double[3];
+            var offset = new[] { g54[0] + g92[0], g54[1] + g92[1], g54[2] + g92[2] };
+            var settings = _grblSettings ?? await g.ReadSettingsAsync();
+            string hint = _document.WorkZero == WorkZero.Center ? "materialets mitt" : "materialets främre vänstra hörn";
+            if (JobEnvelope.Check(GCodePath.Parse(lines), offset, settings, hint) is string problem)
+            {
+                AppDialog.Show(this, problem, title, MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusText.Text = "Programmet startades inte: X/Y-nollan skulle föra fräsen utanför maskinen.";
+                return false;
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            return AppDialog.Show(this, "X/Y-nollan kunde inte kontrolleras mot maskinens arbetsområde: " + ex.Message +
+                "\n\nKontrollera själv att X0 Y0 är satt där programmet förutsätter. Fortsätta ändå?",
+                title, MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) == MessageBoxResult.OK;
+        }
     }
 
     private static async Task<double[]?> ReadG54(GrblClient g)
