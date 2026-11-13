@@ -88,4 +88,46 @@ public class WasteboardSurfacingTests
             new SurfacingSettings { Width = 240, Length = 30, FromHomeX = 40, FromHomeY = 60 });
         Assert.Equal((x, y), WasteboardSurfacing.WorkZeroFromHome(doc));
     }
+
+    [Theory]
+    [InlineData(3, false)] [InlineData(0, false)] [InlineData(3, true)] [InlineData(1, true)]
+    public void With_the_centre_over_the_whole_travel_the_cutter_reaches_past_it_and_it_still_exports(int homeMask, bool alongY)
+    {
+        var m = Machine(homeMask: homeMask);                   // 500 × 500, 3 mm limit margin
+        var s = new SurfacingSettings { ToolDiameter = 35, OverhangMm = 2, CenterCoversTravel = true, RowsAlongY = alongY };
+        var (doc, report) = Plan(m, s);
+        Assert.True(doc.CamOperations.Single().FaceCenterReachesLimits);
+        Assert.DoesNotContain(report.AllFindings, f => f.Severity == CamSeverity.Critical);
+        var (jobs, blocking) = GCodeGenerator.GenerateByTool(doc, report);
+        Assert.Empty(blocking);
+        var job = Assert.Single(jobs);
+        Assert.True(job.Result.Success, string.Join("\n", job.Result.VerifierIssues.Concat(job.Result.BlockingReasons)));
+
+        // The centre covers 3…497 mm on both axes (the limit margin): machine coordinates −497…−3.
+        var moves = GCodePath.Parse(job.Result.Lines);
+        var settings = new Dictionary<int, double> { [23] = homeMask, [130] = 500, [131] = 500 };
+        var fromHome = Grbl.WorkZeroPlacement.PointFromHome(doc);
+        var zero = Grbl.WorkZeroPlacement.MachinePosition(fromHome.X, fromHome.Y, settings);
+        var cuts = moves.Where(mv => !mv.Rapid).ToList();
+        var reach = Grbl.JobEnvelope.MachineReach(cuts, new[] { zero.X, zero.Y, 0 })!;
+        Assert.Equal(-497, reach.MinX, 3); Assert.Equal(-3, reach.MaxX, 3);
+        Assert.Equal(-497, reach.MinY, 3); Assert.Equal(-3, reach.MaxY, 3);
+        Assert.Null(Grbl.JobEnvelope.Check(moves, new[] { zero.X, zero.Y, 0 }, settings, "x"));   // inside the soft limits
+
+        Assert.Equal((-14.5, 514.5, 514.5), WasteboardSurfacing.CenterCoverage(m, s));   // the cutter faces a radius past the margin
+    }
+
+    [Fact]
+    public void Without_the_option_the_whole_cutter_stays_inside()
+    {
+        var (doc, report) = Plan(Machine(), new SurfacingSettings { ToolDiameter = 35 });
+        Assert.False(doc.CamOperations.Single().FaceCenterReachesLimits);
+        Assert.DoesNotContain(report.AllFindings, f => f.Severity == CamSeverity.Critical);
+        // The centre layout checked as an ordinary operation is refused: the cutter would leave the travel.
+        var wide = WasteboardSurfacing.CreateProject(Machine(), new SurfacingSettings { ToolDiameter = 35, CenterCoversTravel = true });
+        wide.CamOperations[0].FaceCenterReachesLimits = false;
+        wide.Motion.StockTopMachineZ = -60;
+        var r = new CamPlanner(ContourToolpaths.Generate).Review(wide, computeAll: true);
+        Assert.Contains(r.AllFindings, f => f.Code == "OutsideMachine");
+    }
 }

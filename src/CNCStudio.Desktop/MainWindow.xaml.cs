@@ -1435,6 +1435,7 @@ public partial class MainWindow : Window
             CamStepover.Text = F(operation?.StepoverPercent ?? defaults.StepoverPercent);
             CamFaceOverhang.Text = F(operation?.FaceOverhangMm ?? defaults.FaceOverhangMm);
             CamFaceDirection.SelectedIndex = operation?.FaceAlongY == true ? 1 : 0;
+            CamFaceCenterReachesLimits.IsChecked = operation?.FaceCenterReachesLimits == true;
             CamPlungeMode.SelectedIndex = (int)(operation?.Plunge ?? defaults.Plunge);
             CamRampAngle.Text = F(operation?.RampAngleDeg ?? defaults.RampAngleDeg);
             CamRampFeed.Text = F(operation?.RampFeedPercent ?? defaults.RampFeedPercent);
@@ -1528,6 +1529,7 @@ public partial class MainWindow : Window
             Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
             FaceOverhangMm = CamFaceOverhang is not null && Parse(CamFaceOverhang, out var overhang) ? overhang : defaults.FaceOverhangMm,
             FaceAlongY = CamFaceDirection?.SelectedIndex == 1,
+            FaceCenterReachesLimits = kind == CamOperationKind.Face && CamFaceCenterReachesLimits?.IsChecked == true,
             Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
     }
     private void UpdateCamSummary()
@@ -1544,7 +1546,7 @@ public partial class MainWindow : Window
         if (error is null && op.Kind == CamOperationKind.Face)
         {
             CamSummary.Text = $"Planfräsning · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm totalt i {Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9):0} pass · " +
-                $"rader längs {(op.FaceAlongY ? "Y" : "X")} med {F(op.ToolDiameter * op.StepoverPercent / 100)} mm stegning · {F(op.FaceOverhangMm)} mm ut förbi kanten · körs först";
+                $"rader längs {(op.FaceAlongY ? "Y" : "X")} med {F(op.ToolDiameter * op.StepoverPercent / 100)} mm stegning · {F(op.FaceOverhangMm)} mm ut förbi kanten{(op.FaceCenterReachesLimits ? " · fräsens centrum når gränslägena (fräsen går utanför)" : "")} · körs först";
             return;
         }
         if (error is null && op.Kind == CamOperationKind.Drill)

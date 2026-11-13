@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.12 – nolla X/Y vid materialet" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.13 – planfräsning över hela rörelseområdet" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -560,8 +560,12 @@
                 </StackPanel>
                 <Grid x:Name="FaceSettingsPanel" Margin="0,6,0,0" Visibility="Collapsed">
                   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                   <StackPanel><TextBlock Text="Ut förbi kanten (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamFaceOverhang" Text="2" TextChanged="CamInput_Changed" ToolTip="Så långt utanför kanten varje rad går, utöver fräsens radie – fräsen lämnar materialet helt innan den går till nästa rad."/></StackPanel>
                   <StackPanel Grid.Column="1"><TextBlock Text="Rader längs" Style="{StaticResource FieldLabel}"/><ComboBox x:Name="CamFaceDirection" SelectedIndex="0" Margin="3" SelectionChanged="CamInput_Changed"><ComboBoxItem Content="X (vänster–höger)"/><ComboBoxItem Content="Y (fram–bak)"/></ComboBox></StackPanel>
+                  <CheckBox x:Name="CamFaceCenterReachesLimits" Grid.Row="1" Grid.ColumnSpan="2" Content="Fräsens centrum får nå gränslägena" Margin="4,6,4,2"
+                            Checked="CamInput_Changed" Unchecked="CamInput_Changed"
+                            ToolTip="För planfräsning av en offerskiva som är större än rörelseområdet: bara fräsens centrum (spindeln) behöver hålla marginalen till gränslägena – fräsen får gå utanför. Av: hela fräsen håller sig innanför, som vid all annan bearbetning."/>
                 </Grid>
                 <CheckBox x:Name="CamTabs" IsChecked="True" Content="Hållflikar (vid genomskärning)" Margin="4,10,4,4" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
                 <Grid x:Name="TabSettingsPanel" Margin="18,0,0,2">
