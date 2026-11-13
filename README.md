@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.6)
+﻿# CNC Studio – källkod (senaste: 0.9.7)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,19 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.7 – Maskinbordet i 3D-vyn
+- **3D-vyn visar maskinens arbetsyta** under materialet, på samma ställe som i maskinvyn i 2D:
+  - en mörk bordsskiva med maskinens mått ($130 × $131 från maskinprofilen)
+  - ett rutnät räknat från hemhörnet (100 mm, eller 50 mm på ett bord som är mindre än 400 mm)
+  - en kantlinje och en grön **HEM**-markering i hemhörnet
+  - Materialet ligger på bordet, och fastspänningarna står där de står i maskinvyn.
+- Kryssrutan **Maskinbord (arbetsyta)** visar eller döljer bordet.
+- **Anpassa vy** zoomar fortfarande till materialet och banorna. Den nya knappen **Hela bordet** zoomar ut till hela maskinbordet.
+- Ett projekt utan material visar nu maskinbordet i 3D-vyn i stället för en tom vy.
+- Placeringen räknas ut i `MachineTable3D` (Core) och följer samma koordinater som maskinvyn: materialets position räknas från bordets bakre vänstra hörn.
+
+**Tester:** 461 tester. Kompilerad utan fel, men 3D-vyn är inte körd i Windows ännu.
 
 ## 0.9.6 – Kontrollera vinkel (XY-squaring)
 Kontrollerar att X och Y är vinkelräta, som gSenders squaring-verktyg men med ett bättre råd. Verktyget finns under **Maskin → Maskiner…**, knappen *Kontrollera vinkel…* på maskinens rad. Det går bara på den anslutna maskinen och när maskinen är Idle.

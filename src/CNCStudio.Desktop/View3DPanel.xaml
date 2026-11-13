@@ -16,7 +16,12 @@
         <CheckBox x:Name="ShowCuts" Content="Skärande banor" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
         <CheckBox x:Name="ShowRapids" Content="Snabbförflyttningar" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
         <CheckBox x:Name="ShowFixtures" Content="Fastspänningar" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
-        <Button Content="Anpassa vy" Margin="0,8,0,0" Padding="8,3" Click="Fit_Click" Background="#34475A" Foreground="White" BorderBrush="#506783"/>
+        <CheckBox x:Name="ShowTable" Content="Maskinbord (arbetsyta)" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"
+                  ToolTip="Maskinens arbetsområde ($130 × $131) under materialet, med rutnät från hemhörnet och HEM-markering – som maskinvyn i 2D."/>
+        <UniformGrid Columns="2" Margin="0,8,0,0">
+          <Button Content="Anpassa vy" Margin="0,0,3,0" Padding="8,3" Click="Fit_Click" Background="#34475A" Foreground="White" BorderBrush="#506783" ToolTip="Zooma till materialet och banorna"/>
+          <Button Content="Hela bordet" Margin="3,0,0,0" Padding="8,3" Click="FitTable_Click" Background="#34475A" Foreground="White" BorderBrush="#506783" ToolTip="Zooma ut till hela maskinbordet"/>
+        </UniformGrid>
         <TextBlock x:Name="InfoText" Text="" Foreground="#9FB3C8" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="220"/>
       </StackPanel>
     </Border>

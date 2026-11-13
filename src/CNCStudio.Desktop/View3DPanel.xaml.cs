@@ -24,6 +24,7 @@ public partial class View3DPanel : UserControl
     private readonly LinesVisual3D _rapids = new() { Color = Color.FromRgb(255, 77, 77), Thickness = 1.0 };
     private readonly ModelVisual3D _fixtures = new();
     private readonly ModelVisual3D _zero = new();
+    private readonly ModelVisual3D _table = new();
     // The running program: what has run (orange), what is left (blue) and where the tool is.
     private readonly LinesVisual3D _jobDone = new() { Color = Color.FromRgb(255, 159, 58), Thickness = 2.0 };
     private readonly LinesVisual3D _jobTodo = new() { Color = Color.FromRgb(79, 179, 255), Thickness = 1.4 };
@@ -53,6 +54,7 @@ public partial class View3DPanel : UserControl
         BuildPaths(doc, report);
         BuildFixtures(doc);
         BuildZero(doc);
+        BuildTable(doc);
         Layer_Changed(this, new RoutedEventArgs());
         if (!_fitted) { SetCamera(w, l, t); _fitted = true; }
         _ = SimulateAsync(doc, report, w, l, t);
@@ -99,14 +101,20 @@ public partial class View3DPanel : UserControl
         Layer_Changed(this, new RoutedEventArgs());
     }
 
-    /// <summary>A project without material: no stock, paths, fixtures or work zero.</summary>
-    public void ShowEmpty()
+    /// <summary>A project without material: no stock, paths, fixtures or work zero – only the machine table.</summary>
+    public void ShowEmpty(CncDocument doc)
     {
-        if (_shownKey == "empty") return;
+        var key = $"empty:{doc.Machine.WorkWidthMm}:{doc.Machine.WorkLengthMm}:{doc.Machine.HomeCorner}";
+        if (_shownKey == key) return;
         _simulation?.Cancel();
-        _stock.Content = null; _fixtures.Content = null; _zero.Content = null;
+        _stock.Content = null; _fixtures.Children.Clear(); _zero.Children.Clear();
         _cuts.Points = new Point3DCollection(); _plunges.Points = new Point3DCollection(); _rapids.Points = new Point3DCollection();
-        _shownKey = "empty";
+        BuildTable(doc);
+        Layer_Changed(this, new RoutedEventArgs());
+        var a = MachineTable3D.For(doc);
+        SetCamera(a.Width, a.Length, 0, a.Left, a.Front, fitAll: true);
+        _fitted = false;     // the first project with material gets its own view
+        _shownKey = key;
     }
 
     private string? _shownKey;
@@ -116,6 +124,7 @@ public partial class View3DPanel : UserControl
         var h = new HashCode();
         h.Add(doc.MaterialWidth); h.Add(doc.MaterialHeight); h.Add(doc.MaterialThickness); h.Add(doc.WorkZero);
         h.Add(doc.Stock.X); h.Add(doc.Stock.Y);
+        h.Add(doc.Machine.WorkWidthMm); h.Add(doc.Machine.WorkLengthMm); h.Add(doc.Machine.HomeCorner);
         foreach (var f in doc.Fixtures) { h.Add(f.X); h.Add(f.Y); h.Add(f.Width); h.Add(f.Length); h.Add(f.HeightAboveStockMm); }
         foreach (var o in report.Operations) { h.Add(o.Operation.ToolDiameter); h.Add(o.Operation.ToolKind); }
         foreach (var m in report.Motion.Moves)
@@ -321,15 +330,64 @@ public partial class View3DPanel : UserControl
         _zero.Children.Add(new LinesVisual3D { Color = Color.FromRgb(70, 150, 255), Thickness = 3, Points = new Point3DCollection { o, new Point3D(ox, oy, len) } });
     }
 
+    // ---- Machine table ----
+
+    private static readonly Color TableTop = Color.FromRgb(0x2A, 0x3B, 0x4D), TableEdge = Color.FromRgb(0x8C, 0xA3, 0xBA),
+        TableGrid = Color.FromRgb(0x3E, 0x55, 0x6D), Home = Color.FromRgb(0x7C, 0xD9, 0x9C);
+
+    /// <summary>The machine's work area under the material: a table top, grid lines from the home corner, its edge and HEM.</summary>
+    private void BuildTable(CncDocument doc)
+    {
+        _table.Children.Clear();
+        var a = MachineTable3D.For(doc);
+        if (!(a.Width > 0 && a.Length > 0)) return;
+        // Just under the material's underside, so the two never fight over the same depth.
+        double z = a.TopZ - 0.3;
+        _table.Children.Add(new BoxVisual3D
+        {
+            Center = new Point3D(a.Left + a.Width / 2, a.Front + a.Length / 2, z - 3),
+            Length = a.Width, Width = a.Length, Height = 6, Fill = new SolidColorBrush(TableTop)
+        });
+        var grid = new Point3DCollection();
+        foreach (var (x0, y0, x1, y1) in MachineTable3D.GridLines(a, doc.Machine.HomeCorner))
+        { grid.Add(new Point3D(x0, y0, z + 0.05)); grid.Add(new Point3D(x1, y1, z + 0.05)); }
+        _table.Children.Add(new LinesVisual3D { Color = TableGrid, Thickness = 1, Points = grid });
+        _table.Children.Add(new LinesVisual3D
+        {
+            Color = TableEdge, Thickness = 1.5, Points = new Point3DCollection
+            {
+                new(a.Left, a.Front, z + 0.1), new(a.Right, a.Front, z + 0.1), new(a.Right, a.Front, z + 0.1), new(a.Right, a.Back, z + 0.1),
+                new(a.Right, a.Back, z + 0.1), new(a.Left, a.Back, z + 0.1), new(a.Left, a.Back, z + 0.1), new(a.Left, a.Front, z + 0.1)
+            }
+        });
+        var (hx, hy) = MachineTable3D.HomePoint(a, doc.Machine.HomeCorner);
+        _table.Children.Add(new SphereVisual3D { Center = new Point3D(hx, hy, z + 2), Radius = 5, Fill = new SolidColorBrush(Home) });
+        _table.Children.Add(new BillboardTextVisual3D
+        {
+            Text = "HEM", Position = new Point3D(hx, hy, z + 18), Foreground = new SolidColorBrush(Home), Background = Brushes.Transparent,
+            FontWeight = FontWeights.Bold, FontSize = 13
+        });
+        InfoText.Text = $"Maskinbord {F(a.Width)} × {F(a.Length)} mm, rutor {F(MachineTable3D.GridStep(a))} mm från hemhörnet.";
+    }
+
     // ---- View ----
 
-    private void SetCamera(double w, double l, double t)
+    private void SetCamera(double w, double l, double t, double x0 = 0, double y0 = 0, bool fitAll = false)
     {
-        var target = new Point3D(w / 2, l / 2, -t / 2);
+        var target = new Point3D(x0 + w / 2, y0 + l / 2, -t / 2);
         double d = Math.Max(w, l) * 1.4;
-        var position = new Point3D(w / 2 - d * 0.35, -d * 0.75, d * 0.75);
+        var position = new Point3D(target.X - d * 0.35, y0 - d * 0.75, d * 0.75);
         Scene.Camera = new PerspectiveCamera(position, target - position, new Vector3D(0, 0, 1), 45);
-        Scene.ZoomExtents(0);
+        Fit(0, includeTable: fitAll);
+    }
+
+    /// <summary>Zooms to what is shown; the table only when asked, so the material stays the focus.</summary>
+    private void Fit(double ms, bool includeTable)
+    {
+        bool hide = !includeTable && Scene.Children.Contains(_table);
+        if (hide) Scene.Children.Remove(_table);
+        Scene.ZoomExtents(ms);
+        if (hide) Scene.Children.Insert(0, _table);
     }
 
     private void Layer_Changed(object sender, RoutedEventArgs e)
@@ -345,6 +403,7 @@ public partial class View3DPanel : UserControl
         SetVisible(_jobTool, _jobActive);
         SetVisible(_rapids, ShowRapids.IsChecked == true);
         SetVisible(_fixtures, ShowFixtures.IsChecked == true);
+        SetVisible(_table, ShowTable?.IsChecked == true);
         // See-through material must be drawn after the paths, or it hides them in the depth buffer.
         if (StockMode.SelectedIndex == 1 && Scene.Children.Contains(_stock)) { Scene.Children.Remove(_stock); Scene.Children.Add(_stock); }
     }
@@ -355,7 +414,9 @@ public partial class View3DPanel : UserControl
         if (!on && Scene.Children.Contains(v)) Scene.Children.Remove(v);
     }
 
-    private void Fit_Click(object sender, RoutedEventArgs e) => Scene.ZoomExtents(300);
+    private void Fit_Click(object sender, RoutedEventArgs e) => Fit(300, includeTable: _shownKey?.StartsWith("empty") == true);
+
+    private void FitTable_Click(object sender, RoutedEventArgs e) => Fit(300, includeTable: true);
 
     private static string F(double v, int d = 0) => v.ToString(d == 0 ? "0" : "0." + new string('#', d), CultureInfo.InvariantCulture);
 }
