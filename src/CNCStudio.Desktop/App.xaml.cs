@@ -36,7 +36,7 @@ public partial class App : Application
         catch (Exception) { /* never let the safety net itself crash */ }
     }
 
-    private static string? LogError(Exception ex)
+    internal static string? LogError(Exception ex)
     {
         try
         {

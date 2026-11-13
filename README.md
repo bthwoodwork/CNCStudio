@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.8)
+﻿# CNC Studio – källkod (senaste: 0.9.9)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,21 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.9 – Dockning som i Visual Studio
+Panelerna dockas nu med **AvalonDock** (Dirkster.AvalonDock 4.74.1, fri komponent för WPF, med det mörka temat VS2013).
+- **Ritytan** med 2D- och 3D-vyn ligger i mitten och kan inte lossas.
+- **Ritverktyg, Egenskaper, Maskinkontroll och Smart CAM** är paneler som går att flytta:
+  - **Dra i panelens rubrik** för att lossa den till ett eget fönster, som går att flytta och ändra storlek på, även till en annan skärm.
+  - **Släpp den på en dockningsmarkör** för att docka den till vänster, höger, upptill eller nedtill, eller som **flik** tillsammans med en annan panel.
+  - **Dubbelklicka på rubriken** på ett lossat fönster för att docka tillbaka det.
+  - Pilen i rubriken har menyn *Flytande*, *Dockad*, *Dölj* med mera.
+- Panelernas egna rubrikrader med ↗ och × är borta, eftersom dockningen ger varje panel en riktig rubrikrad. Panelen Egenskaper heter *Maskinbord* i arbetsytan Maskin.
+- Arbetsytorna Design, CAM och Maskin bestämmer fortfarande vilka paneler som visas. En panel som döljs och visas igen hamnar där du senast hade den.
+- **Layouten sparas per dator** i `%APPDATA%\CNCStudio\fönsterlayout.xml` när programmet stängs, eftersom skärmarna skiljer sig mellan datorer. **Visa → Återställ fönsterlayout** lägger tillbaka allt som från början. En trasig eller gammal layoutfil ignoreras.
+- Den gamla egna lossningen (`FloatPanel_Click`, kolumner och splitters) är borttagen.
+
+**Tester:** 462 tester. Kompilerad utan fel och varningar, men **inte körd i Windows ännu**. Det här är en stor ändring i huvudfönstret. Om något ser fel ut, prova först *Visa → Återställ fönsterlayout*.
 
 ## 0.9.8 – Fräsens position i 3D-vyn
 - **3D-vyn visar var fräsen står**, som det röda korset i maskinvyn. Den visas när maskinen är ansluten och homad och inte är i larm, och flyttas vid varje statusrapport.

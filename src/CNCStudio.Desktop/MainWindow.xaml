@@ -2,7 +2,8 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
- Title="CNC Studio 0.9.8 – fräsens position i 3D-vyn" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ xmlns:ad="https://github.com/Dirkster99/AvalonDock"
+ Title="CNC Studio 0.9.9 – dockning som i Visual Studio" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -82,7 +83,7 @@
  <MenuItem Header="_Rita"><MenuItem Header="Markera / flytta" Click="SelectTool_Click"/><MenuItem Header="Rektangel" Click="RectangleTool_Click"/><MenuItem Header="Ellips" Click="EllipseTool_Click"/><MenuItem Header="Polylinje" Click="PolylineTool_Click"/><Separator/><MenuItem Header="Stäng polylinje" Click="ClosePolyline_Click"/><MenuItem Header="Snappning på/av" Click="ToggleSnap_Click"/></MenuItem>
  <MenuItem Header="_Objekt"><MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/><Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/></MenuItem>
  <MenuItem Header="_CAM"><MenuItem Header="Exportera G-code…" Click="ExportGCode_Click" InputGestureText="Ctrl+E"/><Separator/><MenuItem Header="Planfräs hela materialet…" Click="FaceStock_Click"/><Separator/><MenuItem Header="Verktygsbibliotek…" Click="ManageTools_Click"/><MenuItem Header="Materialbibliotek…" Click="ManageMaterials_Click"/><Separator/><MenuItem Header="V-carve inlay-inställningar" Click="OpenInlay_Click"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
- <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem x:Name="View3DMenuItem" Header="3D-vy" Click="Toggle3D_Click" InputGestureText="F4"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinkontroll" Click="ShowPanel_Click" Tag="Machine"/></MenuItem>
+ <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem x:Name="View3DMenuItem" Header="3D-vy" Click="Toggle3D_Click" InputGestureText="F4"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinkontroll" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Återställ fönsterlayout" Click="ResetDockLayout_Click" ToolTip="Lägg tillbaka alla paneler där de var från början"/></MenuItem>
  <MenuItem Header="_Maskin"><MenuItem Header="Första test mot maskinen…" Click="FirstTest_Click"/><Separator/><MenuItem Header="Maskiner (per maskin: inställningar, $$-kopior, kalibrering)…" Click="Machines_Click"/><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Probning…" Click="Probe_Click"/><MenuItem Header="Gamepad…" Click="GamepadSettings_Click"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/><Separator/><MenuItem Header="Demomaskin: simulera strömavbrott" Click="SimulatePowerCut_Click"/></MenuItem>
  <MenuItem Header="_Hjälp"><MenuItem Header="Loggar och fellogg…" Click="ShowLogs_Click"/><Separator/><MenuItem Header="Om CNC Studio" Click="About_Click"/></MenuItem>
 </Menu>
@@ -170,22 +171,14 @@
   </StatusBarItem>
   <StatusBarItem><TextBlock x:Name="StatusText" Text="Arbetsyta Design" TextTrimming="CharacterEllipsis"/></StatusBarItem>
  </StatusBar>
- <Grid x:Name="LayoutGrid">
- <Grid.ColumnDefinitions>
- <ColumnDefinition x:Name="ToolsColumn" Width="144"/><ColumnDefinition x:Name="ToolsSplitterColumn" Width="5"/>
- <ColumnDefinition Width="*"/>
- <ColumnDefinition x:Name="PropertiesSplitterColumn" Width="5"/><ColumnDefinition x:Name="PropertiesColumn" Width="250"/>
- <ColumnDefinition x:Name="MachineSplitterColumn" Width="5"/><ColumnDefinition x:Name="MachineColumn" Width="300"/>
- <ColumnDefinition x:Name="CamSplitterColumn" Width="0"/><ColumnDefinition x:Name="CamColumn" Width="0"/>
- </Grid.ColumnDefinitions>
- <Border x:Name="ToolsPanel" Grid.Column="0" Background="#243447" BorderBrush="#50657D" BorderThickness="0,0,1,0">
-    <DockPanel><Border DockPanel.Dock="Top" Background="#30465C" Padding="8,5">
- <DockPanel LastChildFill="True">
-  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-   <Button Content="↗" Tag="Tools" Click="FloatPanel_Click" Padding="3,1" Margin="1" ToolTip="Lossa panel som eget fönster"/>
-   <Button Content="×" Tag="Tools" Click="HidePanel_Click" Padding="4,1" Margin="1" ToolTip="Dölj panel"/>
-  </StackPanel><TextBlock Text="RITVERKTYG" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="Ritverktyg"/>
- </DockPanel></Border><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
+ <ad:DockingManager x:Name="DockManager" AllowMixedOrientation="True" Background="#17212C">
+  <ad:DockingManager.Theme><ad:Vs2013DarkTheme/></ad:DockingManager.Theme>
+  <ad:LayoutRoot>
+   <ad:LayoutPanel Orientation="Horizontal">
+    <ad:LayoutAnchorablePane DockWidth="144">
+     <ad:LayoutAnchorable ContentId="Tools" Title="Ritverktyg" CanClose="False" CanHide="True" FloatingWidth="184" FloatingHeight="700">
+ <Border x:Name="ToolsPanel" Background="#243447" BorderBrush="#50657D" BorderThickness="0,0,1,0">
+    <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
  <TextBlock Text="RITA" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,5,0,7"/>
  <Button x:Name="SelectToolButton" Content="Markera" Click="SelectTool_Click" ToolTip="Markera objekt direkt med vänsterklick"/>
  <Button x:Name="RectangleToolButton" Content="Rektangel" Click="RectangleTool_Click"/>
@@ -205,8 +198,11 @@
  <Button Content="Ta bort" Click="Delete_Click"/>
  </StackPanel></Border></ScrollViewer></DockPanel>
    </Border>
- <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#465D75" ResizeBehavior="PreviousAndNext"/>
- <Grid Grid.Column="2" Background="#101B27" ClipToBounds="True">
+     </ad:LayoutAnchorable>
+    </ad:LayoutAnchorablePane>
+    <ad:LayoutDocumentPane>
+     <ad:LayoutDocument ContentId="Canvas" Title="Arbetsyta" CanClose="False" CanFloat="False">
+ <Grid x:Name="CanvasArea" Background="#101B27" ClipToBounds="True">
   <Canvas x:Name="Viewport" Background="#101B27" ClipToBounds="True" SizeChanged="Viewport_SizeChanged" MouseWheel="Viewport_Wheel" MouseMove="Viewport_MouseMove" MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp">
    <Canvas x:Name="DesignCanvas" Width="600" Height="600" Background="#1B2734" MouseLeftButtonDown="Canvas_Down" MouseRightButtonDown="Canvas_RightDown" MouseMove="Canvas_Move" MouseLeftButtonUp="Canvas_Up">
     <Canvas.RenderTransform><TransformGroup><ScaleTransform x:Name="DesignScale" ScaleX="1" ScaleY="1"/><TranslateTransform x:Name="DesignOffset"/></TransformGroup></Canvas.RenderTransform>
@@ -226,15 +222,12 @@
   <Button x:Name="View3DToggle" Content="3D" Click="Toggle3D_Click" Panel.ZIndex="30" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,40,14,0" Width="56" Height="46" FontSize="16" FontWeight="Bold" Background="#2E7DD7" Foreground="White" BorderBrush="#7FB6F0" ToolTip="Växla mellan 2D-ritning och 3D-vy (F4)"/>
   <Border Background="#26394D" CornerRadius="4" Padding="9,5" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="50,0,0,12" IsHitTestVisible="False"><TextBlock Text="Hjul: zoom  |  Mittenknapp: panorera  |  Ctrl+klick: flermarkera  |  Ctrl+Z/Y: ångra/gör om" Foreground="#D7E7F5" FontSize="12"/></Border>
  </Grid>
- <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="#465D75" ResizeBehavior="PreviousAndNext"/>
- <Border x:Name="PropertiesPanel" Grid.Column="4" Background="#243447" BorderBrush="#50657D" BorderThickness="0,0,1,0">
-    <DockPanel><Border DockPanel.Dock="Top" Background="#30465C" Padding="8,5">
- <DockPanel LastChildFill="True">
-  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-   <Button Content="↗" Tag="Properties" Click="FloatPanel_Click" Padding="5,2" Margin="2" ToolTip="Lossa panel som eget fönster"/>
-   <Button Content="×" Tag="Properties" Click="HidePanel_Click" Padding="6,2" Margin="2" ToolTip="Dölj panel"/>
-  </StackPanel><TextBlock x:Name="PropertiesTitle" Text="EGENSKAPER" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
- </DockPanel></Border><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
+     </ad:LayoutDocument>
+    </ad:LayoutDocumentPane>
+    <ad:LayoutAnchorablePane DockWidth="250">
+     <ad:LayoutAnchorable ContentId="Properties" Title="Egenskaper" CanClose="False" CanHide="True" FloatingWidth="290" FloatingHeight="700">
+ <Border x:Name="PropertiesPanel" Background="#243447" BorderBrush="#50657D" BorderThickness="0,0,1,0">
+    <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
 
          <!-- Design workspace: what you work on first – the selected object – then project and material. -->
          <StackPanel x:Name="DesignSections">
@@ -353,15 +346,12 @@
         </StackPanel>
       </Border></ScrollViewer></DockPanel>
    </Border>
- <GridSplitter Grid.Column="5" Width="5" HorizontalAlignment="Stretch" Background="#465D75" ResizeBehavior="PreviousAndNext"/>
- <Border x:Name="MachinePanel" Grid.Column="6" Background="#17212C" BorderBrush="#50657D" BorderThickness="0,0,1,0">
-    <DockPanel><Border DockPanel.Dock="Top" Background="#30465C" Padding="8,5">
- <DockPanel LastChildFill="True">
-  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-   <Button Content="↗" Tag="Machine" Click="FloatPanel_Click" Padding="5,2" Margin="2" ToolTip="Lossa panel som eget fönster"/>
-   <Button Content="×" Tag="Machine" Click="HidePanel_Click" Padding="6,2" Margin="2" ToolTip="Dölj panel"/>
-  </StackPanel><TextBlock Text="MASKINKONTROLL" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
- </DockPanel></Border><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
+     </ad:LayoutAnchorable>
+    </ad:LayoutAnchorablePane>
+    <ad:LayoutAnchorablePane DockWidth="300">
+     <ad:LayoutAnchorable ContentId="Machine" Title="Maskinkontroll" CanClose="False" CanHide="True" FloatingWidth="340" FloatingHeight="700">
+ <Border x:Name="MachinePanel" Background="#17212C" BorderBrush="#50657D" BorderThickness="0,0,1,0">
+    <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
           
           <Border x:Name="ConnectionBanner" Background="#533C34" CornerRadius="5" Padding="10" Margin="0,0,0,8">
             <StackPanel>
@@ -497,15 +487,12 @@
         </StackPanel>
       </Border></ScrollViewer></DockPanel>
    </Border>
- <GridSplitter Grid.Column="7" Width="5" HorizontalAlignment="Stretch" Background="#465D75" ResizeBehavior="PreviousAndNext"/>
- <Border x:Name="CamPanel" Grid.Column="8" Visibility="Collapsed" Background="#27384C" BorderBrush="#50657D" BorderThickness="0,0,1,0">
-    <DockPanel><Border DockPanel.Dock="Top" Background="#30465C" Padding="8,5">
- <DockPanel LastChildFill="True">
-  <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-   <Button Content="↗" Tag="Cam" Click="FloatPanel_Click" Padding="5,2" Margin="2" ToolTip="Lossa panel som eget fönster"/>
-   <Button Content="×" Tag="Cam" Click="HidePanel_Click" Padding="6,2" Margin="2" ToolTip="Dölj panel"/>
-  </StackPanel><TextBlock Text="SMART CAM" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
- </DockPanel></Border><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
+     </ad:LayoutAnchorable>
+    </ad:LayoutAnchorablePane>
+    <ad:LayoutAnchorablePane DockWidth="300">
+     <ad:LayoutAnchorable ContentId="Cam" Title="Smart CAM" CanClose="False" CanHide="True" FloatingWidth="340" FloatingHeight="700">
+ <Border x:Name="CamPanel" Background="#27384C" BorderBrush="#50657D" BorderThickness="0,0,1,0">
+    <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
             
             <StackPanel.Resources>
               <Style x:Key="CamSection" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#8CA3BA"/><Setter Property="Margin" Value="3,0,3,4"/></Style>
@@ -678,6 +665,10 @@
           </StackPanel>
         </Border></ScrollViewer></DockPanel>
    </Border>
- </Grid>
+     </ad:LayoutAnchorable>
+    </ad:LayoutAnchorablePane>
+   </ad:LayoutPanel>
+  </ad:LayoutRoot>
+ </ad:DockingManager>
  </DockPanel>
 </Window>

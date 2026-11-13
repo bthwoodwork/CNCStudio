@@ -48,11 +48,6 @@ public partial class MainWindow : Window
     private bool _panning;
     private Point _panStart;
     private Point _panOrigin;
-    private bool _propertiesVisible = true;
-    private bool _camVisible;
-    private readonly Dictionary<string, Window> _floatingPanels = new();
-    private readonly Dictionary<string, double> _savedPanelWidths = new() { ["Tools"] = 144, ["Properties"] = 250, ["Machine"] = 300, ["Cam"] = 300 };
-    private bool _closingMain;
     private bool _loadingCam;
     private bool _showContourPreview = true;
     private sealed record ResizeHandle(DesignShape Shape, string Corner);
@@ -227,6 +222,7 @@ public partial class MainWindow : Window
     }
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        InitDocking();   // the saved panel layout, before the workspace decides which panels are shown
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
         FitToMaterial(); InitGrblUi(); InitGamepad(); InitSettingsBackup();
         ShowStorageStatus();
@@ -326,103 +322,14 @@ public partial class MainWindow : Window
     private void ActualSize_Click(object sender, RoutedEventArgs e)
         => ApplyZoom(1, new Point(Viewport.ActualWidth / 2, Viewport.ActualHeight / 2));
     private void ToggleProperties_Click(object sender, RoutedEventArgs e) => SetPanelVisible("Properties", !_propertiesVisible);
-    // Docking without a third-party dependency: each existing live panel is moved between
-    // the main layout and an optional independent Window. Its controls retain their state.
-    private (Border Panel, ColumnDefinition Column, ColumnDefinition? Splitter, int Index) GetPanel(string id) => id switch
-    {
-        "Tools" => (ToolsPanel, ToolsColumn, ToolsSplitterColumn, 0),
-        "Properties" => (PropertiesPanel, PropertiesColumn, PropertiesSplitterColumn, 4),
-        "Machine" => (MachinePanel, MachineColumn, MachineSplitterColumn, 6),
-        "Cam" => (CamPanel, CamColumn, CamSplitterColumn, 8),
-        _ => throw new ArgumentException("Okänd panel", nameof(id))
-    };
-    private void SetPanelVisible(string id, bool visible)
-    {
-        var (panel, column, splitter, index) = GetPanel(id);
-        if (_floatingPanels.TryGetValue(id, out var floating))
-        {
-            if (visible) { floating.Show(); floating.Activate(); return; }
-            // Closing the floating window docks it, then it can be hidden normally.
-            floating.Close();
-        }
-        if (visible)
-        {
-            if (!LayoutGrid.Children.Contains(panel))
-            {
-                LayoutGrid.Children.Add(panel);
-                Grid.SetColumn(panel, index);
-            }
-            panel.Visibility = Visibility.Visible;
-            column.Width = new GridLength(_savedPanelWidths[id], GridUnitType.Pixel);
-            if (splitter is not null) splitter.Width = new GridLength(5);
-        }
-        else
-        {
-            if (column.ActualWidth > 40) _savedPanelWidths[id] = column.ActualWidth;
-            panel.Visibility = Visibility.Collapsed;
-            column.Width = new GridLength(0);
-            if (splitter is not null) splitter.Width = new GridLength(0);
-        }
-        _propertiesVisible = PropertiesPanel.Visibility == Visibility.Visible;
-        _camVisible = CamPanel.Visibility == Visibility.Visible;
-        if (id == "Cam" && visible) RefreshCamSelection();
-        Dispatcher.BeginInvoke(new Action(FitToMaterial), System.Windows.Threading.DispatcherPriority.Loaded);
-    }
-    private void ShowPanel_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement element && element.Tag is string id)
-            SetPanelVisible(id, true);
-    }
-    private void HidePanel_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement element && element.Tag is string id)
-            SetPanelVisible(id, false);
-    }
-    private void FloatPanel_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement element || element.Tag is not string id) return;
-        if (_floatingPanels.TryGetValue(id, out var existing)) { existing.Activate(); return; }
-        var (panel, column, splitter, _) = GetPanel(id);
-        if (column.ActualWidth > 40) _savedPanelWidths[id] = column.ActualWidth;
-        LayoutGrid.Children.Remove(panel);
-        column.Width = new GridLength(0);
-        if (splitter is not null) splitter.Width = new GridLength(0);
-        var window = new Window
-        {
-            Title = "CNC Studio – " + (id == "Machine" ? "Maskinkontroll" : id == "Properties" ? "Egenskaper" : id == "Cam" ? "CAM" : "Ritverktyg"),
-            Width = id == "Tools" ? 240 : id == "Machine" ? 380 : 340,
-            Height = id == "Tools" ? 650 : 700,
-            MinWidth = 190, MinHeight = 300,
-            Owner = this, Background = Brushes.DarkSlateGray,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Content = panel
-        };
-        _floatingPanels[id] = window;
-        window.Closed += (_, _) =>
-        {
-            window.Content = null;
-            _floatingPanels.Remove(id);
-            LayoutGrid.Children.Add(panel);
-            Grid.SetColumn(panel, GetPanel(id).Index);
-            panel.Visibility = Visibility.Visible;
-            column.Width = new GridLength(_savedPanelWidths[id]);
-            if (splitter is not null) splitter.Width = new GridLength(5);
-            _propertiesVisible = PropertiesPanel.Visibility == Visibility.Visible;
-            _camVisible = CamPanel.Visibility == Visibility.Visible;
-            if (!_closingMain) Dispatcher.BeginInvoke(new Action(FitToMaterial), System.Windows.Threading.DispatcherPriority.Loaded);
-        };
-        window.Show();
-        Dispatcher.BeginInvoke(new Action(FitToMaterial), System.Windows.Threading.DispatcherPriority.Loaded);
-    }
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
         if (_runner is not null && AppDialog.Show(this,
                 "Ett program körs på maskinen. Stänger du nu avbryts sändningen mitt i jobbet (läget sparas och kan återupptas).\n\nStänga ändå?",
                 "Program körs", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK)
         { e.Cancel = true; return; }
-        _closingMain = true;
         SavePlacement();
-        foreach (var window in _floatingPanels.Values.ToList()) window.Close();
+        SaveDockLayout();
         if (_grbl is not null) DisconnectGrbl("Programmet stängs.");
     }
     private enum Workspace { Design, Cam, Machine }
@@ -469,7 +376,7 @@ public partial class MainWindow : Window
         bool machine = _workspace == Workspace.Machine;
         DesignSections.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
         MachineSections.Visibility = machine ? Visibility.Visible : Visibility.Collapsed;
-        PropertiesTitle.Text = machine ? "MASKINBORD" : "EGENSKAPER";
+        if (Anchorable("Properties") is { } properties) properties.Title = machine ? "Maskinbord" : "Egenskaper";
         DesignTab.Tag = _workspace == Workspace.Design ? "Active" : null;
         CamTab.Tag = _workspace == Workspace.Cam ? "Active" : null;
         MachineTab.Tag = _workspace == Workspace.Machine ? "Active" : null;
