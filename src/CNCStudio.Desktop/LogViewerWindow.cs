@@ -55,7 +55,7 @@ public sealed class LogViewerWindow : Window
 
     private UIElement BuildLayout()
     {
-        Style(_files); Style(_entries);
+        StyleList(_files); StyleList(_entries);
         var header = new StackPanel { Margin = new Thickness(16, 12, 16, 8), Children =
         {
             new TextBlock { Text = "LOGGAR", FontSize = 20, FontWeight = FontWeights.Bold },
@@ -219,7 +219,7 @@ public sealed class LogViewerWindow : Window
         LoadFiles(selectErrorLog: true);
     }
 
-    private static void Style(ListBox list)
+    private static void StyleList(ListBox list)
     {
         list.Background = Field; list.Foreground = Ink; list.BorderBrush = Edge;
         ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Disabled);
