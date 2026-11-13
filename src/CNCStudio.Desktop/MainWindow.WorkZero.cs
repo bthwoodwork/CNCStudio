@@ -10,6 +10,15 @@ public partial class MainWindow
 {
     private async void ZeroAtPlacement_Click(object sender, RoutedEventArgs e) => await ZeroAtPlacement(ask: true);
 
+    /// <summary>The ▾ beside Nolla X + Y: opens its menu (here, or at the material) under the button.</summary>
+    private void ZeroXyMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (ZeroXyMenuButton.ContextMenu is not { } menu) return;
+        menu.PlacementTarget = ZeroXyMenuButton;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
     /// <summary>Sets X0 Y0 from the placement. <paramref name="ask"/> = show the numbers and ask first (the user already agreed otherwise). True when set.</summary>
     private async Task<bool> ZeroAtPlacement(bool ask)
     {

@@ -59,7 +59,7 @@ public partial class MainWindow
             $"Planfräsningen av {F(_document.MaterialWidth)} × {F(_document.MaterialHeight)} mm är ett nytt projekt (inte sparat ännu). Ytan syns i maskinvyn.\n\n" +
             "SÅ KÖR DU DEN:\n" +
             (ready ? "" : "• Anslut, sätt i planfräsen och homa maskinen ($H).\n") +
-            $"• X/Y: X0 Y0 är ytans främre vänstra hörn, {F(x)} / {F(y)} mm från hemhörnet. Klicka Nolla X/Y vid materialet – maskinen rör sig inte.\n" +
+            $"• X/Y: X0 Y0 är ytans främre vänstra hörn, {F(x)} / {F(y)} mm från hemhörnet. Välj ▾ vid Nolla X + Y → Vid materialet – maskinen rör sig inte.\n" +
             zStep +
             "• Klicka Ladda från projektet under KÖR PROGRAM (Maskinkontroll) och sedan Starta. Programmet kontrolleras som vanligt innan det körs.";
         if (!ready)

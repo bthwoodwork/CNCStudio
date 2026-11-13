@@ -267,12 +267,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
 ## 0.9.12 – Nolla X/Y vid materialet
-- **Maskinkontroll → Nolla X/Y vid materialet…** sätter X0 Y0 där materialet är ritat i maskinvyn, utan att du behöver jogga dit:
+- **Nolla X + Y ▾ → Vid materialet…** i Maskinkontroll, eller **Maskin → Nolla X + Y vid materialet…**, sätter X0 Y0 där materialet är ritat i maskinvyn, utan att du behöver jogga dit:
   - Nollpunkten är materialets främre vänstra hörn eller mitten, beroende på projektets nollpunkt.
   - Programmet räknar ut punkten från materialplaceringen och maskinens egna $23, $130 och $131, på samma sätt som fräsmarkören. Rutan visar avståndet från hemhörnet och MPos innan något ändras.
   - Nollan sätts med `G10 L20 P0` från där fräsen står, så **maskinen rör sig inte**. Z ändras inte.
   - Efteråt läses nollan tillbaka med `$#` och jämförs med det beräknade värdet. En laddad körning kontrolleras om mot den nya nollan.
   - Kräver att maskinen är homad. Det stämmer bara om materialet ligger där det är ritat. Vid planfräsning av offerskivan gör det alltid det.
+- Knappen **Nolla X + Y** nollar fortfarande där fräsen står. Pilen **▾** bredvid har båda valen, *Här* och *Vid materialet*, så det finns inte två knappar för samma sak.
 - **Planfräsa offerskivan** när maskinen är ansluten och homad:
   - Maskinens Z-nolla läses in direkt (G54 Z + G92 Z + TLO, med samma kontroller som *Läs från maskinen*). Du behöver alltså inte fylla i *Maskinens Z vid materialytan* för hand. Har du bytt fräs ska du proba Z igen.
   - Rutan efter *Skapa projekt* har knappen **Nolla X/Y vid ytan nu**.
