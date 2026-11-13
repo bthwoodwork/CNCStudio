@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.10)
+﻿# CNC Studio – källkod (senaste: 0.9.11)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,15 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.11 – Kontroll av X/Y-nollan före start
+Rättning efter första körningen av planfräsningen. X och Y var aldrig nollade, så X0 Y0 låg kvar på maskinens nollpunkt i hörnet mitt emot hemhörnet. Programmet gick därifrån +409 mm, och GRBL stoppade med **ALARM:2 – Soft limit** innan något rörde sig. Programmets egen kontroll granskade bara Z mot nollan, inte X och Y.
+- **Starta** och **Återuppta** läser nu maskinens verkliga nollpunkt med `$#` (G54 + G92). De räknar om hela programmets bana till maskinkoordinater och stoppar om den skulle gå utanför −$130…0 eller −$131…0, alltså samma gränser som GRBL:s mjuka gränser.
+- Rutan som visas talar om vilken axel som går hur långt förbi gränsen, var X/Y-nollan står nu och var den ska stå (materialets främre vänstra hörn eller mitt). Den säger också att du ska jogga dit och klicka *Nolla X + Y*.
+- Om `$#` inte går att läsa får du välja själv om du vill fortsätta.
+- Logiken finns i `JobEnvelope` i Core och har tester, bland annat med just den nollpunkt som orsakade larmet.
+
+**Tester:** 478 tester. Kompilerad utan fel och varningar.
 
 ## 0.9.10 – Planfräsa offerskivan
 Verktyget motsvarar gSenders *Wasteboard Surfacing* och finns under **Maskin → Planfräsa offerskivan…**. Alla inställningar görs i ett formulär:
