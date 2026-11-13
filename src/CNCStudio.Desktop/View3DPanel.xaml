@@ -16,6 +16,8 @@
         <CheckBox x:Name="ShowCuts" Content="Skärande banor" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
         <CheckBox x:Name="ShowRapids" Content="Snabbförflyttningar" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
         <CheckBox x:Name="ShowFixtures" Content="Fastspänningar" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
+        <CheckBox x:Name="ShowToolPos" Content="Fräsens position" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"
+                  ToolTip="Var fräsen står just nu (från maskinens statusrapporter), som korset i maskinvyn. Visas när maskinen är ansluten och homad."/>
         <CheckBox x:Name="ShowTable" Content="Maskinbord (arbetsyta)" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"
                   ToolTip="Maskinens arbetsområde ($130 × $131) under materialet, med rutnät från hemhörnet och HEM-markering – som maskinvyn i 2D."/>
         <UniformGrid Columns="2" Margin="0,8,0,0">

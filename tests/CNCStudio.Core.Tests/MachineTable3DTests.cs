@@ -75,4 +75,18 @@ public class MachineTable3DTests
         d.Machine.WorkWidthMm = 300; d.Machine.WorkLengthMm = 300;
         Assert.Equal(50, MachineTable3D.GridStep(MachineTable3D.For(d)));
     }
+
+    [Fact]
+    public void The_tool_marker_from_the_2D_table_lands_on_the_same_spot_in_3D()
+    {
+        // Material at (50, 100) from the table's back-left corner: the tool over the material's back-left
+        // corner is at the view's (0, material length); over its front-left corner at (0, 0).
+        var a = MachineTable3D.For(Doc(50, 100));
+        Assert.Equal((0.0, 200.0), MachineTable3D.FromTable(a, 50, 100));
+        Assert.Equal((0.0, 0.0), MachineTable3D.FromTable(a, 50, 300));
+        Assert.Equal((a.Left, a.Back), MachineTable3D.FromTable(a, 0, 0));
+        var empty = Doc(50, 100); empty.HasMaterial = false;
+        var e = MachineTable3D.For(empty);
+        Assert.Equal((0.0, 500.0), MachineTable3D.FromTable(e, 0, 0));      // back-left corner of a 750 × 500 table
+    }
 }

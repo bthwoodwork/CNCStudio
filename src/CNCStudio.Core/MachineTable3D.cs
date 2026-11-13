@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace CNCStudio.Core;
@@ -27,6 +27,12 @@ public static class MachineTable3D
         // Table-canvas y (down = front) to view y (up = back) through the material's frame: y_view = ml − (y_table − sy).
         return new Area(-sx, w - sx, ml - (l - sy), ml + sy, -doc.MaterialThickness);
     }
+
+    /// <summary>
+    /// A point on the 2D machine table (from its back-left corner, Y towards the front – where the tool
+    /// marker is drawn) in the 3D view's frame.
+    /// </summary>
+    public static (double X, double Y) FromTable(Area a, double tableX, double tableY) => (a.Left + tableX, a.Back - tableY);
 
     /// <summary>The home corner (where the X/Y switches are) on the work area.</summary>
     public static (double X, double Y) HomePoint(Area a, HomeCorner corner) => corner switch

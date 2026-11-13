@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.7)
+﻿# CNC Studio – källkod (senaste: 0.9.8)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,17 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.8 – Fräsens position i 3D-vyn
+- **3D-vyn visar var fräsen står**, som det röda korset i maskinvyn. Den visas när maskinen är ansluten och homad och inte är i larm, och flyttas vid varje statusrapport.
+  - Ett rött kors ligger på materialets ovansida när fräsen står över materialet och på bordet annars.
+  - Om fräsens höjd är känd visas också fräsen själv: en röd spets på verklig höjd och ett grått skaft. Höjden är arbets-Z, alltså Z0 på materialets ovansida, och den stämmer bara när Z är nollad. En tunn röd linje går från korset upp till spetsen, så att höjden syns mot materialet.
+- Kryssrutan **Fräsens position** i 3D-panelen visar eller döljer markeringen.
+- Under ett program ersätter markeringen den röda stapeln från tidigare versioner, eftersom båda följer statusrapporterna.
+- Placeringen räknas ut på samma sätt som i 2D, från maskinens egna $23, $130 och $131. `MachineTable3D.FromTable` översätter till 3D-vyns koordinater.
+- Funktionen går att prova utan maskin: anslut till DEMO-porten, kör homing och jogga.
+
+**Tester:** 462 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.7 – Maskinbordet i 3D-vyn
 - **3D-vyn visar maskinens arbetsyta** under materialet, på samma ställe som i maskinvyn i 2D:

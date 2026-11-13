@@ -25,6 +25,11 @@ public partial class View3DPanel : UserControl
     private readonly ModelVisual3D _fixtures = new();
     private readonly ModelVisual3D _zero = new();
     private readonly ModelVisual3D _table = new();
+    private readonly ModelVisual3D _tool = new();
+    private bool _toolShown;
+
+    /// <summary>The tool in the view's frame; <paramref name="Z"/> = the tip's work Z (null = unknown).</summary>
+    public readonly record struct ToolPosition(double X, double Y, double? Z);
     // The running program: what has run (orange), what is left (blue) and where the tool is.
     private readonly LinesVisual3D _jobDone = new() { Color = Color.FromRgb(255, 159, 58), Thickness = 2.0 };
     private readonly LinesVisual3D _jobTodo = new() { Color = Color.FromRgb(79, 179, 255), Thickness = 1.4 };
@@ -51,6 +56,7 @@ public partial class View3DPanel : UserControl
         if (key == _shownKey && _fitted) return;
         _shownKey = key;
         double w = doc.MaterialWidth, l = doc.MaterialHeight, t = doc.MaterialThickness;
+        _stockW = w; _stockL = l;
         BuildPaths(doc, report);
         BuildFixtures(doc);
         BuildZero(doc);
@@ -109,6 +115,7 @@ public partial class View3DPanel : UserControl
         _simulation?.Cancel();
         _stock.Content = null; _fixtures.Children.Clear(); _zero.Children.Clear();
         _cuts.Points = new Point3DCollection(); _plunges.Points = new Point3DCollection(); _rapids.Points = new Point3DCollection();
+        _stockW = _stockL = 0;
         BuildTable(doc);
         Layer_Changed(this, new RoutedEventArgs());
         var a = MachineTable3D.For(doc);
@@ -332,6 +339,8 @@ public partial class View3DPanel : UserControl
 
     // ---- Machine table ----
 
+    private double _tableTopZ, _stockW, _stockL;
+
     private static readonly Color TableTop = Color.FromRgb(0x2A, 0x3B, 0x4D), TableEdge = Color.FromRgb(0x8C, 0xA3, 0xBA),
         TableGrid = Color.FromRgb(0x3E, 0x55, 0x6D), Home = Color.FromRgb(0x7C, 0xD9, 0x9C);
 
@@ -340,6 +349,7 @@ public partial class View3DPanel : UserControl
     {
         _table.Children.Clear();
         var a = MachineTable3D.For(doc);
+        _tableTopZ = a.TopZ;
         if (!(a.Width > 0 && a.Length > 0)) return;
         // Just under the material's underside, so the two never fight over the same depth.
         double z = a.TopZ - 0.3;
@@ -368,6 +378,49 @@ public partial class View3DPanel : UserControl
             FontWeight = FontWeights.Bold, FontSize = 13
         });
         InfoText.Text = $"Maskinbord {F(a.Width)} × {F(a.Length)} mm, rutor {F(MachineTable3D.GridStep(a))} mm från hemhörnet.";
+    }
+
+    // ---- Live tool position ----
+
+    private static readonly Color ToolRed = Color.FromRgb(0xFF, 0x5A, 0x5A);
+
+    /// <summary>
+    /// The tool where the machine says it is (null = unknown: not connected, not homed or in alarm), like the
+    /// cross in the 2D machine view: a cross on the table under the tool, a line up to the tip and the tool
+    /// itself above it. With an unknown height only the cross on the table is drawn.
+    /// </summary>
+    public void ShowTool(ToolPosition? tool)
+    {
+        _tool.Children.Clear();
+        _toolShown = tool is not null;
+        if (tool is { } t)
+        {
+            // On the material's top when the tool is over it, otherwise on the table – where the 2D cross would be seen.
+            bool overStock = t.X >= 0 && t.X <= _stockW && t.Y >= 0 && t.Y <= _stockL;
+            double table = (overStock ? 0 : _tableTopZ) + 0.3, arm = 14;
+            var red = new LinesVisual3D { Color = ToolRed, Thickness = 2, Points = new Point3DCollection
+            {
+                new(t.X - arm, t.Y, table), new(t.X + arm, t.Y, table), new(t.X, t.Y - arm, table), new(t.X, t.Y + arm, table)
+            } };
+            _tool.Children.Add(red);
+            if (t.Z is double z)
+            {
+                // A thin line from the table up to the tip, so the height can be read against the material.
+                _tool.Children.Add(new LinesVisual3D { Color = Color.FromArgb(160, 0xFF, 0x5A, 0x5A), Thickness = 1,
+                    Points = new Point3DCollection { new(t.X, t.Y, table), new(t.X, t.Y, z) } });
+                _tool.Children.Add(new TruncatedConeVisual3D
+                {
+                    Origin = new Point3D(t.X, t.Y, z), Normal = new Vector3D(0, 0, 1), BaseRadius = 0.5, TopRadius = 3.2, Height = 8,
+                    Fill = new SolidColorBrush(ToolRed)
+                });
+                _tool.Children.Add(new PipeVisual3D
+                {
+                    Point1 = new Point3D(t.X, t.Y, z + 8), Point2 = new Point3D(t.X, t.Y, z + 40), Diameter = 6.4,
+                    Fill = new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xC8))
+                });
+            }
+        }
+        Layer_Changed(this, new RoutedEventArgs());
     }
 
     // ---- View ----
@@ -400,7 +453,10 @@ public partial class View3DPanel : UserControl
         SetVisible(_plunges, ShowCuts.IsChecked == true && !_jobActive);
         SetVisible(_jobTodo, ShowCuts.IsChecked == true && _jobActive);
         SetVisible(_jobDone, ShowCuts.IsChecked == true && _jobActive);
-        SetVisible(_jobTool, _jobActive);
+        // The live tool replaces the job's red bar when it is shown (both follow the status reports).
+        bool liveTool = _toolShown && ShowToolPos?.IsChecked == true;
+        SetVisible(_tool, liveTool);
+        SetVisible(_jobTool, _jobActive && !liveTool);
         SetVisible(_rapids, ShowRapids.IsChecked == true);
         SetVisible(_fixtures, ShowFixtures.IsChecked == true);
         SetVisible(_table, ShowTable?.IsChecked == true);
