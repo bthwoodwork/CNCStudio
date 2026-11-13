@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.9)
+﻿# CNC Studio – källkod (senaste: 0.9.10)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.10 – Planfräsa offerskivan
+Verktyget motsvarar gSenders *Wasteboard Surfacing* och finns under **Maskin → Planfräsa offerskivan…**. Alla inställningar görs i ett formulär:
+- **Fräs:** välj en fräs ur verktygsbiblioteket. Planfräsar visas först, sedan de bredaste. Diameter, matning, nedmatning och varvtal fylls i från fräsen. Ställ in stegning (standard 60 %) och om raderna ska gå längs X eller Y.
+- **Yta:** bredd × djup och offerskivans tjocklek. **Hela bordet** fyller i den största ytan som går att planfräsa: maskinens arbetsområde minus det som krävs för att raderna ska gå ut så långt att hela fräsen lämnar ytan, plus marginalen till gränslägena. Ytan kan ligga **centrerad på bordet** eller på ett avstånd **från hemhörnet**, som under Materialplacering. En yta för nära kanten flyttas in.
+- **Djup:** totalt djup och djup per pass (standard 0,5 mm), högst 5 mm. Offerskivan ska göras plan, inte bytas.
+- **Skapa projekt** gör om formuläret till ett vanligt projekt: offerskivan blir material, en rektangel täcker ytan och planfräsningen läggs på den. Därför gäller samma CAM-kontroll, G-code-kontroll och körning som för alla andra projekt. Projektet kan sparas och köras igen nästa gång.
+- **Det öppna projektet:** om det har innehåll frågar programmet först om det ska sparas.
+- **Instruktioner efter Skapa projekt:** en ruta talar om hur programmet körs. Homa, och jogga sedan tills fräsmarkören i maskinvyn visar X/Y för ytans främre vänstra hörn (talen räknas fram åt dig). Nolla X och Y där, nolla Z på offerskivans ovansida och ladda programmet.
+- Logiken finns i `WasteboardSurfacing` (Core). Testerna kör hela kedjan för alla fyra hemhörn: CAM-kontroll, rörelseplan, G-code och den oberoende kontrollen.
+
+**Tester:** 474 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.9 – Dockning som i Visual Studio
 Panelerna dockas nu med **AvalonDock** (Dirkster.AvalonDock 4.74.1, fri komponent för WPF, med det mörka temat VS2013).
