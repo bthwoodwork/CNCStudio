@@ -332,6 +332,7 @@ public partial class MainWindow
         ShowDro(mpos, wpos);
         if (wpos is not null && _runner is not null) UpdateJobPathPosition(wpos);
         UpdateToolMarker();
+        Update3DTool();
         UpdateJobStatus(s);
     }
 

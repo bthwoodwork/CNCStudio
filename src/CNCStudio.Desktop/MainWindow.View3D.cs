@@ -25,8 +25,9 @@ public partial class MainWindow
     private void Update3D()
     {
         if (!_show3D || View3DPanel is null) return;
-        if (!_document.HasMaterial) { View3DPanel.ShowEmpty(_document); return; }   // only the machine table without material
+        if (!_document.HasMaterial) { View3DPanel.ShowEmpty(_document); Update3DTool(); return; }   // only the machine table (and the tool) without material
         View3DPanel.Show(_document, _camReport);
         Update3DJob();
+        Update3DTool();
     }
 }

@@ -104,13 +104,12 @@ public partial class MainWindow
         UpdateToolMarker();
     }
 
-    /// <summary>Moves the marker on each status report – no redraw of the view.</summary>
-    private void UpdateToolMarker()
+    /// <summary>
+    /// Where the tool is on the machine table: (x, y) on the table canvas (from the back-left corner, Y to
+    /// the front) and (tx, ty) from the home corner, as the marker's label shows.
+    /// </summary>
+    private (double X, double Y, double Tx, double Ty) ToolOnTable(double[] mpos)
     {
-        if (_toolMarker is null) return;
-        var mpos = _grbl?.LastStatus?.MPos;
-        if (mpos is not { Length: >= 3 } || _grbl?.LastStatus?.State == "Alarm") { _toolMarker.Visibility = Visibility.Collapsed; return; }
-        _toolMarker.Visibility = Visibility.Visible;
         double tx, ty, x, y;
         if (_grblSettings is { } s)
         {
@@ -123,6 +122,33 @@ public partial class MainWindow
             x = _document.Machine.WorkWidthMm + mpos[0]; y = -mpos[1];
             (tx, ty) = ToTable(x, y, 0, 0);
         }
+        return (x, y, tx, ty);
+    }
+
+    /// <summary>
+    /// The tool in the 3D view, on every status report: shown on the same conditions as the 2D marker
+    /// (connected, homed, not in alarm). The height is the work Z (Z0 = the material's top) when it is
+    /// known; otherwise only the position on the table is shown.
+    /// </summary>
+    private void Update3DTool()
+    {
+        if (!_show3D || View3DPanel is null) return;
+        var st = _grbl?.LastStatus;
+        if (!_homedThisSession || Grbl is null || st?.MPos is not { Length: >= 3 } mpos || st.State == "Alarm") { View3DPanel.ShowTool(null); return; }
+        var (x, y, _, _) = ToolOnTable(mpos);
+        var (vx, vy) = MachineTable3D.FromTable(MachineTable3D.For(_document), x, y);
+        double? z = st.WPos is { Length: >= 3 } w ? w[2] : _lastWco is { Length: >= 3 } wco ? mpos[2] - wco[2] : null;
+        View3DPanel.ShowTool(new View3DPanel.ToolPosition(vx, vy, z));
+    }
+
+    /// <summary>Moves the marker on each status report – no redraw of the view.</summary>
+    private void UpdateToolMarker()
+    {
+        if (_toolMarker is null) return;
+        var mpos = _grbl?.LastStatus?.MPos;
+        if (mpos is not { Length: >= 3 } || _grbl?.LastStatus?.State == "Alarm") { _toolMarker.Visibility = Visibility.Collapsed; return; }
+        _toolMarker.Visibility = Visibility.Visible;
+        var (x, y, tx, ty) = ToolOnTable(mpos);
         Canvas.SetLeft(_toolMarker, x); Canvas.SetTop(_toolMarker, y);
         if (_toolMarker.Tag is TextBlock label)
             label.Text = $"X {tx.ToString("0.0", CultureInfo.InvariantCulture)}  Y {ty.ToString("0.0", CultureInfo.InvariantCulture)}";
