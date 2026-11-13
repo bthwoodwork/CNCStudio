@@ -361,29 +361,39 @@ public partial class MainWindow
     /// Refused if units are inches ($13=1) or a work coordinate system other than G54 is active.
     /// Only fills the field; the user saves.
     /// </summary>
+    /// <summary>
+    /// The machine's Z zero as "MPos Z at the stock top" (G54 Z + G92 Z + TLO from $#), with the checks of
+    /// Läs från maskinen: millimetres, G54 active, and a value below the Z switch. Error = why it cannot be used.
+    /// </summary>
+    private static async Task<(double StockTop, double G54Z, double G92Z, double Tlo, string? Error)> ReadStockTopAsync(GrblClient g)
+    {
+        var settings = await g.ReadSettingsAsync();
+        if (settings.TryGetValue(13, out var inches) && inches == 1)
+            return (0, 0, 0, 0, "Maskinen rapporterar i tum ($13=1). CNC Studio räknar i mm – värdet läses inte.");
+        var gc = await g.SendLineAsync("$G");
+        var modes = gc.Lines.FirstOrDefault(l => l.Raw.StartsWith("[GC:", StringComparison.Ordinal))?.Raw ?? "";
+        if (!modes.Contains(" G54 ") && !modes.Contains(" G54]"))
+            return (0, 0, 0, 0, $"Aktivt koordinatsystem är inte G54 ({modes}). Värdet läses inte.");
+        var p = await g.ReadParametersAsync();
+        if (!p.TryGetValue("G54", out var g54) || g54.Length < 3) return (0, 0, 0, 0, "Maskinen svarade inte med G54 i $#.");
+        double g92 = p.TryGetValue("G92", out var o) && o.Length >= 3 ? o[2] : 0;
+        double tlo = p.TryGetValue("TLO", out var t) && t.Length >= 1 ? t[0] : 0;
+        double stockTop = g54[2] + g92 + tlo;
+        if (stockTop >= 0)
+            return (stockTop, g54[2], g92, tlo, $"G54 Z + G92 Z + TLO = {stockTop.ToString("0.000", CultureInfo.InvariantCulture)}. Det ska vara negativt (under Z-brytaren) – är Z-nollan satt och maskinen homad?");
+        return (stockTop, g54[2], g92, tlo, null);
+    }
+
     private async void ReadZeroFromMachine_Click(object sender, RoutedEventArgs e)
     {
         if (Grbl is not GrblClient g) { Error("Anslut till maskinen först (Maskinkontroll-panelen)."); return; }
         try
         {
-            var settings = await g.ReadSettingsAsync();
-            if (settings.TryGetValue(13, out var inches) && inches == 1)
-            { Error("Maskinen rapporterar i tum ($13=1). CNC Studio räknar i mm – värdet läses inte."); return; }
-            var gc = await g.SendLineAsync("$G");
-            var modes = gc.Lines.FirstOrDefault(l => l.Raw.StartsWith("[GC:", StringComparison.Ordinal))?.Raw ?? "";
-            if (!modes.Contains(" G54 ") && !modes.Contains(" G54]"))
-            { Error($"Aktivt koordinatsystem är inte G54 ({modes}). Värdet läses inte."); return; }
-            var p = await g.ReadParametersAsync();
-            if (!p.TryGetValue("G54", out var g54) || g54.Length < 3)
-            { Error("Maskinen svarade inte med G54 i $#."); return; }
-            double g92 = p.TryGetValue("G92", out var o) && o.Length >= 3 ? o[2] : 0;
-            double tlo = p.TryGetValue("TLO", out var t) && t.Length >= 1 ? t[0] : 0;
-            double stockTop = g54[2] + g92 + tlo;
+            var (stockTop, g54z, g92, tlo, error) = await ReadStockTopAsync(g);
+            if (error is not null) { Error(error); return; }
             string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
-            if (stockTop >= 0)
-            { Error($"G54 Z + G92 Z + TLO = {F3(stockTop)}. Det ska vara negativt (under Z-brytaren) – är Z-nollan satt och maskinen homad?"); return; }
             if (AppDialog.Show(this,
-                    $"MPos Z vid materialytan = {F3(stockTop)} mm\n(G54 Z {F3(g54[2])} + G92 Z {F3(g92)} + verktygslängd {F3(tlo)})\n\n" +
+                    $"MPos Z vid materialytan = {F3(stockTop)} mm\n(G54 Z {F3(g54z)} + G92 Z {F3(g92)} + verktygslängd {F3(tlo)})\n\n" +
                     "Gäller bara om maskinen är homad med $H och Z-nollan är satt på materialets ovansida.\n\nAnvänd värdet?",
                     "Läs Z-nolla från maskinen", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
             ZMaxBox.Text = F3(stockTop);

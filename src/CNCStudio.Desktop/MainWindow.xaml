@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.11 – kontroll av X/Y-nollan" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.12 – nolla X/Y vid materialet" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -421,6 +421,8 @@
               <Button Content="Nolla X + Y" Tag="XY" Click="Zero_Click" Background="#24618C" ToolTip="Nollar X och Y – Z ändras inte (G10 L20 P0 X0 Y0)"/>
               <Button Content="Gå till X0 Y0" Tag="XY" Click="GoTo_Click" ToolTip="Lyfter Z till nära överkanten (G53) och går till X0 Y0"/>
               <Button Content="⊥  Probning…" Click="Probe_Click" Background="#6B4FA0" FontWeight="SemiBold" ToolTip="Sätt Z (standard) – eller X, Y och Z i hörnet – med probplatta (G38.2)."/>
+              <Button Content="Nolla X/Y vid materialet…" Click="ZeroAtPlacement_Click" Background="#24618C"
+                      ToolTip="Sätter X0 Y0 där materialet är ritat i maskinvyn (främre vänstra hörnet, eller mitten), utan att maskinen rör sig. Stämmer när materialet ligger där det är ritat – vid planfräsning av offerskivan alltid."/>
               <Button Content="Arbetsområde hit…" Click="SetTravelHere_Click" ToolTip="Efter homing: jogga till yttersta punkten maskinen får nå och klicka här. Avståndet från brytarna blir maskinens rörelse ($130/$131) – de mjuka gränserna."/>
             </UniformGrid>
             <CheckBox x:Name="ShowToolBox" Content="Visa fräsens position i maskinvyn" IsChecked="True" Foreground="#E8F1FA" Margin="4,6,3,2" Checked="ShowTool_Changed" Unchecked="ShowTool_Changed"/>
