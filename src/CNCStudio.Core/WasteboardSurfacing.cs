@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace CNCStudio.Core;
 
@@ -24,6 +24,12 @@ public sealed record SurfacingSettings
     public bool RowsAlongY { get; init; }
     /// <summary>How far past the edge each row runs, beyond the tool radius.</summary>
     public double OverhangMm { get; init; } = 2;
+    /// <summary>
+    /// The cutter's centre goes over the whole travel (the margin to the limits is kept by the centre only),
+    /// so a wide cutter faces a wasteboard larger than the travel out to a radius beyond it. Size and placement
+    /// are then given by the machine.
+    /// </summary>
+    public bool CenterCoversTravel { get; init; }
 }
 
 /// <summary>
@@ -50,6 +56,26 @@ public static class WasteboardSurfacing
         return (Math.Floor(Math.Max(0, m.WorkWidthMm - edge)), Math.Floor(Math.Max(0, m.WorkLengthMm - edge)));
     }
 
+    /// <summary>
+    /// With <see cref="SurfacingSettings.CenterCoversTravel"/>: the material (the rows' area) and its corner from
+    /// home. The rows run a radius plus the run-out past the material along their direction, and the first and
+    /// last row lie on its edges across it – so the material is set back by that much along the rows and only
+    /// by the limit margin across them, and the cutter's centre reaches the margin on all four sides.
+    /// </summary>
+    public static (double Width, double Length, double FromHomeX, double FromHomeY) CenterArea(MachineProfile m, SurfacingSettings s)
+    {
+        double margin = Math.Max(0, m.LimitMarginMm), along = margin + s.ToolDiameter / 2 + s.OverhangMm;
+        double inX = s.RowsAlongY ? margin : along, inY = s.RowsAlongY ? along : margin;
+        return (m.WorkWidthMm - 2 * inX, m.WorkLengthMm - 2 * inY, inX, inY);
+    }
+
+    /// <summary>The faced area with the centre over the whole travel: from the limit margin less the radius to the far margin plus the radius (machine table coordinates from home).</summary>
+    public static (double From, double ToX, double ToY) CenterCoverage(MachineProfile m, SurfacingSettings s)
+    {
+        double margin = Math.Max(0, m.LimitMarginMm), r = s.ToolDiameter / 2;
+        return (margin - r, m.WorkWidthMm - margin + r, m.WorkLengthMm - margin + r);
+    }
+
     /// <summary>The reason the settings cannot become a project, or null.</summary>
     public static string? Validate(MachineProfile m, SurfacingSettings s)
     {
@@ -59,6 +85,11 @@ public static class WasteboardSurfacing
         if (s.TotalDepth > 5) return "Planfräsa högst 5 mm åt gången – offerskivan ska bara göras plan, inte bytas.";
         if (s.TotalDepth >= s.WasteboardThickness) return "Djupet måste vara mindre än offerskivans tjocklek.";
         if (!double.IsFinite(s.DepthPerPass) || s.DepthPerPass <= 0) return "Djup per pass måste vara större än 0.";
+        if (s.CenterCoversTravel)
+        {
+            var (cw, cl, _, _) = CenterArea(m, s);
+            return cw < 10 || cl < 10 ? "Maskinens rörelseområde är för litet för den här fräsen." : null;
+        }
         var (maxW, maxL) = MaxArea(m, s);
         double w = s.Width ?? maxW, l = s.Length ?? maxL;
         if (!double.IsFinite(w) || !double.IsFinite(l) || w < 10 || l < 10) return "Ytan måste vara minst 10 × 10 mm.";
@@ -73,6 +104,8 @@ public static class WasteboardSurfacing
         if (Validate(machine, s) is string error) throw new ArgumentException(error);
         var (maxW, maxL) = MaxArea(machine, s);
         double w = s.Width ?? maxW, l = s.Length ?? maxL;
+        double? centreX = null, centreY = null;
+        if (s.CenterCoversTravel) { var c = CenterArea(machine, s); (w, l, centreX, centreY) = (c.Width, c.Length, c.FromHomeX, c.FromHomeY); }
         var doc = new CncDocument
         {
             Name = $"Planfräsa offerskivan {w:0} × {l:0}",
@@ -83,10 +116,15 @@ public static class WasteboardSurfacing
         doc.Motion.EndPosition = EndPosition.WorkZero;
         // Where the area lies on the table: from the home corner as asked, or centred. Canvas coordinates
         // run from the table's back-left corner with Y towards the front (as the machine view draws it).
-        double reach = Reach(machine, s);
-        double tx = s.FromHomeX ?? (machine.WorkWidthMm - w) / 2, ty = s.FromHomeY ?? (machine.WorkLengthMm - l) / 2;
-        tx = Math.Clamp(tx, reach, Math.Max(reach, machine.WorkWidthMm - w - reach));
-        ty = Math.Clamp(ty, reach, Math.Max(reach, machine.WorkLengthMm - l - reach));
+        double tx, ty;
+        if (centreX is double cx && centreY is double cy) (tx, ty) = (cx, cy);
+        else
+        {
+            double reach = Reach(machine, s);
+            tx = s.FromHomeX ?? (machine.WorkWidthMm - w) / 2; ty = s.FromHomeY ?? (machine.WorkLengthMm - l) / 2;
+            tx = Math.Clamp(tx, reach, Math.Max(reach, machine.WorkWidthMm - w - reach));
+            ty = Math.Clamp(ty, reach, Math.Max(reach, machine.WorkLengthMm - l - reach));
+        }
         bool left = machine.HomeCorner is HomeCorner.BackLeft or HomeCorner.FrontLeft;
         bool front = machine.HomeCorner is HomeCorner.FrontLeft or HomeCorner.FrontRight;
         doc.Stock.X = left ? tx : machine.WorkWidthMm - tx - w;
@@ -99,6 +137,7 @@ public static class WasteboardSurfacing
             ShapeId = rect.Id, Kind = CamOperationKind.Face, ToolName = s.ToolName, ToolKind = ToolKind.FlatEndMill,
             ToolDiameter = s.ToolDiameter, TotalDepth = s.TotalDepth, DepthPerPass = s.DepthPerPass, UseTabs = false,
             StepoverPercent = s.StepoverPercent, FaceOverhangMm = s.OverhangMm, FaceAlongY = s.RowsAlongY,
+            FaceCenterReachesLimits = s.CenterCoversTravel,
             FeedRate = s.FeedRate, PlungeRate = s.PlungeRate, SpindleRpm = s.SpindleRpm
         });
         return doc;

@@ -90,6 +90,13 @@ public sealed class CamOperation
     /// <summary>Facing: rows along Y instead of along X.</summary>
     public bool FaceAlongY { get; set; }
 
+    /// <summary>
+    /// Facing only: the cutter may reach past the machine's travel – only its centre (the spindle) must keep the
+    /// margin to the limits. For surfacing a wasteboard larger than the travel with a wide cutter, so the whole
+    /// reachable area gets faced. Off: the whole cutter stays inside, as for every other operation.
+    /// </summary>
+    public bool FaceCenterReachesLimits { get; set; }
+
     /// <summary>Pocket and facing: distance between neighbouring loops/rows, as % of the tool diameter.</summary>
     public double StepoverPercent { get; set; } = 40;
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -33,7 +33,9 @@ public static class CamSafetyReview
         }
         // A tool's *entire diameter* must remain inside the machine envelope, with the
         // machine profile's safety margin to the limit switches.
-        double edge = toolRadius + Math.Max(0, document.Machine.LimitMarginMm);
+        // Facing a wasteboard may let the cutter run past the travel: then only its centre keeps the margin.
+        bool centreOnly = operation.Kind == CamOperationKind.Face && operation.FaceCenterReachesLimits;
+        double edge = (centreOnly ? 0 : toolRadius) + Math.Max(0, document.Machine.LimitMarginMm);
         double minX = edge, minY = edge;
         double maxX = document.Machine.WorkWidthMm - edge;
         double maxY = document.Machine.WorkLengthMm - edge;

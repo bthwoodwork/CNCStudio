@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -23,6 +23,13 @@ public sealed class SurfacingWindow : Window
     private readonly RadioButton _centred = new() { Content = "Centrerad på bordet", IsChecked = true, Foreground = Ink, Margin = new Thickness(0, 4, 16, 0) },
         _placed = new() { Content = "Från hemhörnet:", Foreground = Ink, Margin = new Thickness(0, 4, 8, 0) };
     private readonly ComboBox _rows = new() { Margin = new Thickness(0, 2, 0, 0) };
+    private readonly CheckBox _centre = new()
+    {
+        Content = "Fräsens centrum över hela rörelseområdet – fräsen går utanför", IsChecked = true, Foreground = Ink, Margin = new Thickness(0, 0, 0, 6),
+        ToolTip = "För en offerskiva som är större än det maskinen kan röra sig över: spindeln (fräsens centrum) går ända ut till marginalen vid gränslägena, " +
+                  "och fräsen planar en radie utanför. Av: hela fräsen håller sig innanför, och du väljer ytans storlek och placering."
+    };
+    private Button? _whole;
     private readonly TextBlock _max = new() { Foreground = Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
 
@@ -52,8 +59,11 @@ public sealed class SurfacingWindow : Window
         if (list.Count > 0) _tool.SelectedIndex = 0;
 
         _diameter.TextChanged += (_, _) => ShowMax();
+        _rows.SelectionChanged += (_, _) => ShowMax();
+        _centre.Checked += (_, _) => { Placement(); ShowMax(); };
+        _centre.Unchecked += (_, _) => { Placement(); ShowMax(); };
         _centred.Checked += (_, _) => Placement(); _placed.Checked += (_, _) => Placement();
-        var whole = Btn("Hela bordet", B(0x34, 0x47, 0x5A));
+        var whole = _whole = Btn("Hela bordet", B(0x34, 0x47, 0x5A));
         whole.ToolTip = "Största ytan maskinen kan planfräsa med den här fräsen";
         whole.Click += (_, _) => { if (Settings(out var s, quiet: true) is { } ok) { var (w, l) = WasteboardSurfacing.MaxArea(_machine, ok); _width.Text = F(w); _length.Text = F(l); _centred.IsChecked = true; } };
         var create = Btn("Skapa projekt", B(0x24, 0x61, 0x8C)); create.IsDefault = true;
@@ -76,6 +86,7 @@ public sealed class SurfacingWindow : Window
             Card1(new StackPanel { Children =
             {
                 Label("2 · YTA"),
+                _centre,
                 Row(("Bredd X (mm)", _width), ("Djup Y (mm)", _length), ("Offerskivans tjocklek (mm)", _thickness)),
                 new WrapPanel { Children = { whole } },
                 new WrapPanel { Margin = new Thickness(0, 6, 0, 0), Children = { _centred, _placed,
@@ -107,12 +118,27 @@ public sealed class SurfacingWindow : Window
         ShowMax();
     }
 
-    private void Placement() => _fromX.IsEnabled = _fromY.IsEnabled = _placed.IsChecked == true;
+    private void Placement()
+    {
+        bool own = _centre.IsChecked != true;            // own size and placement only when the cutter stays inside
+        _width.IsEnabled = _length.IsEnabled = _centred.IsEnabled = _placed.IsEnabled = own;
+        if (_whole is not null) _whole.IsEnabled = own;
+        _fromX.IsEnabled = _fromY.IsEnabled = own && _placed.IsChecked == true;
+    }
 
     private void ShowMax()
     {
         if (_max is null) return;
         if (Settings(out _, quiet: true) is not { } s) { _max.Text = ""; return; }
+        if (s.CenterCoversTravel)
+        {
+            double margin = _machine.LimitMarginMm;
+            var (from, toX, toY) = WasteboardSurfacing.CenterCoverage(_machine, s);
+            _max.Text = $"Fräsens centrum går från {F(margin)} till {F(_machine.WorkWidthMm - margin)} mm i X och {F(margin)} till {F(_machine.WorkLengthMm - margin)} mm i Y " +
+                        $"({F(margin)} mm marginal till gränslägena). Med {F(s.ToolDiameter)} mm fräs planas {F(from)}…{F(toX)} × {F(from)}…{F(toY)} mm från hemhörnet – " +
+                        $"{F(s.ToolDiameter / 2 - margin)} mm utanför rörelseområdet på varje sida. Se till att inget annat står där.";
+            return;
+        }
         var (w, l) = WasteboardSurfacing.MaxArea(_machine, s);
         _max.Text = $"Maskinen är {F(_machine.WorkWidthMm)} × {F(_machine.WorkLengthMm)} mm. Med {F(s.ToolDiameter)} mm fräs kan högst {F(w)} × {F(l)} mm planfräsas: " +
                     $"raderna går ut förbi kanten tills hela fräsen har lämnat ytan, och {F(_machine.LimitMarginMm)} mm ska finnas kvar till gränslägena.";
@@ -140,7 +166,8 @@ public sealed class SurfacingWindow : Window
         {
             Width = w, Length = l, FromHomeX = fx, FromHomeY = fy, WasteboardThickness = thick, TotalDepth = depth, DepthPerPass = pass,
             ToolName = tool is not null && Math.Abs(tool.Diameter - dia) < 1e-9 ? tool.Name : $"{F(dia)} mm planfräs",
-            ToolDiameter = dia, StepoverPercent = step, FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm, RowsAlongY = _rows.SelectedIndex == 1
+            ToolDiameter = dia, StepoverPercent = step, FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm, RowsAlongY = _rows.SelectedIndex == 1,
+            CenterCoversTravel = _centre.IsChecked == true
         };
     }
 

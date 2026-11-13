@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.12)
+﻿# CNC Studio – källkod (senaste: 0.9.13)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.13 – Planfräsning över hela rörelseområdet
+En stor fräs, till exempel 35 mm, når utanför maskinens rörelseområde. Offerskivan är ofta större än rörelseområdet, och då ska hela ytan som fräsen når kunna planas.
+- **Planfräsa offerskivan → "Fräsens centrum över hela rörelseområdet – fräsen går utanför"** (förvalt):
+  - Spindeln, alltså fräsens centrum, går ända ut till marginalen vid gränslägena på alla fyra sidor, och fräsen planar en radie utanför. Med en 35 mm fräs, 500 × 500 mm rörelse och 3 mm marginal går centrum 3…497 mm och fräsen planar −14,5…514,5 mm.
+  - Storlek och placering bestäms av maskinen, så de fälten är gråa. Formuläret talar om exakt vad som planas och hur långt utanför rörelseområdet fräsen går. Se till att inget annat står där.
+  - Utan valet håller sig hela fräsen innanför, som tidigare. Då väljer du själv ytans storlek och placering.
+- **CAM-panelen, planfräsning → "Fräsens centrum får nå gränslägena"**: samma sak för en vanlig planfräsning. CAM-kontrollen räknar då bara med fräsens centrum, inte hela fräsen. Det gäller bara planfräsning. Alla andra bearbetningar kräver fortfarande att hela fräsen är innanför.
+- GRBL:s mjuka gränser gäller spindelns position, och kontrollen före start (0.9.11) räknar med fräsens centrum. Den skyddar alltså fortfarande mot ALARM:2.
+- Materialet som ritas i maskinvyn och 3D-vyn är radernas område: centrumets yta minus utgången förbi kanten längs raderna. Den planade ytan är större än så.
+
+**Tester:** 492 tester. Hela kedjan, från CAM-kontroll via G-code och den oberoende kontrollen till kontrollen före start, är testad med 35 mm fräs för olika hemhörn och radriktningar. Testerna visar att centrum når exakt −497…−3 i maskinkoordinater.
 
 ## 0.9.12 – Nolla X/Y vid materialet
 - **Nolla X + Y ▾ → Vid materialet…** i Maskinkontroll, eller **Maskin → Nolla X + Y vid materialet…**, sätter X0 Y0 där materialet är ritat i maskinvyn, utan att du behöver jogga dit:
