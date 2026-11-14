@@ -22,7 +22,7 @@ public static class CamDirection
         var outline = CamGeometryChecks.Outline(shape);
         var result = paths.Select(path =>
         {
-            bool? wallRight = p.IsPocket ? PocketWallOnRight(path) : ContourWallOnRight(path, shape, op, outline);
+            bool? wallRight = p.IsPocket || p.IsVCarve ? PocketWallOnRight(path) : ContourWallOnRight(path, shape, op, outline);
             return wallRight is bool r && r != wantRight ? Reverse(path) : path;
         }).ToList();
         return p with { Centerline = result[0], Centerlines = result };

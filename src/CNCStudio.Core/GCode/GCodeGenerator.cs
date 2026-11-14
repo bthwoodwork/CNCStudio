@@ -46,7 +46,7 @@ public sealed record ExportBlocker(ExportBlockerKind Kind, string Message, Guid?
 /// </summary>
 public static class GCodeGenerator
 {
-    public const string Generator = "CNC Studio 0.9.24";
+    public const string Generator = "CNC Studio 0.9.25";
 
     public static IReadOnlyList<string> BlockingReasons(CncDocument doc, CamReport report) =>
         Blockers(doc, report).Select(b => b.Message).ToList();

@@ -58,13 +58,20 @@ public partial class MainWindow
         if (_loadingCam || CamToolPicker.SelectedItem is not ToolDefinition t || t == CustomTool) return;
         var v = t.CuttingFor(_document.MaterialId);
         CamDiameter.Text = F(t.Diameter);
+        if (t.Kind == ToolKind.VBit)
+        {
+            CamVAngle.Text = F(t.AngleDeg);
+            // A V-bit is for V-carving: choose it for the user (contour and pocket refuse a V-bit).
+            if (CamKind.SelectedIndex is (int)CamOperationKind.Outside or (int)CamOperationKind.Inside or (int)CamOperationKind.Pocket)
+                CamKind.SelectedIndex = (int)CamOperationKind.VCarve;
+        }
         CamFeed.Text = F(v.FeedRate);
         CamPlunge.Text = F(v.PlungeRate);
         CamPass.Text = F(v.DepthPerPass);
         CamRpm.Text = F(v.SpindleRpm);
         UpdateCamSummary();
         StatusText.Text = t.Kind == ToolKind.VBit
-            ? "V-fräs vald: den kan inte användas för kontur eller ficka (V-carving kommer senare)."
+            ? $"V-fräs vald ({F(t.AngleDeg)}°): bearbetningen är V-carving."
             : v.Material is string m ? $"Skärdata för {t.Name} i {m} från verktygsbiblioteket."
             : _document.MaterialName is string pm ? $"{t.Name} har ingen skärdata för {pm} – standardvärdena används. Lägg till den i Verktygsbiblioteket."
             : $"{t.Name}: standardvärden (välj materialtyp under Projekt och material för materialets skärdata).";

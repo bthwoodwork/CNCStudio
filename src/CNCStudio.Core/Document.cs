@@ -39,7 +39,8 @@ public sealed class DesignShape
 
 /// <summary>Drill: straight plunges at the shape's centre (the hole gets the tool's diameter), in pecks of DepthPerPass.</summary>
 /// <para>Face: the shape's whole area cut flat in rows, running out past the edges (planfräsning).</para>
-public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face }
+/// <para>VCarve: a V-bit carves the shape with walls along the outline, deeper where it is wider (V-carving).</para>
+public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve }
 
 public enum PlungeMode { Vertical, Ramp }
 
@@ -71,6 +72,8 @@ public sealed class CamOperation
     public Guid ShapeId { get; set; }
     public CamOperationKind Kind { get; set; } = CamOperationKind.Outside;
     public double ToolDiameter { get; set; } = 3.175;
+    /// <summary>V-bit: the included angle in degrees (60° V-bit = 60). Used by V-carving and the 3D view.</summary>
+    public double ToolAngleDeg { get; set; } = 60;
     public double TotalDepth { get; set; } = 6;
     public double DepthPerPass { get; set; } = 2;
     public bool UseTabs { get; set; } = true;
@@ -135,6 +138,12 @@ public static class CamValidation
             return "Hållflikar används inte för borrning.";
         if (operation.Kind == CamOperationKind.Face && operation.UseTabs)
             return "Hållflikar används inte för planfräsning.";
+        if (operation.Kind == CamOperationKind.VCarve && operation.UseTabs)
+            return "Hållflikar används inte för V-carving.";
+        if (operation.Kind == CamOperationKind.VCarve && VCarveToolpaths.ValidateAngle(operation.ToolAngleDeg) is string angle)
+            return angle;
+        if (operation.Kind == CamOperationKind.VCarve && operation.ToolKind != ToolKind.VBit)
+            return "V-carving kräver en V-fräs – välj en V-fräs i listan.";
         if (operation.Kind == CamOperationKind.Face &&
             (!double.IsFinite(operation.StepoverPercent) || operation.StepoverPercent < 5 || operation.StepoverPercent > 95))
             return "Stegningen för planfräsning måste vara 5–95 % av fräsdiametern.";

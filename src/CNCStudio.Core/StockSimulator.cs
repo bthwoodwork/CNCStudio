@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -105,7 +105,7 @@ public static class StockSimulator
         int ix0 = Math.Max(0, (int)Math.Floor((x - r) / map.Cell)), ix1 = Math.Min(map.Nx - 1, (int)Math.Floor((x + r) / map.Cell));
         int iy0 = Math.Max(0, (int)Math.Floor((y - r) / map.Cell)), iy1 = Math.Min(map.Ny - 1, (int)Math.Floor((y + r) / map.Cell));
         float floor = (float)-map.Thickness;
-        double vTan = op.ToolKind == ToolKind.VBit ? Math.Tan(90.0 * Math.PI / 180 / 2) : 0; // V-bit angle not on the op yet: 90°
+        double vTan = op.ToolKind == ToolKind.VBit ? Math.Tan(op.ToolAngleDeg * Math.PI / 360) : 0;
         for (int iy = iy0; iy <= iy1; iy++)
         {
             double cy = (iy + 0.5) * map.Cell - y;

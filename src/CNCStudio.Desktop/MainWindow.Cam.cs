@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.9.24";
+    private const string AppTitle = "CNC Studio 0.9.25";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -124,6 +124,15 @@ public partial class MainWindow
             if (result.Preview is not ContourPreview preview) continue;
             double width = Math.Max(result.Operation.ToolDiameter, 0.5 / _zoom);
             if (preview.IsDrill) { canvas.Children.Add(HoleDisc(preview.Centerline[0], result.Operation.ToolDiameter, offsetX, offsetY, CanvasTheme.ToolBand, null)); continue; }
+            if (preview.IsVCarve)
+            {
+                // The V-bit cuts only as wide as its cone at each loop's depth: draw that, deepest per loop.
+                for (int i = 0; i < preview.Centerlines.Count; i++)
+                    if (preview.LoopFinal[i])
+                        canvas.Children.Add(PathLine(preview.Centerlines[i], offsetX, offsetY, CanvasTheme.ToolBand,
+                            Math.Max(2 * VCarveToolpaths.HalfWidthAt(preview.LoopDepths[i], result.Operation.ToolAngleDeg), 0.5 / _zoom)));
+                continue;
+            }
             foreach (var centerline in preview.Centerlines)
                 canvas.Children.Add(PathLine(centerline, offsetX, offsetY, CanvasTheme.ToolBand, width));
         }
@@ -145,7 +154,7 @@ public partial class MainWindow
             {
                 foreach (var centerline in preview.Centerlines)
                     canvas.Children.Add(PathLine(centerline, offsetX, offsetY, CanvasTheme.ToolPath, 1.1 / _zoom));
-                if (result.Operation.Kind != CamOperationKind.Pocket)
+                if (result.Operation.Kind is not (CamOperationKind.Pocket or CamOperationKind.VCarve))
                     foreach (var centerline in preview.Centerlines)
                         DrawDirectionArrows(canvas, centerline, offsetX, offsetY);
                 DrawTabs(canvas, preview, result.TabSpans, result.Operation.ToolDiameter, offsetX, offsetY);
