@@ -59,6 +59,7 @@ public partial class MainWindow
                 PortPicker.SelectedItem = real;
         }
         RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields(); Render();
+        RefreshJobHistory();
     }
 
     /// <summary>

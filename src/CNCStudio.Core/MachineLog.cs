@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,6 +22,10 @@ public sealed record LoggedJob
     public string Computer { get; init; } = "";
     /// <summary>True when the run continued an interrupted job.</summary>
     public bool Resumed { get; init; }
+    /// <summary>The project the program came from (to open and load it again), null when unknown or unsaved.</summary>
+    public string? ProjectPath { get; init; }
+    /// <summary>Which of the project's programs (one per tool), null for a project with one program.</summary>
+    public int? ProgramNumber { get; init; }
     [JsonIgnore] public TimeSpan Duration => End > Start ? End - Start : TimeSpan.Zero;
 }
 

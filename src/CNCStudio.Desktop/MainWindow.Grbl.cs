@@ -216,7 +216,7 @@ public partial class MainWindow
     {
         if (_grbl is null || machine.Id != _document.Machine.Id)
         {
-            AppDialog.Show(owner, $"Kalibreringen görs på den anslutna maskinen. Anslut till {machine.Name} först (Maskinkontroll → Anslut) och kör homing.",
+            AppDialog.Show(owner, $"Kalibreringen görs på den anslutna maskinen. Anslut till {machine.Name} först (Anslut uppe till vänster) och kör homing.",
                 "Kalibrera steg/mm", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -229,7 +229,7 @@ public partial class MainWindow
     {
         if (_grbl is null || machine.Id != _document.Machine.Id)
         {
-            AppDialog.Show(owner, $"Vinkelkontrollen görs på den anslutna maskinen. Anslut till {machine.Name} först (Maskinkontroll → Anslut) och kör homing.",
+            AppDialog.Show(owner, $"Vinkelkontrollen görs på den anslutna maskinen. Anslut till {machine.Name} först (Anslut uppe till vänster) och kör homing.",
                 "Kontrollera vinkel", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -307,6 +307,7 @@ public partial class MainWindow
         ConnectionBanner.Background = new SolidColorBrush(color);
         ConnectionStateText.Text = title;
         ConnectionDetailText.Text = detail;
+        ConnectionBanner.ToolTip = detail.Length == 0 ? title : title + " – " + detail;
     }
 
     private double[]? _lastWco;
@@ -388,7 +389,7 @@ public partial class MainWindow
 
     private async void ReadZeroFromMachine_Click(object sender, RoutedEventArgs e)
     {
-        if (Grbl is not GrblClient g) { Error("Anslut till maskinen först (Maskinkontroll-panelen)."); return; }
+        if (Grbl is not GrblClient g) { Error("Anslut till maskinen först (uppe till vänster i verktygsraden)."); return; }
         try
         {
             var (stockTop, g54z, g92, tlo, error) = await ReadStockTopAsync(g);
@@ -408,7 +409,7 @@ public partial class MainWindow
 
     private void OpenLimitTest_Click(object sender, RoutedEventArgs e)
     {
-        if (Grbl is not GrblClient g) { Error("Anslut till maskinen först (Maskinkontroll-panelen)."); return; }
+        if (Grbl is not GrblClient g) { Error("Anslut till maskinen först (uppe till vänster i verktygsraden)."); return; }
         if (_limitTest is { IsLoaded: true }) { _limitTest.Activate(); return; }
         var w = new LimitSwitchTestWindow(g) { Owner = this };
         w.Closed += (_, _) =>

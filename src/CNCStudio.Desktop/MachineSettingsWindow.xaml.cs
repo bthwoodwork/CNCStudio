@@ -42,7 +42,7 @@ public partial class MachineSettingsWindow : Window
         _validate = validate;
         _grbl = grbl;
         GrblInfoText.Text = grbl is null
-            ? "Inte ansluten. Anslut i Maskinkontroll-panelen för att läsa och skriva maskinens inställningar."
+            ? "Inte ansluten. Anslut (uppe till vänster i huvudfönstret) för att läsa och skriva maskinens inställningar."
             : "Läser hela inställningsminnet med $$. Ändrade värden skrivs ett i taget direkt till maskinens EEPROM " +
               "(bara när maskinen är Idle eller Alarm) och kontrolläses sedan. Detta är skilt från Spara/Avbryt nedan.";
         ReadGrblButton.IsEnabled = grbl is not null;
@@ -317,7 +317,7 @@ public partial class MachineSettingsWindow : Window
     /// </summary>
     private async void TestAxis_Click(object sender, RoutedEventArgs e)
     {
-        if (_grbl is null) { Show("Anslut till maskinen först (Maskinkontroll-panelen)."); return; }
+        if (_grbl is null) { Show("Anslut till maskinen först (uppe till vänster i huvudfönstret)."); return; }
         var tag = (string)((Button)sender).Tag;
         char axis = tag[0]; int sign = tag[1] == '+' ? 1 : -1;
         if (!Num(TestDistanceBox, out var mm) || mm <= 0 || mm > 50)
