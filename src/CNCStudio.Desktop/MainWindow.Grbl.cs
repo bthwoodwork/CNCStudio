@@ -79,6 +79,7 @@ public partial class MainWindow
             var hello = await client.ConnectAsync();
             _connectedFirmware = hello;
             _grbl = client;
+            UpdateKeepAwake();
             LogConnected(hello);
             client.StartStatusPolling(TimeSpan.FromMilliseconds(250));
             _connectedBanner = (demo ? "ANSLUTEN – DEMOMASKIN" : "ANSLUTEN", $"{port} · {hello}", demo ? Color.FromRgb(92, 60, 140) : Color.FromRgb(36, 98, 63));
@@ -108,6 +109,7 @@ public partial class MainWindow
     {
         var client = _grbl;
         _grbl = null;
+        UpdateKeepAwake();
         if (client is not null)
         {
             try { client.Disconnect(); } catch (Exception) { }

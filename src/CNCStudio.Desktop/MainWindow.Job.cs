@@ -134,6 +134,7 @@ public partial class MainWindow
     {
         var runner = new JobRunner(g, _jobLines!, _jobStore);
         _runner = runner;
+        UpdateKeepAwake();
         runner.ProgressChanged += () => Dispatcher.BeginInvoke(() => ShowJobProgress(runner));
         UpdateJobButtons();
         RecoveryBanner.Visibility = Visibility.Collapsed;
@@ -142,6 +143,7 @@ public partial class MainWindow
         var result = await runner.RunAsync(startIndex, preamble);
         var due = LogJob(started, result, runner.TotalLines, resumed: startIndex > 0);
         _runner = null;
+        UpdateKeepAwake();
         ShowJobProgress(runner);
         UpdateJobButtons();
         JobProgressText.Text = result.Message;
