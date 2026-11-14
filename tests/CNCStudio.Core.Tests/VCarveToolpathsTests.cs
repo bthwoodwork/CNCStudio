@@ -127,4 +127,18 @@ public class VCarveToolpathsTests
         // A link at depth never goes deeper than the loop it comes from allows: it stays horizontal.
         Assert.All(moves.Where(m => m.Purpose == "Till nästa varv på djupet"), m => Assert.Equal(m.Z0, m.Z1));
     }
+
+    [Fact]
+    public void A_letter_that_splits_is_followed_one_leg_at_a_time()
+    {
+        // An "n"-like shape: a bar on top of two legs. Deeper insets split into the two legs.
+        var shape = TextShapes.FromOutlines(new IReadOnlyList<(double, double)>[]
+        {
+            new List<(double, double)> { (0, 0), (30, 0), (30, 30), (22, 30), (22, 8), (8, 8), (8, 30), (0, 30) },
+        }, 30, 0, 0, new TextSource { Content = "n" });
+        var p = VCarveToolpaths.Generate(shape, Op(shape.Id, angle: 90, depth: 4, pass: 4), 10);
+        // Lifts (loops not linked at depth) stay few: not one per inset step in each leg.
+        int lifts = p.LoopLinkAtDepth.Count(x => !x);
+        Assert.True(lifts <= 6, $"{lifts} lifts of {p.Centerlines.Count} loops");
+    }
 }
