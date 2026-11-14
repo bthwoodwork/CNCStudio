@@ -15,7 +15,7 @@ namespace CNCStudio.Desktop;
 /// </summary>
 public partial class MainWindow
 {
-    private static readonly string[] PanelIds = { "Tools", "Properties", "Machine", "Job", "Cam" };
+    private static readonly string[] PanelIds = { "Tools", "Properties", "Machine", "Job", "Macros", "Cam" };
     private const string CanvasId = "Canvas";
     /// <summary>The layout as built from the XAML, to fall back to and to reset to.</summary>
     private string? _defaultDockLayout;
@@ -32,7 +32,7 @@ public partial class MainWindow
     {
         _dockContents = new Dictionary<string, object>
         {
-            ["Tools"] = ToolsPanel, ["Properties"] = PropertiesPanel, ["Machine"] = MachinePanel, ["Job"] = JobPanel, ["Cam"] = CamPanel, [CanvasId] = CanvasArea
+            ["Tools"] = ToolsPanel, ["Properties"] = PropertiesPanel, ["Machine"] = MachinePanel, ["Job"] = JobPanel, ["Macros"] = MacrosPanel, ["Cam"] = CamPanel, [CanvasId] = CanvasArea
         };
         try { _defaultDockLayout = SerializeLayout(); } catch (Exception) { _defaultDockLayout = null; }
         var path = AppStorage.Current.DockLayoutPath;

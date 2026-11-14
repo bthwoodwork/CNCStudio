@@ -223,6 +223,7 @@ public partial class MainWindow : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         InitDocking();   // the saved panel layout, before the workspace decides which panels are shown
+        RefreshMacroList();
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
         FitToMaterial(); InitGrblUi(); InitGamepad(); InitSettingsBackup();
         ShowStorageStatus();
@@ -351,17 +352,19 @@ public partial class MainWindow : Window
         {
             case Workspace.Design:
                 SetPanelVisible("Tools", true); SetPanelVisible("Properties", true);
-                SetPanelVisible("Cam", false); SetPanelVisible("Machine", false); SetPanelVisible("Job", false);
+                SetPanelVisible("Cam", false); SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false);
                 StatusText.Text = "Arbetsyta Design – rita och redigera på materialet.";
                 break;
             case Workspace.Cam:
                 SetPanelVisible("Tools", true); SetPanelVisible("Properties", false);
-                SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Cam", true);
+                SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false); SetPanelVisible("Cam", true);
                 StatusText.Text = "Arbetsyta CAM – bearbetning och körbanor på materialet. Ingen G-code.";
                 break;
             case Workspace.Machine:
                 SetPanelVisible("Tools", false); SetPanelVisible("Cam", false);
-                SetPanelVisible("Machine", true); SetPanelVisible("Job", true);
+                // Makron first, so Program is the tab in front when they share a pane.
+                SetPanelVisible("Machine", true); SetPanelVisible("Macros", true); SetPanelVisible("Job", true);
+                RefreshMacroList();
                 RefreshJobHistory();
                 SetPanelVisible("Properties", true); // fixture and Z settings live there
                 StatusText.Text = "Arbetsyta Maskin – maskinbordet: materialplacering, fastspänningar och maskinstyrning.";

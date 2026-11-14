@@ -71,6 +71,7 @@ public sealed class AppStorage
         Path.Combine(MaterialsFolderName, "material.json"),
         Path.Combine(SettingsFolderName, "maskinprofil.json"),
         Path.Combine(SettingsFolderName, "probplatta.json"),
+        Path.Combine(SettingsFolderName, "makron.json"),
     };
 
     private readonly string _local;
@@ -191,6 +192,9 @@ public sealed class AppStorage
 
     /// <summary>Copies of the machine's GRBL settings ($$): Inställningar\GRBL-kopior.</summary>
     public string GrblBackupFolder => Path.Combine(DataFolder, SettingsFolderName, Grbl.GrblBackup.FolderName);
+
+    /// <summary>The macros (Inställningar\makron.json) – shared like the libraries.</summary>
+    public string MacroLibraryPath => Path.Combine(DataFolder, SettingsFolderName, "makron.json");
 
     /// <summary>The gamepad setup (Inställningar\gamepad.json) – shared like the other settings.</summary>
     public string GamepadProfilePath => Path.Combine(DataFolder, SettingsFolderName, "gamepad.json");
