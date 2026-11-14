@@ -132,7 +132,7 @@ public static class VCarveToolpaths
                     // Follow one part inwards as long as the next loop is right beside it (a chain: the outline's
                     // insets, or a hole's); otherwise start the outermost loop left, nearest first.
                     var near = at;
-                    (int Ring, PathD Path, double Depth) next = default;
+                    var next = items[0];
                     bool link = false;
                     if (near is not null && lastRing >= 0)
                     {
