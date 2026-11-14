@@ -998,6 +998,8 @@ public partial class MainWindow : Window
         _drawStartedOn = null;
         if (_tool != Tool.Select && clicked is not null && handle is null && !ctrl)
         { _drawStartedOn = clicked; clicked = null; }
+        if (e.ClickCount >= 2 && _tool == Tool.Select && handle is null && clicked?.Text is not null)
+        { EditText(clicked); e.Handled = true; return; }
         if (_tool == Tool.Polyline && (clicked is null || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)))
         {
             var snapped = SnapPoint(p);
@@ -1178,7 +1180,8 @@ public partial class MainWindow : Window
                 X = s.X + 10, Y = s.Y + 10,
                 Width = s.Width, Height = s.Height,
                 Contours = s.Contours.Select(c => new VectorContour { Closed = c.Closed,
-                    Points = c.Points.Select(p => new VectorPoint(p.X, p.Y)).ToList() }).ToList() }).ToList();
+                    Points = c.Points.Select(p => new VectorPoint(p.X, p.Y)).ToList() }).ToList(),
+                Text = s.Text?.Clone() }).ToList();
         _document.Shapes.AddRange(duplicates);
         var originals = _document.Shapes.Where(x => _selection.Contains(x)).ToList();
         for (int i = 0; i < Math.Min(originals.Count, duplicates.Count); i++)

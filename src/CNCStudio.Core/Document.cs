@@ -33,6 +33,8 @@ public sealed class DesignShape
     public double Width { get; set; }
     public double Height { get; set; }
     public List<VectorContour> Contours { get; set; } = new();
+    /// <summary>Set for a text object (Rita → Text): what it was made from, to edit it again. Null for other shapes.</summary>
+    public TextSource? Text { get; set; }
 }
 
 /// <summary>Drill: straight plunges at the shape's centre (the hole gets the tool's diameter), in pecks of DepthPerPass.</summary>
