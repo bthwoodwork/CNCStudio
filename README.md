@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.21)
+﻿# CNC Studio – källkod (senaste: 0.9.22)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,14 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.22 – Rita konturen i luften
+
+- **Program → Rita konturen…** (som gSenders *Outline*): fräsen lyfts till säker höjd (maskinkoordinater, som Gå till) och åker runt det laddade programmets yttre gräns – i luften, utan att gå ned – och sedan tillbaka dit den stod. Då ser du att jobbet ryms på materialet och går fri från fastspänningarna innan du startar.
+- Välj **Yttre form** (konvext hölje runt alla fräsrörelser, som ett gummiband) eller **Rektangel** (programmets yttre rektangel). Snabbförflyttningar räknas inte.
+- Hastigheten är joggens mm/min (begränsad till maskinens max). Kräver homing; samma kontroll som Starta görs först – konturen måste rymmas i maskinen med den nolla som är satt.
+- Körs som ett makro: **Stopp** i Program-panelen avbryter. Datorn hålls vaken under tiden.
+- Logiken finns i `JobOutline` (Core) med tester, bland annat en körning på den simulerade maskinen.
 
 ## 0.9.21 – Håller datorn vaken
 Om Windows går i viloläge mitt i ett jobb avbryts sändningen, och om datorn somnar medan maskinen är ansluten bryts USB-anslutningen. CNC Studio sköter nu viloläget, som gSender gör.
