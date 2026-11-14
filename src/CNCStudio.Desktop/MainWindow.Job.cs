@@ -207,6 +207,7 @@ public partial class MainWindow
     private async void StopJob_Click(object sender, RoutedEventArgs e)
     {
         if (_runner is JobRunner r) { StopJobButton.IsEnabled = false; await r.StopAsync(); }
+        else if (_macroRunner is JobRunner aux) await aux.StopAsync();      // a macro or the outline
         else if (Grbl is GrblClient g) g.SendRealtime(GrblProtocol.FeedHold);
     }
 
@@ -235,6 +236,7 @@ public partial class MainWindow
         LoadJobButton.IsEnabled = !running;
         if (OpenGCodeButton is not null) OpenGCodeButton.IsEnabled = !running && _macroRunner is null;
         CheckJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null;
+        if (OutlineJobButton is not null) OutlineJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null && _macroRunner is null;
         StartJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null && _macroRunner is null;
         // Say why Starta is grey instead of leaving the user to guess.
         StartJobButton.ToolTip = running ? "Ett program körs."
