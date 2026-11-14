@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.22)
+﻿# CNC Studio – källkod (senaste: 0.9.23)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.23 – Jogga med tangentbordet
+
+- **Jogga med tangenterna** (som i gSender och UGS): ← → för X, ↑ ↓ för Y, Page Up/Page Down för Z. Ett kort tryck tar ett steg; håller du tangenten inne längre än 250 ms joggar maskinen tills du släpper (jog cancel 0x85). **Esc** stoppar joggen, **1/2/3** väljer Precis/Normal/Snabb.
+- **Egna kortkommandon:** Maskin → *Tangentbord…* eller *⌨ Tangenter…* i JOGG-panelen. Klicka på en åtgärd och tryck den nya tangenten, gärna med Ctrl/Shift/Alt. Förutom joggen (även diagonalt) finns hastighet, Nolla X + Y, Nolla Z, Gå till X0 Y0, Homing, Paus och Fortsätt. Samma tangent för två åtgärder, eller tangenter programmet redan använder (F1–F4, Ctrl+S, Ctrl+Z …), godtas inte.
+- Säkert: tangenterna verkar bara i arbetsytan Maskin (kan stängas av), aldrig när du skriver i ett fält, inte medan ett program eller makro körs (utom Stopp, Paus och Fortsätt), och joggen stoppar om fönstret tappar fokus.
+- Sparas i `Inställningar\tangentbord.json` och följer med till andra datorer som övriga inställningar.
 
 ## 0.9.22 – Rita konturen i luften
 
