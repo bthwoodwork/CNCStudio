@@ -14,6 +14,12 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        // The look for every window, before the first one opens (Visa → Nytt utseende turns it off).
+        if (CNCStudio.Core.AppStorage.Current.Settings.ModernLook != false)
+        {
+            try { Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Theme.xaml") }); }
+            catch (Exception ex) { LogError(ex); }   // never stop the program over its looks
+        }
         base.OnStartup(e);
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += (_, args) => { LogError(args.Exception); args.SetObserved(); };

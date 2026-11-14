@@ -4,7 +4,7 @@
         Title="GRBL-konsol" Width="760" Height="560" MinWidth="560" MinHeight="380"
         WindowStartupLocation="CenterOwner" Background="#17212C" Foreground="#E8F1FA">
   <Window.Resources>
-    <Style TargetType="Button"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="10,5"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
+    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="10,5"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
   </Window.Resources>
   <DockPanel Margin="10">
     <Border DockPanel.Dock="Top" Background="#4A3A1E" CornerRadius="4" Padding="8" Margin="0,0,0,8">

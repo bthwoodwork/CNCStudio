@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.18)
+﻿# CNC Studio – källkod (senaste: 0.9.19)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,22 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.19 – Nytt utseende
+Lappen "Snygga till GUI, ser lite ut som ett 90-tals windows-program". 90-talskänslan kom från Windows egna standardkontroller, som låg kvar i det mörka gränssnittet: knappar med grå gradient och 3D-kant, vita inmatningsfält med svart text, ljusgrå rullgardinsmenyer och Windows kryssrutor, rullningslister och verktygstips.
+- **Ett gemensamt tema** (`Theme.xaml`) gäller i alla fönster, både huvudfönstret och dialogerna:
+  - **Knappar:** platta med rundade hörn. Hover ljusar upp och tryck mörkar knappens egen färg, så att gröna, röda och blå knappar behåller sin färg. En knapp med tangentbordsfokus får en blå kant, och avstängda knappar tonas ned.
+  - **Inmatningsfält:** mörka med ljus text, rundade hörn, ljusare kant vid hover och blå kant vid fokus. Fält som bara går att läsa är något mörkare.
+  - **Rullgardinsmenyer:** mörka med pil, och listan är mörk med blå markering. Det gäller även menyer där man kan skriva, som kategori och skärmaterial.
+  - **Kryssrutor och radioknappar:** mörka rutor som blir blå med vit bock eller prick.
+  - **Rullningslister:** smala och rundade, utan pilknappar.
+  - **Listor, tabeller och förloppsindikatorer:** mörka listor med rundade rader och blå markering, mörka tabeller (skärdata och $$) med mörka kolumnrubriker, och rundade förloppsindikatorer.
+  - **Verktygstips och högerklicksmenyer:** mörka med rundade hörn. Långa verktygstips radbryts.
+- Färger som en enskild knapp har, till exempel Starta i grönt och Stopp i rött, gäller fortfarande. Temat ritar med kontrollens egen färg.
+- **Visa → Nytt utseende** stänger av temat och går tillbaka till Windows egna kontroller. Valet sparas per dator och gäller när CNC Studio startas om.
+- Fönstrens egna knapp- och fältstilar bygger nu på temat (`BasedOn`) i stället för att ersätta det.
+
+**Tester:** 549 tester. Kompilerad utan fel och varningar, men **inte körd i Windows ännu**. Utseendet har ingen sett än. Ser något fel ut, ta en skärmbild och stäng av *Visa → Nytt utseende* så länge.
 
 ## 0.9.18 – Maskininformation
 Motsvarar gSenders *Machine Information*. Du öppnar den med **Maskin → Maskininformation…** eller med knappen **Maskininfo…** i Maskinstyrning. Det är ett vanligt fönster som kan ligga öppet bredvid arbetet, och med **Alltid överst** stannar det framför huvudfönstret.

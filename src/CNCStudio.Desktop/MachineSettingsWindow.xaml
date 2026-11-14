@@ -5,8 +5,8 @@
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="#17212C" Foreground="#E8F1FA">
   <Window.Resources>
-    <Style TargetType="Button"><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="14,6"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
-    <Style TargetType="TextBox"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="5"/><Setter Property="Foreground" Value="#152332"/><Setter Property="Background" Value="#F5F8FB"/></Style>
+    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="14,6"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
+    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="Margin" Value="3"/><Setter Property="Padding" Value="5,4"/></Style>
     <Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="3,3,10,3"/></Style>
     <Style TargetType="CheckBox"><Setter Property="Foreground" Value="#E8F1FA"/><Setter Property="Margin" Value="3,6"/></Style>
     <Style TargetType="GroupBox"><Setter Property="Foreground" Value="#A5C0D9"/><Setter Property="BorderBrush" Value="#50657D"/><Setter Property="Margin" Value="0,6"/><Setter Property="Padding" Value="8,6"/></Style>
@@ -26,7 +26,7 @@
       <TextBlock DockPanel.Dock="Bottom" x:Name="GrblResultText" TextWrapping="Wrap" FontSize="11.5" Margin="3,6,3,0"/>
       <DataGrid x:Name="GrblGrid" Height="560" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                 CanUserSortColumns="False" HeadersVisibility="Column" Margin="3,6,3,0" FontSize="12"
-                Background="#F5F8FB" RowBackground="#F5F8FB" AlternatingRowBackground="#E7EEF5" Foreground="#152332"
+                Background="#0F1A25" RowBackground="#0F1A25" AlternatingRowBackground="#14212E" Foreground="#E8F1FA" BorderBrush="#3A4F66" HorizontalGridLinesBrush="#26384B" VerticalGridLinesBrush="#26384B"
                 CellEditEnding="GrblGrid_CellEditEnding">
         <DataGrid.Columns>
           <DataGridTextColumn Header="$" Binding="{Binding Code}" IsReadOnly="True" Width="50"/>
