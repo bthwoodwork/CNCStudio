@@ -40,29 +40,34 @@ public static class VCarveToolpaths
 
     public static ContourPreview Generate(DesignShape shape, CamOperation op, double materialThickness)
     {
-        if (op.Kind != CamOperationKind.VCarve) throw new ArgumentException("Inte en V-carving.");
+        if (op.Kind is not (CamOperationKind.VCarve or CamOperationKind.VCarvePlug)) throw new ArgumentException("Inte en V-carving.");
         if (CamValidation.GetError(op, materialThickness) is string problem) throw new ArgumentException(problem);
         if (!double.IsFinite(shape.X) || !double.IsFinite(shape.Y) || shape.Width <= 0 || shape.Height <= 0)
             throw new ArgumentException("Ogiltig objektgeometri.");
         if (shape.Kind == ShapeKind.VectorPath && (shape.Contours.Count == 0 || shape.Contours.Any(c => !c.Closed)))
             throw new ArgumentException("V-carving kräver slutna konturer.");
-        var region = PocketToolpaths.Region(shape);
-        if (Math.Abs(Clipper.Area(region)) < 1e-6) throw new ArgumentException("Formen har ingen yta.");
-
         double tan = Math.Tan(op.ToolAngleDeg * Math.PI / 360);
         double maxDepth = MaxDepth(op);
-        double maxInset = maxDepth * tan;
+        bool plug = op.Kind == CamOperationKind.VCarvePlug;
+        double start = plug ? op.InlayStartDepthMm : 0;
+        if (start >= maxDepth - 1e-9)
+            throw new ArgumentException($"Hanens startdjup ({start:0.##} mm) måste vara grundare än det djupaste V-fräsen når ({maxDepth:0.##} mm).");
+        var region = plug ? PlugRegion(shape, op, maxDepth, tan) : PocketToolpaths.Region(shape);
+        if (Math.Abs(Clipper.Area(region)) < 1e-6) throw new ArgumentException(plug ? "Hanen blev ingenting – minska spelet." : "Formen har ingen yta.");
+        // Each loop at inset d is cut at start + d / tan: the cone meets the outline at depth 'start'.
+        double maxInset = (maxDepth - start) * tan;
         // Inset step: fine enough that the stepped surface is smooth (≤ 0.1 mm in depth), never absurdly many loops.
         double step = Math.Clamp(Math.Min(0.1 * tan, maxInset / 8), 0.02, 0.25);
 
         var rings = new List<(PathsD Paths, double Depth)>();
+        if (start > 0) rings.Add((Simplify(region), start));   // the first loop right on the outline, at the start depth
         bool floor = false;
         double d = step;
         for (; d < maxInset - 1e-9; d += step)
         {
             var inset = Simplify(Offset(region, -d));
             if (inset.Count == 0) break;
-            rings.Add((inset, d / tan));
+            rings.Add((inset, start + d / tan));
             if (rings.Count > MaxLoops) throw new NotSupportedException("För många varv – minska djupet eller välj en V-fräs med större vinkel.");
         }
         if (d >= maxInset - 1e-9)
@@ -186,6 +191,24 @@ public static class VCarveToolpaths
             VCarveHasFloor = floor,
         };
     }
+
+    /// <summary>
+    /// Inlay plug: the band around the shape (made smaller by the clearance) that is carved away so the shape stands
+    /// as a plug – wide enough that the middle of the band reaches the full depth.
+    /// </summary>
+    public static PathsD PlugRegion(DesignShape shape, CamOperation op, double maxDepth, double tan)
+    {
+        var plug = PocketToolpaths.Region(shape);
+        if (op.InlayClearanceMm > 0) plug = Simplify(Offset(plug, -op.InlayClearanceMm));
+        if (plug.Count == 0) return new PathsD();
+        double band = PlugBandMm(op, maxDepth, tan);
+        var outer = Offset(plug, band);
+        return Clipper.Difference(outer, plug, FillRule.NonZero, Precision);
+    }
+
+    /// <summary>How far around the plug the V-bit carves.</summary>
+    public static double PlugBandMm(CamOperation op, double maxDepth, double tan) =>
+        2 * (maxDepth - op.InlayStartDepthMm) * tan + 2;
 
     /// <summary>The region's separate parts: each outer outline with its holes (islands in holes are parts of their own).</summary>
     private static List<PathsD> Components(PathsD region)

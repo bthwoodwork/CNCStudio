@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.27 – V-carving följer varje del" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.28 – V-carve inlay" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -82,7 +82,7 @@
  <MenuItem Header="_Redigera"><MenuItem Header="Ångra" Click="Undo_Click" InputGestureText="Ctrl+Z"/><MenuItem Header="Gör om" Click="Redo_Click" InputGestureText="Ctrl+Y"/><Separator/><MenuItem Header="Markera alla" Click="SelectAll_Click" InputGestureText="Ctrl+A"/><MenuItem Header="Gruppera" Click="Group_Click" InputGestureText="Ctrl+G"/><MenuItem Header="Avgruppera" Click="Ungroup_Click" InputGestureText="Ctrl+Shift+G"/><Separator/><MenuItem Header="Duplicera" Click="Duplicate_Click" InputGestureText="Ctrl+D"/><MenuItem Header="Ta bort markerat" Click="Delete_Click" InputGestureText="Delete"/></MenuItem>
  <MenuItem Header="_Rita"><MenuItem Header="Markera / flytta" Click="SelectTool_Click"/><MenuItem Header="Rektangel" Click="RectangleTool_Click"/><MenuItem Header="Ellips" Click="EllipseTool_Click"/><MenuItem Header="Polylinje" Click="PolylineTool_Click"/><MenuItem Header="Text…" Click="TextTool_Click"/><MenuItem Header="Redigera text…" Click="EditText_Click"/><Separator/><MenuItem Header="Stäng polylinje" Click="ClosePolyline_Click"/><MenuItem Header="Snappning på/av" Click="ToggleSnap_Click"/></MenuItem>
  <MenuItem Header="_Objekt"><MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/><Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/></MenuItem>
- <MenuItem Header="_CAM"><MenuItem Header="Exportera G-code…" Click="ExportGCode_Click" InputGestureText="Ctrl+E"/><Separator/><MenuItem Header="Planfräs hela materialet…" Click="FaceStock_Click"/><Separator/><MenuItem Header="Verktygsbibliotek…" Click="ManageTools_Click"/><MenuItem Header="Materialbibliotek…" Click="ManageMaterials_Click"/><Separator/><MenuItem Header="V-carve inlay-inställningar" Click="OpenInlay_Click"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
+ <MenuItem Header="_CAM"><MenuItem Header="Exportera G-code…" Click="ExportGCode_Click" InputGestureText="Ctrl+E"/><Separator/><MenuItem Header="Planfräs hela materialet…" Click="FaceStock_Click"/><Separator/><MenuItem Header="Verktygsbibliotek…" Click="ManageTools_Click"/><MenuItem Header="Materialbibliotek…" Click="ManageMaterials_Click"/><Separator/><MenuItem Header="Skapa inlay (hona + hane)…" Click="CreateInlay_Click" ToolTip="V-carve inlay: honan V-carvas i det här projektet, hanen blir ett eget speglat projekt"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
  <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem x:Name="View3DMenuItem" Header="3D-vy" Click="Toggle3D_Click" InputGestureText="F4"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinstyrning" Click="ShowPanel_Click" Tag="Machine"/><MenuItem Header="Visa program" Click="ShowPanel_Click" Tag="Job"/><MenuItem Header="Visa makron" Click="ShowPanel_Click" Tag="Macros"/><Separator/><MenuItem x:Name="ModernLookMenuItem" Header="Nytt utseende" IsCheckable="True" Click="ModernLook_Click" ToolTip="Platta, mörka knappar, fält och listor i alla fönster. Gäller när CNC Studio startas om."/><MenuItem Header="Återställ fönsterlayout" Click="ResetDockLayout_Click" ToolTip="Lägg tillbaka alla paneler där de var från början"/></MenuItem>
  <MenuItem Header="_Maskin"><MenuItem Header="Första test mot maskinen…" Click="FirstTest_Click"/><Separator/><MenuItem Header="Maskiner (per maskin: inställningar, $$-kopior, kalibrering)…" Click="Machines_Click"/><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="Maskininformation…" Click="MachineInfo_Click" ToolTip="Firmware, aktiva lägen ($G), ingångar live och låsning av stegmotorerna"/><MenuItem Header="Maskinlogg och underhåll…" Click="MachineLog_Click" ToolTip="Körda jobb, larm, körtid och underhåll för den valda maskinen"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><MenuItem Header="Planfräsa offerskivan…" Click="Surfacing_Click" ToolTip="Fräs offerskivan plan med en bred fräs (som gSenders Wasteboard Surfacing). Blir ett eget projekt."/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Probning…" Click="Probe_Click"/><MenuItem Header="Gamepad…" Click="GamepadSettings_Click"/><MenuItem Header="Tangentbord (jogga med tangenterna)…" Click="KeyboardSettings_Click"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Nolla X + Y vid materialet (enligt placeringen)…" Click="ZeroAtPlacement_Click"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/><Separator/><MenuItem Header="Demomaskin: simulera strömavbrott" Click="SimulatePowerCut_Click"/></MenuItem>
  <MenuItem Header="_Hjälp"><MenuItem Header="Loggar och fellogg…" Click="ShowLogs_Click"/><Separator/><MenuItem Header="Om CNC Studio" Click="About_Click"/></MenuItem>
@@ -578,7 +578,7 @@
               <StackPanel>
                 <TextBlock Text="Bearbetning" Style="{StaticResource FieldLabel}"/>
                 <ComboBox x:Name="CamKind" SelectedIndex="0" Margin="3,3,3,8" SelectionChanged="CamInput_Changed">
-                  <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/><ComboBoxItem Content="Borrning (Drill)" ToolTip="Hål med fräsens diameter i objektets mitt, rakt ned i steg"/><ComboBoxItem Content="Planfräsning (Face)" ToolTip="Fräser hela objektets yta plan, rad för rad, och går ut förbi kanterna. Körs först."/><ComboBoxItem Content="V-carving (V-fräs)" ToolTip="V-fräsen fräser formen med väggar längs konturen – djupare där formen är bredare, skarpa hörn. För text och skyltar."/>
+                  <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/><ComboBoxItem Content="Borrning (Drill)" ToolTip="Hål med fräsens diameter i objektets mitt, rakt ned i steg"/><ComboBoxItem Content="Planfräsning (Face)" ToolTip="Fräser hela objektets yta plan, rad för rad, och går ut förbi kanterna. Körs först."/><ComboBoxItem Content="V-carving (V-fräs)" ToolTip="V-fräsen fräser formen med väggar längs konturen – djupare där formen är bredare, skarpa hörn. För text och skyltar."/><ComboBoxItem Content="Inlay-hane (V-fräs)" ToolTip="Hanen i en V-carve inlay: V-fräsen fräser runt formen så att den står kvar som en plugg. Skapas enklast med CAM → Skapa inlay."/>
                 </ComboBox>
                 <TextBlock Text="Fräs" Style="{StaticResource FieldLabel}"/>
                 <DockPanel>
@@ -590,6 +590,11 @@
                   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                   <StackPanel><TextBlock Text="Fräsdiameter (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamDiameter" Text="3.175" TextChanged="CamInput_Changed"/></StackPanel>
                   <StackPanel x:Name="VCarveAnglePanel" Grid.Column="1" Visibility="Collapsed"><TextBlock Text="V-vinkel (grader)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamVAngle" Text="60" TextChanged="CamInput_Changed" ToolTip="V-fräsens spetsvinkel, t.ex. 60 eller 90. Hämtas från fräsen i biblioteket."/></StackPanel>
+                </Grid>
+                <Grid x:Name="InlayPlugPanel" Visibility="Collapsed">
+                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <StackPanel><TextBlock Text="Startdjup vid konturen (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamInlayStart" Text="3" TextChanged="CamInput_Changed" ToolTip="Fräsningen börjar så här djupt precis vid konturen. Måste vara grundare än honans djup – skillnaden blir glipan för lim i botten."/></StackPanel>
+                  <StackPanel Grid.Column="1"><TextBlock Text="Spel runt om (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamInlayClearance" Text="0.05" TextChanged="CamInput_Changed" ToolTip="Hanen görs så här mycket mindre runt om, för lim på väggarna."/></StackPanel>
                 </Grid>
               </StackPanel>
             </Border>
@@ -699,33 +704,6 @@
               </StackPanel>
             </Expander>
 
-            <!-- V-carve inlay: settings only (no G-code yet) – shown from CAM → V-carve inlay-inställningar. -->
-            <Expander x:Name="InlayExpander" Header="V-CARVE INLAY · förberedelse, ingen G-code ännu" IsExpanded="False" Margin="0,12,0,0" Foreground="#E8F1FA" Visibility="Collapsed">
-              <StackPanel Margin="4,10,4,4">
-                <TextBlock Text="InlayStudio-inställningar integrerade i projektet" TextWrapping="Wrap" Foreground="#BDCEE0" Margin="0,0,0,9"/>
-                <TextBlock Text="Jobbtyp"/><ComboBox x:Name="InlayKind" SelectedIndex="0" Margin="3,4,3,9"><ComboBoxItem Content="Hona + hane"/><ComboBoxItem Content="Endast hona"/><ComboBoxItem Content="Endast hane"/><ComboBoxItem Content="Endast V-carve"/></ComboBox>
-                <TextBlock Text="V-fräsens vinkel (grader)"/><TextBox x:Name="InlayAngle" Text="60"/>
-                <TextBlock Text="V-fräsdiameter (mm)"/><TextBox x:Name="InlayVBitDia" Text="12.7"/>
-                <TextBlock Text="Plan spets (mm)"/><TextBox x:Name="InlayTip" Text="0.2"/>
-                <TextBlock Text="Honans djup (mm)"/><TextBox x:Name="InlayFemaleDepth" Text="3"/>
-                <TextBlock Text="Hanens djup (mm)"/><TextBox x:Name="InlayMaleDepth" Text="3"/>
-                <TextBlock Text="Hanens startdjup (mm)"/><TextBox x:Name="InlayStart" Text="1.5"/>
-                <TextBlock Text="Limspalt (mm)"/><TextBox x:Name="InlayGlue" Text="0.2"/>
-                <TextBlock Text="Passningsspel (mm)"/><TextBox x:Name="InlayClearance" Text="0.1"/>
-                <TextBlock Text="Planfräsdiameter (mm)"/><TextBox x:Name="InlayCleanupDia" Text="3"/>
-                <TextBlock Text="Överlapp planfräs (%)"/><TextBox x:Name="InlayStepover" Text="40"/>
-                <TextBlock Text="Matning XY (mm/min)"/><TextBox x:Name="InlayFeed" Text="1500"/>
-                <TextBlock Text="Matning Z (mm/min)"/><TextBox x:Name="InlayPlunge" Text="500"/>
-                <TextBlock Text="Säker Z (mm)"/><TextBox x:Name="InlaySafeZ" Text="5"/>
-                <TextBlock Text="Spindel (rpm)"/><TextBox x:Name="InlayRpm" Text="18000"/>
-                <CheckBox x:Name="InlayMirrorFemale" Content="Spegla hona (X)" IsChecked="True" Margin="4,7"/>
-                <CheckBox x:Name="InlayMirrorMale" Content="Spegla hane (X)" IsChecked="True" Margin="4,7"/>
-                <Button Content="Spara V-carve inlay-inställningar" Click="SaveInlay_Click" Background="#24618C" Margin="2,9,2,3"/>
-                <Button Content="Ta bort inlay-inställningar" Click="RemoveInlay_Click"/>
-                <TextBlock x:Name="InlaySummary" Text="Konfiguration – ännu ingen G-code-generering." Foreground="#FFD39F" TextWrapping="Wrap" Margin="0,10,0,0"/>
-                <TextBlock Text="OBS: InlayStudio använder F-Engrave som extern beräkningsmotor. Denna första integration sparar bara inställningar. Fräsprogram och verifiering implementeras separat." Foreground="#FFD39F" TextWrapping="Wrap" Margin="0,8,0,0"/>
-              </StackPanel>
-            </Expander>
 
           </StackPanel>
         </Border></ScrollViewer></DockPanel>
