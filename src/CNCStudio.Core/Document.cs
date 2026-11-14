@@ -40,7 +40,8 @@ public sealed class DesignShape
 /// <summary>Drill: straight plunges at the shape's centre (the hole gets the tool's diameter), in pecks of DepthPerPass.</summary>
 /// <para>Face: the shape's whole area cut flat in rows, running out past the edges (planfräsning).</para>
 /// <para>VCarve: a V-bit carves the shape with walls along the outline, deeper where it is wider (V-carving).</para>
-public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve }
+/// <para>VCarvePlug: the male part of a V-carve inlay – the V-bit carves around the shape, so it stands as a plug.</para>
+public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve, VCarvePlug }
 
 public enum PlungeMode { Vertical, Ramp }
 
@@ -74,6 +75,10 @@ public sealed class CamOperation
     public double ToolDiameter { get; set; } = 3.175;
     /// <summary>V-bit: the included angle in degrees (60° V-bit = 60). Used by V-carving and the 3D view.</summary>
     public double ToolAngleDeg { get; set; } = 60;
+    /// <summary>Inlay plug: the depth the carving starts at, right at the outline (the plug's top lands this deep in the pocket).</summary>
+    public double InlayStartDepthMm { get; set; }
+    /// <summary>Inlay plug: the plug is made this much smaller all round, for a glue film along the walls.</summary>
+    public double InlayClearanceMm { get; set; }
     public double TotalDepth { get; set; } = 6;
     public double DepthPerPass { get; set; } = 2;
     public bool UseTabs { get; set; } = true;
@@ -138,12 +143,19 @@ public static class CamValidation
             return "Hållflikar används inte för borrning.";
         if (operation.Kind == CamOperationKind.Face && operation.UseTabs)
             return "Hållflikar används inte för planfräsning.";
-        if (operation.Kind == CamOperationKind.VCarve && operation.UseTabs)
+        bool vcarve = operation.Kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug;
+        if (vcarve && operation.UseTabs)
             return "Hållflikar används inte för V-carving.";
-        if (operation.Kind == CamOperationKind.VCarve && VCarveToolpaths.ValidateAngle(operation.ToolAngleDeg) is string angle)
+        if (vcarve && VCarveToolpaths.ValidateAngle(operation.ToolAngleDeg) is string angle)
             return angle;
-        if (operation.Kind == CamOperationKind.VCarve && operation.ToolKind != ToolKind.VBit)
+        if (vcarve && operation.ToolKind != ToolKind.VBit)
             return "V-carving kräver en V-fräs – välj en V-fräs i listan.";
+        if (operation.Kind == CamOperationKind.VCarvePlug &&
+            (!double.IsFinite(operation.InlayStartDepthMm) || operation.InlayStartDepthMm < 0 || operation.InlayStartDepthMm >= operation.TotalDepth))
+            return "Hanens startdjup måste vara minst 0 och mindre än hanens djup.";
+        if (operation.Kind == CamOperationKind.VCarvePlug &&
+            (!double.IsFinite(operation.InlayClearanceMm) || operation.InlayClearanceMm < 0 || operation.InlayClearanceMm > 2))
+            return "Spelet måste vara 0–2 mm.";
         if (operation.Kind == CamOperationKind.Face &&
             (!double.IsFinite(operation.StepoverPercent) || operation.StepoverPercent < 5 || operation.StepoverPercent > 95))
             return "Stegningen för planfräsning måste vara 5–95 % av fräsdiametern.";

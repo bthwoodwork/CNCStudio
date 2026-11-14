@@ -192,7 +192,7 @@ public partial class MainWindow : Window
     private void Xor_Click(object sender, RoutedEventArgs e) => BooleanApply(BooleanAction.Xor);
 
 
-    public MainWindow() { InitializeComponent(); RestorePlacement(); RefreshInlaySettings(); Render(); }
+    public MainWindow() { InitializeComponent(); RestorePlacement(); Render(); }
 
     /// <summary>The size and place the window had when it was last closed on this computer (if it still fits on the screens).</summary>
     private void RestorePlacement()
@@ -1261,83 +1261,6 @@ public partial class MainWindow : Window
             StatusText.Text = outside + " Flytta materialet under Maskin → Materialplacering – inga körbanor beräknas så länge.";
     }
 
-    private void OpenInlay_Click(object sender, RoutedEventArgs e)
-    {
-        SetPanelVisible("Cam", true);
-        InlayExpander.Visibility = Visibility.Visible;          // hidden in the panel until asked for (settings only)
-        InlayExpander.IsExpanded = true;
-        InlayExpander.BringIntoView();
-    }
-    private bool ParseInlay(TextBox field, string description, out double value)
-    {
-        if (!Parse(field, out value)) { Error("Ange ett giltigt tal för " + description + ".", field); return false; }
-        return true;
-    }
-    private InlaySettings? ReadInlaySettings()
-    {
-        if (!ParseInlay(InlayAngle, "vinkel", out var angle) ||
-            !ParseInlay(InlayVBitDia, "V-fräsdiameter", out var dia) ||
-            !ParseInlay(InlayTip, "spetsdiameter", out var tip) ||
-            !ParseInlay(InlayFemaleDepth, "honans djup", out var femaleDepth) ||
-            !ParseInlay(InlayMaleDepth, "hanens djup", out var maleDepth) ||
-            !ParseInlay(InlayStart, "startdjup", out var start) ||
-            !ParseInlay(InlayGlue, "limspalt", out var glue) ||
-            !ParseInlay(InlayClearance, "passningsspel", out var clearance) ||
-            !ParseInlay(InlayCleanupDia, "planfräsdiameter", out var cleanup) ||
-            !ParseInlay(InlayStepover, "överlapp", out var overlap) ||
-            !ParseInlay(InlayFeed, "matning", out var feed) ||
-            !ParseInlay(InlayPlunge, "Z-matning", out var plunge) ||
-            !ParseInlay(InlaySafeZ, "säker Z", out var safeZ) ||
-            !ParseInlay(InlayRpm, "spindelvarvtal", out var rpm)) return null;
-        if (rpm != Math.Truncate(rpm) || rpm < int.MinValue || rpm > int.MaxValue)
-        { Error("Spindelvarvtalet måste vara ett heltal.", InlayRpm); return null; }
-        return new InlaySettings
-        {
-            JobKind = (InlayJobKind)Math.Max(0, InlayKind.SelectedIndex),
-            VBitAngleDegrees = angle, VBitDiameterMm = dia, VBitFlatTipDiameterMm = tip,
-            FemaleDepthMm = femaleDepth, MaleDepthMm = maleDepth, MaleStartDepthMm = start,
-            GlueGapMm = glue, FitClearanceMm = clearance, CleanupToolDiameterMm = cleanup,
-            CleanupStepOverPercent = overlap, FeedRateMmPerMin = feed, PlungeRateMmPerMin = plunge,
-            SafeZMm = safeZ, SpindleRpm = (int)rpm,
-            MirrorFemaleX = InlayMirrorFemale.IsChecked == true,
-            MirrorMaleX = InlayMirrorMale.IsChecked == true
-        };
-    }
-    private void SaveInlay_Click(object sender, RoutedEventArgs e)
-    {
-        var settings = ReadInlaySettings();
-        if (settings is null) return;
-        var error = InlayValidation.GetError(settings, _document.MaterialThickness);
-        if (error is not null) { Error(error); return; }
-        RememberChange();
-        _document.Inlay = settings;
-        InlaySummary.Text = "Inlay-inställningar sparade i projektet. Ingen G-code har genererats.";
-        StatusText.Text = "V-carve inlay-konfiguration sparad (ingen G-code).";
-    }
-    private void RemoveInlay_Click(object sender, RoutedEventArgs e)
-    {
-        if (_document.Inlay is null) return;
-        RememberChange();
-        _document.Inlay = null;
-        InlaySummary.Text = "Inlay-konfiguration borttagen.";
-    }
-    private void RefreshInlaySettings()
-    {
-        if (InlayKind is null) return;
-        var v = _document.Inlay ?? new InlaySettings();
-        InlayKind.SelectedIndex = (int)v.JobKind;
-        InlayAngle.Text = F(v.VBitAngleDegrees); InlayVBitDia.Text = F(v.VBitDiameterMm);
-        InlayTip.Text = F(v.VBitFlatTipDiameterMm);
-        InlayFemaleDepth.Text = F(v.FemaleDepthMm); InlayMaleDepth.Text = F(v.MaleDepthMm);
-        InlayStart.Text = F(v.MaleStartDepthMm); InlayGlue.Text = F(v.GlueGapMm);
-        InlayClearance.Text = F(v.FitClearanceMm); InlayCleanupDia.Text = F(v.CleanupToolDiameterMm);
-        InlayStepover.Text = F(v.CleanupStepOverPercent); InlayFeed.Text = F(v.FeedRateMmPerMin);
-        InlayPlunge.Text = F(v.PlungeRateMmPerMin); InlaySafeZ.Text = F(v.SafeZMm);
-        InlayRpm.Text = v.SpindleRpm.ToString(CultureInfo.InvariantCulture);
-        InlayMirrorFemale.IsChecked = v.MirrorFemaleX;
-        InlayMirrorMale.IsChecked = v.MirrorMaleX;
-        InlaySummary.Text = _document.Inlay is null ? "Inte konfigurerad – standardvärden visas." : "Konfiguration laddad från projektet. Ingen G-code genererad.";
-    }
 
     private void ImportVector_Click(object sender, RoutedEventArgs e)
     {
@@ -1384,7 +1307,7 @@ public partial class MainWindow : Window
       NoMaterialText.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
       RefreshMachineSummary();
       ShowStockFields();
-      RefreshFixtureFields(); RefreshInlaySettings(); RefreshMotionFields(); SyncWorkZero(); RefreshMaterialPicker(); }
+      RefreshFixtureFields(); RefreshMotionFields(); SyncWorkZero(); RefreshMaterialPicker(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         // Without material the size fields are empty on purpose: the project is saved with its placeholders.
@@ -1392,8 +1315,6 @@ public partial class MainWindow : Window
         if (_document.HasMaterial && (!Parse(MaterialWidthBox, out w) || !Parse(MaterialHeightBox, out h) || !Parse(MaterialThicknessBox, out t) || w <= 0 || h <= 0 || t <= 0 || w > 5000 || h > 5000)) { Error("Kontrollera materialmåtten innan du sparar (bredd och höjd 1–5000 mm, tjocklek större än 0).", MaterialWidthBox); return; }
         if (_document.CamOperations.Any(o => CamValidation.GetError(o, t) is not null))
         { Error("En CAM-operation är inte giltig för aktuell materialtjocklek. Kontrollera CAM-inställningarna."); return; }
-        if (_document.Inlay is not null && InlayValidation.GetError(_document.Inlay, t) is string inlayError)
-        { Error("Inlay-inställningarna passar inte materialtjockleken: " + inlayError); return; }
         _document.Name = NameBox.Text; _document.MaterialWidth = w; _document.MaterialHeight = h; _document.MaterialThickness = t;
         // Saving the project only needs a valid profile; material outside the work area is shown in CAM instead.
         if ((MachineSetupValidation.ValidateProfile(_document.Machine) ?? MachineSetupValidation.FixtureValues(_document)) is string setupError) { Error(setupError); return; }
@@ -1430,6 +1351,8 @@ public partial class MainWindow : Window
             CamKind.SelectedIndex = operation is null ? 0 : (int)operation.Kind;
             CamDiameter.Text = F(operation?.ToolDiameter ?? 3.175);
             CamVAngle.Text = F(operation?.ToolAngleDeg ?? new CamOperation().ToolAngleDeg);
+            CamInlayStart.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayStartDepthMm : 3);
+            CamInlayClearance.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayClearanceMm : 0.05);
             CamDepth.Text = F(operation?.TotalDepth ?? 6);
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
             CamTabs.IsChecked = operation?.UseTabs ?? true;
@@ -1469,8 +1392,10 @@ public partial class MainWindow : Window
         bool pocket = CamKind.SelectedIndex == (int)CamOperationKind.Pocket;
         bool drill = CamKind.SelectedIndex == (int)CamOperationKind.Drill;
         bool face = CamKind.SelectedIndex == (int)CamOperationKind.Face;
-        bool vcarve = CamKind.SelectedIndex == (int)CamOperationKind.VCarve;
+        bool plug = CamKind.SelectedIndex == (int)CamOperationKind.VCarvePlug;
+        bool vcarve = CamKind.SelectedIndex == (int)CamOperationKind.VCarve || plug;
         if (VCarveAnglePanel is not null) VCarveAnglePanel.Visibility = vcarve ? Visibility.Visible : Visibility.Collapsed;
+        if (InlayPlugPanel is not null) InlayPlugPanel.Visibility = plug ? Visibility.Visible : Visibility.Collapsed;
         PocketSettingsPanel.Visibility = pocket || face ? Visibility.Visible : Visibility.Collapsed;
         if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
         if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
@@ -1491,7 +1416,11 @@ public partial class MainWindow : Window
         var kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex);
         bool pocket = kind == CamOperationKind.Pocket;
         bool face = kind == CamOperationKind.Face;
-        bool vcarve = kind == CamOperationKind.VCarve;
+        bool vcarve = kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug;
+        double inlayStart = 0, inlayClearance = 0;
+        if (kind == CamOperationKind.VCarvePlug &&
+            (CamInlayStart is null || CamInlayClearance is null || !Parse(CamInlayStart, out inlayStart) || !Parse(CamInlayClearance, out inlayClearance)))
+            return null;
         bool useTabs = !pocket && !face && !vcarve && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets, holes, facing or V-carving
         double vAngle = new CamOperation().ToolAngleDeg;
         if (CamVAngle is not null && !Parse(CamVAngle, out vAngle))
@@ -1544,7 +1473,7 @@ public partial class MainWindow : Window
             ToolName = fromLibrary ? tool!.Name : null,
             // V-carving always uses a V-bit (also a custom one typed in by diameter and angle).
             ToolKind = vcarve ? ToolKind.VBit : fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
-            ToolAngleDeg = vAngle,
+            ToolAngleDeg = vAngle, InlayStartDepthMm = inlayStart, InlayClearanceMm = inlayClearance,
             Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
             FaceOverhangMm = CamFaceOverhang is not null && Parse(CamFaceOverhang, out var overhang) ? overhang : defaults.FaceOverhangMm,
             FaceAlongY = CamFaceDirection?.SelectedIndex == 1,
@@ -1560,8 +1489,14 @@ public partial class MainWindow : Window
         string kind = op.Kind switch
         {
             CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur",
-            CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carving", _ => "Ficka"
+            CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carving", CamOperationKind.VCarvePlug => "Inlay-hane", _ => "Ficka"
         };
+        if (error is null && op.Kind == CamOperationKind.VCarvePlug)
+        {
+            CamSummary.Text = $"Inlay-hane · {F(op.ToolAngleDeg)}° V-fräs Ø {F(op.ToolDiameter)} mm · fräser runt formen från {F(op.InlayStartDepthMm)} mm vid konturen ned till {F(Math.Round(VCarveToolpaths.MaxDepth(op), 2))} mm · " +
+                $"spel {F(op.InlayClearanceMm)} mm · hanen står {F(Math.Round(VCarveToolpaths.MaxDepth(op) - op.InlayStartDepthMm, 2))} mm upp";
+            return;
+        }
         if (error is null && op.Kind == CamOperationKind.VCarve)
         {
             double max = VCarveToolpaths.MaxDepth(op);

@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.9.27";
+    private const string AppTitle = "CNC Studio 0.9.28";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -154,7 +154,7 @@ public partial class MainWindow
             {
                 foreach (var centerline in preview.Centerlines)
                     canvas.Children.Add(PathLine(centerline, offsetX, offsetY, CanvasTheme.ToolPath, 1.1 / _zoom));
-                if (result.Operation.Kind is not (CamOperationKind.Pocket or CamOperationKind.VCarve))
+                if (result.Operation.Kind is not (CamOperationKind.Pocket or CamOperationKind.VCarve or CamOperationKind.VCarvePlug))
                     foreach (var centerline in preview.Centerlines)
                         DrawDirectionArrows(canvas, centerline, offsetX, offsetY);
                 DrawTabs(canvas, preview, result.TabSpans, result.Operation.ToolDiameter, offsetX, offsetY);

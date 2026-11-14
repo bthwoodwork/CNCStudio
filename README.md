@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.27)
+﻿# CNC Studio – källkod (senaste: 0.9.28)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.28 – V-carve inlay (hona + hane)
+
+- Markera formen, till exempel en text, och välj **CAM → Skapa inlay (hona + hane)…**. Välj V-fräs, honans djup, hanens startdjup och djup, spel och tjockleken på hanens skiva. Dialogen visar vad passningen ger.
+- **Honan** blir en V-carving till honans djup i det öppna projektet.
+- **Hanen** sparas som ett **eget projekt** bredvid. Formen är speglad, och skivan är precis så stor som behövs. Hanen fräses med den nya bearbetningen **Inlay-hane (V-fräs)**: V-fräsen fräser runt formen, med början på startdjupet precis vid konturen. Formen står kvar som en plugg och görs lite mindre med *spelet*.
+- **Varför det passar:** vänd hanen så går den ned startdjupet i honan innan väggarna möts. Det ger en glipa i botten för limmet (honans djup minus startdjupet). Hanen sticker upp hanens djup minus startdjupet och sågas eller planas bort när limmet har torkat.
+- Bokstäver som står tätt slås ihop till en enda form i hanen, så att fräsningen runt en bokstav aldrig skär in i nästa.
+- Den gamla inlay-panelen, som bara sparade inställningar och inte gav någon G-code, är borttagen.
+- Logiken finns i `Inlay` och `VCarveToolpaths` (Core) med tester: passningsmått, spegling, hanens djup och G-code för hanens projekt.
 
 ## 0.9.27 – V-carving följer varje del inåt
 
