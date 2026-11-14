@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.26)
+﻿# CNC Studio – källkod (senaste: 0.9.27)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,11 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.27 – V-carving följer varje del inåt
+
+- När en bokstav delar sig på djupet, till exempel benen i n och m eller runt hålen i B, e och ö, fräser V-carvingen nu **en del i taget hela vägen inåt** innan den byter till nästa. Tidigare hoppade den mellan delarna för varje varv, med ett lyft och en nedmatning varje gång.
+- Fräsen lyfter nu ungefär en gång per del och djupnivå i stället för en gång per varv.
 
 ## 0.9.26 – V-carving bokstav för bokstav
 

@@ -114,36 +114,58 @@ public static class VCarveToolpaths
             double previous = 0;
             foreach (double level in levels)
             {
-                IReadOnlyList<IReadOnlyList<CamPoint>>? lastRing = null;
-                double lastDepth = 0;
-                // Outside in (shallow first): each loop cut where it is not finished yet.
-                foreach (var (paths, depth) in byComp[comp])
+                // Every loop still to cut at this level: (ring number, path).
+                var items = new List<(int Ring, PathD Path, double Depth)>();
+                for (int r = 0; r < byComp[comp].Count; r++)
                 {
+                    var (paths, depth) = byComp[comp][r];
                     if (depth <= previous + 1e-9) continue;
-                    var ringPoints = paths.Select(p => (IReadOnlyList<CamPoint>)p.Select(v => new CamPoint(v.x, v.y)).ToList()).ToList();
-                    var remaining = paths.ToList();
-                    while (remaining.Count > 0)
+                    foreach (var p in paths) items.Add((r, p, depth));
+                }
+                var ringPoints = new Dictionary<int, IReadOnlyList<IReadOnlyList<CamPoint>>>();
+                IReadOnlyList<IReadOnlyList<CamPoint>> RingPoints(int r) => ringPoints.TryGetValue(r, out var v) ? v
+                    : ringPoints[r] = byComp[comp][r].Paths.Select(p => (IReadOnlyList<CamPoint>)p.Select(q => new CamPoint(q.x, q.y)).ToList()).ToList();
+                int lastRing = -1;
+                double lastDepth = 0;
+                while (items.Count > 0)
+                {
+                    // Follow one part inwards as long as the next loop is right beside it (a chain: the outline's
+                    // insets, or a hole's); otherwise start the outermost loop left, nearest first.
+                    var near = at;
+                    var next = items[0];
+                    bool link = false;
+                    if (near is not null && lastRing >= 0)
                     {
-                        var near = at;
-                        var next = near is null ? remaining[0] : remaining.OrderBy(p => p.Min(v => Dist2(v, near))).First();
-                        remaining.Remove(next);
-                        var loop = Rotate(next, near);
-                        total += loop.Count;
-                        if (total > MaxPoints) throw new NotSupportedException("För komplex V-carving för förhandsvisning – minska djupet eller formens storlek.");
-                        double cut = Math.Min(depth, level);
-                        // Straight on to the next loop at the depth just cut, when it is close and the cone stays
-                        // inside the loop just cut (no lift and plunge for every small step inwards).
-                        bool link = lastRing is not null && at is not null && cut >= lastDepth - 1e-9 &&
-                                    Math.Sqrt(Dist2(new PointD(loop[0].X, loop[0].Y), at)) <= 4 * step + 1e-9 &&
-                                    PocketToolpaths.SegmentInside(at, loop[0], lastRing);
-                        loops.Add(loop);
-                        depths.Add(cut);
-                        cleared.Add(Math.Min(depth, previous));
-                        final.Add(depth <= level + 1e-9);
-                        linkAtDepth.Add(link);
-                        at = loop[^1];
-                        lastRing = ringPoints; lastDepth = cut;
+                        double best = double.MaxValue;
+                        foreach (var it in items.Where(x => x.Ring == lastRing + 1))
+                        {
+                            double dd = it.Path.Min(v => Dist2(v, near));
+                            if (dd < best) { best = dd; next = it; }
+                        }
+                        if (best <= 16 * step * step + 1e-9 && Math.Min(next.Depth, level) >= lastDepth - 1e-9)
+                        {
+                            var candidate = Rotate(next.Path, near);
+                            link = PocketToolpaths.SegmentInside(near, candidate[0], RingPoints(lastRing).Where(p => p.Count >= 3).ToList());
+                        }
                     }
+                    if (!link)
+                    {
+                        int outer = items.Min(x => x.Ring);
+                        var pool = items.Where(x => x.Ring == outer).ToList();
+                        next = near is null ? pool[0] : pool.OrderBy(x => x.Path.Min(v => Dist2(v, near))).First();
+                    }
+                    items.Remove(next);
+                    var loop = Rotate(next.Path, near);
+                    total += loop.Count;
+                    if (total > MaxPoints) throw new NotSupportedException("För komplex V-carving för förhandsvisning – minska djupet eller formens storlek.");
+                    double cut = Math.Min(next.Depth, level);
+                    loops.Add(loop);
+                    depths.Add(cut);
+                    cleared.Add(Math.Min(next.Depth, previous));
+                    final.Add(next.Depth <= level + 1e-9);
+                    linkAtDepth.Add(link);
+                    at = loop[^1];
+                    lastRing = next.Ring; lastDepth = cut;
                 }
                 previous = level;
             }
