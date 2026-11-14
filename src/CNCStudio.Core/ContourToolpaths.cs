@@ -32,6 +32,8 @@ public sealed record ContourPreview(IReadOnlyList<CamPoint> Centerline, IReadOnl
     public IReadOnlyList<double> LoopClearedDepths { get; init; } = Array.Empty<double>();
     /// <summary>V-carving: true for a loop's last pass (its full depth); earlier passes of the same loop are false.</summary>
     public IReadOnlyList<bool> LoopFinal { get; init; } = Array.Empty<bool>();
+    /// <summary>V-carving: true when the tool goes straight on from the previous loop at its depth (no lift).</summary>
+    public IReadOnlyList<bool> LoopLinkAtDepth { get; init; } = Array.Empty<bool>();
     /// <summary>V-carving: the deepest cut (limited by the total depth and the bit's width).</summary>
     public double VCarveMaxDepth { get; init; }
     /// <summary>V-carving: wide parts were cleared flat at the deepest cut.</summary>
