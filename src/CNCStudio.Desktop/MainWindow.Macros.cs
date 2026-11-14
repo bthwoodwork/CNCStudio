@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using CNCStudio.Core;
@@ -112,6 +112,7 @@ public partial class MainWindow
         Action<string> onLog = Show;
         var runner = new JobRunner(g, prepared.Lines, store: null);
         _macroRunner = runner;
+        UpdateKeepAwake();
         RunMacroButton.IsEnabled = false; StopMacroButton.IsEnabled = true;
         LoadJobButton.IsEnabled = StartJobButton.IsEnabled = false;
         GrblLogAdded += onLog;
@@ -129,6 +130,7 @@ public partial class MainWindow
         {
             GrblLogAdded -= onLog;
             _macroRunner = null;
+            UpdateKeepAwake();
             RunMacroButton.IsEnabled = true; StopMacroButton.IsEnabled = false;
             UpdateJobButtons();
         }

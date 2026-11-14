@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.20)
+﻿# CNC Studio – källkod (senaste: 0.9.21)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.21 – Håller datorn vaken
+Om Windows går i viloläge mitt i ett jobb avbryts sändningen, och om datorn somnar medan maskinen är ansluten bryts USB-anslutningen. CNC Studio sköter nu viloläget, som gSender gör.
+- **Ansluten:** datorn får inte gå i viloläge, men skärmen får släckas.
+- **Program eller makro körs:** både datorn och skärmen hålls vakna, så att du kan följa körningen.
+- **Frånkopplad eller klar:** Windows får sova som vanligt igen.
+- Varje ändring skrivs i maskinloggen och i konsolen. Tekniskt används Windows `SetThreadExecutionState`, och nivåerna räknas ut i `KeepAwake` i Core.
+- Det skyddar inte mot att någon stänger locket på en bärbar dator eller trycker på strömknappen. Det skyddar inte heller mot Windows energisparfunktion för USB-portar (*USB selective suspend* i energiinställningarna). Stäng gärna av den på datorn vid maskinen.
+
+**Tester:** 567 tester. Kompilerad utan fel och varningar.
 
 ## 0.9.20 – Kör G-code från andra program
 Program från Fusion 360, VCarve, Easel och andra CAM-program kan nu köras i CNC Studio, som i gSender, UGS och Easel.
