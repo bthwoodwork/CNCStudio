@@ -89,36 +89,64 @@ public static class VCarveToolpaths
         for (double z = op.DepthPerPass; z < deepest - 1e-9; z += op.DepthPerPass) levels.Add(z);
         levels.Add(deepest);
 
+        // One letter (an outline with its holes) at a time, all its levels, before moving on to the next:
+        // the tool stays in one place instead of jumping between letters for every loop.
+        var components = Components(region);
+        int CompOf(PathD p) { for (int c = 0; c < components.Count; c++) if (InComponent(p[0], components[c])) return c; return 0; }
+        var byComp = components.Select(_ => new List<(List<PathD> Paths, double Depth)>()).ToList();
+        foreach (var (paths, depth) in rings)
+            foreach (var g in paths.Where(p => p.Count >= 3).GroupBy(CompOf))
+                byComp[g.Key].Add((g.ToList(), depth));
+
         var loops = new List<IReadOnlyList<CamPoint>>();
         var depths = new List<double>();
         var cleared = new List<double>();
         var final = new List<bool>();
+        var linkAtDepth = new List<bool>();
         CamPoint? at = null;
         int total = 0;
-        double previous = 0;
-        foreach (double level in levels)
+        var todo = Enumerable.Range(0, components.Count).Where(c => byComp[c].Count > 0).ToList();
+        while (todo.Count > 0)
         {
-            // Outside in within a level (shallow first): each loop cut where it is not finished yet.
-            foreach (var (paths, depth) in rings)
+            var here = at;
+            int comp = here is null ? todo[0] : todo.OrderBy(c => byComp[c][0].Paths.Min(p => p.Min(v => Dist2(v, here)))).First();
+            todo.Remove(comp);
+            double previous = 0;
+            foreach (double level in levels)
             {
-                if (depth <= previous + 1e-9) continue;
-                var remaining = paths.Where(p => p.Count >= 3).ToList();
-                while (remaining.Count > 0)
+                IReadOnlyList<IReadOnlyList<CamPoint>>? lastRing = null;
+                double lastDepth = 0;
+                // Outside in (shallow first): each loop cut where it is not finished yet.
+                foreach (var (paths, depth) in byComp[comp])
                 {
-                    var here = at;
-                    var next = here is null ? remaining[0] : remaining.OrderBy(p => p.Min(v => Dist2(v, here))).First();
-                    remaining.Remove(next);
-                    var loop = Rotate(next, here);
-                    total += loop.Count;
-                    if (total > MaxPoints) throw new NotSupportedException("För komplex V-carving för förhandsvisning – minska djupet eller formens storlek.");
-                    loops.Add(loop);
-                    depths.Add(Math.Min(depth, level));
-                    cleared.Add(Math.Min(depth, previous));
-                    final.Add(depth <= level + 1e-9);
-                    at = loop[^1];
+                    if (depth <= previous + 1e-9) continue;
+                    var ringPoints = paths.Select(p => (IReadOnlyList<CamPoint>)p.Select(v => new CamPoint(v.x, v.y)).ToList()).ToList();
+                    var remaining = paths.ToList();
+                    while (remaining.Count > 0)
+                    {
+                        var near = at;
+                        var next = near is null ? remaining[0] : remaining.OrderBy(p => p.Min(v => Dist2(v, near))).First();
+                        remaining.Remove(next);
+                        var loop = Rotate(next, near);
+                        total += loop.Count;
+                        if (total > MaxPoints) throw new NotSupportedException("För komplex V-carving för förhandsvisning – minska djupet eller formens storlek.");
+                        double cut = Math.Min(depth, level);
+                        // Straight on to the next loop at the depth just cut, when it is close and the cone stays
+                        // inside the loop just cut (no lift and plunge for every small step inwards).
+                        bool link = lastRing is not null && at is not null && cut >= lastDepth - 1e-9 &&
+                                    Math.Sqrt(Dist2(new PointD(loop[0].X, loop[0].Y), at)) <= 4 * step + 1e-9 &&
+                                    PocketToolpaths.SegmentInside(at, loop[0], lastRing);
+                        loops.Add(loop);
+                        depths.Add(cut);
+                        cleared.Add(Math.Min(depth, previous));
+                        final.Add(depth <= level + 1e-9);
+                        linkAtDepth.Add(link);
+                        at = loop[^1];
+                        lastRing = ringPoints; lastDepth = cut;
+                    }
                 }
+                previous = level;
             }
-            previous = level;
         }
 
         string warning = floor
@@ -131,10 +159,37 @@ public static class VCarveToolpaths
             LoopDepths = depths,
             LoopClearedDepths = cleared,
             LoopFinal = final,
+            LoopLinkAtDepth = linkAtDepth,
             VCarveMaxDepth = maxDepth,
             VCarveHasFloor = floor,
         };
     }
+
+    /// <summary>The region's separate parts: each outer outline with its holes (islands in holes are parts of their own).</summary>
+    private static List<PathsD> Components(PathsD region)
+    {
+        var tree = new PolyTreeD();
+        Clipper.BooleanOp(ClipType.Union, region, null, tree, FillRule.EvenOdd, Precision);
+        var result = new List<PathsD>();
+        void Outer(PolyPathD outer)
+        {
+            var comp = new PathsD { outer.Polygon! };
+            for (int i = 0; i < outer.Count; i++)
+            {
+                var hole = (PolyPathD)outer[i];
+                comp.Add(hole.Polygon!);
+                for (int k = 0; k < hole.Count; k++) Outer((PolyPathD)hole[k]);
+            }
+            result.Add(comp);
+        }
+        for (int i = 0; i < tree.Count; i++) Outer((PolyPathD)tree[i]);
+        if (result.Count == 0) result.Add(region);
+        return result;
+    }
+
+    private static bool InComponent(PointD p, PathsD comp) =>
+        Clipper.PointInPolygon(p, comp[0]) != PointInPolygonResult.IsOutside &&
+        comp.Skip(1).All(h => Clipper.PointInPolygon(p, h) != PointInPolygonResult.IsInside);
 
     private static PathsD Simplify(PathsD paths) =>
         new(Clipper.SimplifyPaths(paths, SimplifyEpsilon, true).Where(p => p.Count >= 3));

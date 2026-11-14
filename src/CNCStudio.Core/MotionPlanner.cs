@@ -345,6 +345,19 @@ public static class MotionPlanner
                 var start = loop[0];
                 double depth = preview.LoopDepths[k], cutZ = -depth;
                 if (pos is null) TravelTo(start);
+                else if (k < preview.LoopLinkAtDepth.Count && preview.LoopLinkAtDepth[k])
+                {
+                    // A small step inwards inside the loop just cut, then down the last bit and round.
+                    moves.Add(new MotionMove(MoveKind.Feed, pos.X, pos.Y, z, start.X, start.Y, z, "Till nästa varv på djupet", opIndex));
+                    if (cutZ < z - 1e-9)
+                    {
+                        moves.Add(new MotionMove(MoveKind.Feed, start.X, start.Y, z, start.X, start.Y, cutZ, $"Nedmatning till {F(depth)} mm", opIndex));
+                        z = cutZ;
+                    }
+                    AddCut(moves, loop, opIndex, k, 0, PathMath.Length(loop), z, "V-carving");
+                    pos = start;
+                    continue;
+                }
                 else
                 {
                     if (z < m.PlungeClearanceMm - 1e-9)

@@ -97,4 +97,34 @@ public class VCarveToolpathsTests
         Assert.True(g.Success, string.Join("; ", g.BlockingReasons));
         Assert.Contains(g.Lines, l => l.StartsWith("G1") && l.Contains("Z-"));
     }
+
+    [Fact]
+    public void Finishes_one_letter_before_the_next_and_steps_inwards_without_lifting()
+    {
+        // Two "letters" side by side, 10 mm wide strips 20 mm apart; two depth levels.
+        var shape = TextShapes.FromOutlines(new IReadOnlyList<(double, double)>[]
+        {
+            new List<(double, double)> { (0, 0), (8, 0), (8, 30), (0, 30) },
+            new List<(double, double)> { (28, 0), (36, 0), (36, 30), (28, 30) },
+        }, 30, 0, 0, new TextSource { Content = "ll" });
+        var p = VCarveToolpaths.Generate(shape, Op(shape.Id, angle: 90, depth: 4, pass: 2), 10);
+        // Which letter each loop belongs to: left (x < 18) or right.
+        var side = p.Centerlines.Select(l => l[0].X < 18).ToList();
+        int switches = side.Zip(side.Skip(1)).Count(x => x.First != x.Second);
+        Assert.Equal(1, switches);
+        // Most steps inwards go on at depth; only the first loop of each letter and level starts from above.
+        Assert.True(p.LoopLinkAtDepth.Count(x => x) > p.Centerlines.Count / 2, $"{p.LoopLinkAtDepth.Count(x => x)} of {p.Centerlines.Count}");
+
+        var doc = new CncDocument { Name = "V" };
+        doc.Motion.StockTopMachineZ = -40;
+        doc.Shapes.Add(shape);
+        doc.CamOperations.Add(Op(shape.Id, angle: 90, depth: 4, pass: 2));
+        var report = new CamPlanner(ContourToolpaths.Generate).Review(doc, computeAll: true);
+        var moves = report.Motion.Moves;
+        int rapidsXY = moves.Count(m => m.Kind == MoveKind.Rapid && m.MovesXY);
+        Assert.True(rapidsXY <= 8, $"{rapidsXY} rapids");
+        Assert.DoesNotContain(moves, m => m.Kind == MoveKind.Rapid && m.MovesXY && Math.Min(m.Z0, m.Z1) < 0);
+        // A link at depth never goes deeper than the loop it comes from allows: it stays horizontal.
+        Assert.All(moves.Where(m => m.Purpose == "Till nästa varv på djupet"), m => Assert.Equal(m.Z0, m.Z1));
+    }
 }
