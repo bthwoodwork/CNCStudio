@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.16)
+﻿# CNC Studio – källkod (senaste: 0.9.17)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,29 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.17 – Makron
+Egna kodbitar som körs med ett klick. Panelen **Makron** ligger som flik bredvid *Program* i arbetsytan Maskin och finns också under **Visa → Visa makron**.
+- **Panelen:** listan med makron (namn och beskrivning, koden som tooltip), **▶ Kör** eller dubbelklick, *Ändra…*, *Ny…*, *Ta bort*, *Från G-code-fil…* och **■ Stoppa makrot**. Under listan visas maskinens svar, till exempel utskriften från `$#`.
+- **Editorn:**
+  - namn, beskrivning och koden, en rad per kommando med kommentarer i `( )` eller efter `;`
+  - **Infoga** lägger in färdiga rader som var och en förklaras: lyft Z i maskinkoordinater, gå till X0 Y0, relativ flytt, matning, nolla X/Y eller Z, homing, spindel på/av, vänta, paus, `$#` och `$G`
+  - **Läs in G-code-fil…** hämtar kod från en .nc- eller .gcode-fil
+  - **Kontrollera** visar hur många rader som skickas, om makrot kan röra maskinen och vad som skulle stoppas
+- **Kontroll innan makrot körs** (`MacroCode.Prepare`): kommentarer och tomma rader tas bort. Följande stoppas, med en förklaring på vilken rad:
+  - inställningar `$n=` (görs i Maskininställningar, där $$ kopieras först)
+  - `$RST`
+  - startblock `$N`
+  - `$SLP`
+  - rena realtidstecken `! ~ ?` (de är knappar)
+  - tecken utanför ASCII
+  - rader längre än 70 tecken
+- **Makron som kan röra maskinen** (G0–G3, G28/G30, G38.x, M3/M4, `$H`, `$J=`) visar raderna och frågar innan de körs. Är maskinen inte homad påpekar frågan det. Makron som bara läser, som `$#` och `$G`, körs direkt.
+- **Körningen** sker med samma körare som programmen: en rad i taget och väntan på `ok`. Ett `error` eller larm stoppar makrot. **Stoppa makrot** bromsar in, väntar och återställer utan att positionen tappas, som Stopp för program. Ett makro och ett program kan inte köras samtidigt.
+- **Lagring:** makrona sparas i `Inställningar\makron.json` och synkas som verktygsbiblioteket. Fyra exempel följer med: *Lyft Z till toppen*, *Gå till arbetsnollan*, *Visa nollpunkter och lägen* och *Spindel av*.
+- **Tester:** de körs mot den simulerade GRBL:en. Ett makro körs till slut, och ett makro som skulle gå förbi en mjuk gräns stoppas med ALARM:2.
+
+**Tester:** 544 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.16 – Diagonal jogg
 - **Joggkrysset har diagonaler** i de fyra hörnen: ↖ ↗ ↙ ↘.

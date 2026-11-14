@@ -115,6 +115,7 @@ public partial class MainWindow
     private async void StartJob_Click(object sender, RoutedEventArgs e)
     {
         if (_runner is not null || _jobLines is null) return;
+        if (_macroRunner is not null) { Error("Ett makro körs – vänta tills det är klart (eller stoppa det)."); return; }
         if (RequireIdle("Start") is not GrblClient g) return;
         if (!_homedThisSession)
         { Error("Kör homing först (⌂ Homing). Utan homing är maskinkoordinaterna och Z-brytarens läge okända."); return; }
@@ -230,7 +231,7 @@ public partial class MainWindow
         bool running = _runner is not null;
         LoadJobButton.IsEnabled = !running;
         CheckJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null;
-        StartJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null;
+        StartJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null && _macroRunner is null;
         // Say why Starta is grey instead of leaving the user to guess.
         StartJobButton.ToolTip = running ? "Ett program körs."
             : _grbl is null ? "Anslut till maskinen först."
