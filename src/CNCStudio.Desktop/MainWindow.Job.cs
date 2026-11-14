@@ -50,6 +50,7 @@ public partial class MainWindow
         }
         var result = job.Result;
         _jobLines = result.Lines;
+        _loadedExternalPath = null;
         _jobName = job.Count > 1 ? $"{_document.Name} – program {job.Number} av {job.Count} ({job.ToolLabel})" : _document.Name;
         JobInfoText.Text = (note is null ? "" : note + "\n") + $"{_jobName}: {result.Lines.Count} rader." +
             (job.Count > 1 ? $" Fräs: {job.ToolLabel}. Z-nollan ska vara satt med den." : $" {RunTimeText()}") +
@@ -230,6 +231,7 @@ public partial class MainWindow
         if (StartJobButton is null) return;
         bool running = _runner is not null;
         LoadJobButton.IsEnabled = !running;
+        if (OpenGCodeButton is not null) OpenGCodeButton.IsEnabled = !running && _macroRunner is null;
         CheckJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null;
         StartJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null && _macroRunner is null;
         // Say why Starta is grey instead of leaving the user to guess.
@@ -306,8 +308,8 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Before a run: with the work offset the machine really has (G54 + G92 from $#), does every move stay
-    /// inside GRBL's soft limits? A forgotten or wrong X/Y zero is stopped here, with what to do, instead of
+    /// Before a run: with the work offset the machine really has (G54 + G92, and the tool length for Z, from $#),
+    /// does every move stay inside GRBL's soft limits in X, Y and Z? A forgotten or wrong X/Y zero is stopped here, with what to do, instead of
     /// by ALARM:2 after the run has begun. If the offsets cannot be read the user decides.
     /// </summary>
     private async Task<bool> CheckXyZero(GrblClient g, IReadOnlyList<string> lines, string title)
@@ -317,7 +319,8 @@ public partial class MainWindow
             var p = await g.ReadParametersAsync();
             if (!p.TryGetValue("G54", out var g54) || g54.Length < 3) throw new InvalidOperationException("G54 saknas i svaret på $#.");
             var g92 = p.TryGetValue("G92", out var v) && v.Length >= 3 ? v : new double[3];
-            var offset = new[] { g54[0] + g92[0], g54[1] + g92[1], g54[2] + g92[2] };
+            double tlo = p.TryGetValue("TLO", out var t) && t.Length >= 1 ? t[0] : 0;
+            var offset = new[] { g54[0] + g92[0], g54[1] + g92[1], g54[2] + g92[2] + tlo };
             var settings = _grblSettings ?? await g.ReadSettingsAsync();
             string hint = _document.WorkZero == WorkZero.Center ? "materialets mitt" : "materialets främre vänstra hörn";
             if (JobEnvelope.Check(GCodePath.Parse(lines), offset, settings, hint) is string problem)

@@ -26,6 +26,8 @@ public sealed record LoggedJob
     public string? ProjectPath { get; init; }
     /// <summary>Which of the project's programs (one per tool), null for a project with one program.</summary>
     public int? ProgramNumber { get; init; }
+    /// <summary>The G-code file run (a program from another CAM), null for a project's program.</summary>
+    public string? GCodeFile { get; init; }
     [JsonIgnore] public TimeSpan Duration => End > Start ? End - Start : TimeSpan.Zero;
 }
 

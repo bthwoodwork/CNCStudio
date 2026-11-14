@@ -117,6 +117,8 @@ public sealed class SimulatedGrbl : IGrblTransport
     private readonly double[] _g92 = new double[3];
     private int _activeWcs;
     private bool _absolute = true, _inches, _rapidMode = true, _feedSet, _checkMode;
+    /// <summary>The modal motion (G0, G1, G2, G3).</summary>
+    private int _motionMode;
     private double _feed, _spindle, _currentFeed;
     private bool _alarm, _critical, _homed, _hold, _holdDecel, _homing;
     private readonly LinkedList<Block> _queue = new();
@@ -298,7 +300,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         }
         else if (u == "$G")
         {
-            Emit($"[GC:{(_rapidMode ? "G0" : "G1")} G{54 + _activeWcs} G17 {(_inches ? "G20" : "G21")} {(_absolute ? "G90" : "G91")} G94 " +
+            Emit($"[GC:G{_motionMode} G{54 + _activeWcs} G17 {(_inches ? "G20" : "G21")} {(_absolute ? "G90" : "G91")} G94 " +
                  $"{(_spindle > 0 ? "M3" : "M5")} M9 T0 F{N(_feed, 0)} S{N(_spindle, 0)}]\r\n");
             Ok();
         }
@@ -400,6 +402,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         bool g53 = false, g10 = false, g92 = false, dwell = false;
         int probe = 0;                                     // 2 = G38.2, 3 = G38.3
         int? motion = null, l = null, p = null, mCode = null;
+        double? arcI = null, arcJ = null, arcR = null;
         double? pValue = null;
         var axis = new double?[3];
         bool absolute = _absolute, inches = _inches;
@@ -413,7 +416,13 @@ public sealed class SimulatedGrbl : IGrblTransport
                     {
                         case 0: motion = 0; break;
                         case 1: motion = 1; break;
+                        case 2: motion = 2; break;
+                        case 3: motion = 3; break;
                         case 4: dwell = true; break;
+                        // Accepted modes CNC Studio never relies on (gcode.c): cutter comp off, tool length off,
+                        // canned cycle off, exact path, arc distance incremental, other planes.
+                        case 40: case 49: case 61: case 80: case 18: case 19: break;
+                        case var g when Math.Abs(g - 43.1) < 1e-6 || Math.Abs(g - 91.1) < 1e-6: break;
                         case 10: g10 = true; break;
                         case 17: case 94: break;
                         case 20: inches = true; break;
@@ -429,7 +438,7 @@ public sealed class SimulatedGrbl : IGrblTransport
                     }
                     break;
                 case 'M':
-                    if (value is 0 or 2 or 30 or 3 or 4 or 5 or 8 or 9) mCode = (int)value;
+                    if (value is 0 or 1 or 2 or 30 or 3 or 4 or 5 or 7 or 8 or 9) mCode = value == 1 ? 0 : (int)value;
                     else { Error(20); return; }
                     break;
                 case 'X': axis[0] = value; break;
@@ -439,6 +448,10 @@ public sealed class SimulatedGrbl : IGrblTransport
                 case 'S': spindle = value; break;
                 case 'P': pValue = value; p = (int)value; break;
                 case 'L': l = (int)value; break;
+                case 'I': arcI = value; break;
+                case 'J': arcJ = value; break;
+                case 'K': break;
+                case 'R': arcR = value; break;
                 case 'N': case 'T': break;
                 default: Error(20); return;
             }
@@ -477,10 +490,11 @@ public sealed class SimulatedGrbl : IGrblTransport
         if (mCode == 5) _spindle = 0;
 
         if (probe != 0) { Probe(axis, absolute, g53, k, probe == 3); return; }
-        if (motion is not null) _rapidMode = motion == 0;
+        if (motion is not null) { _motionMode = motion.Value; _rapidMode = motion == 0; }
         if (axis.Any(a => a is not null))
         {
-            bool rapid = motion is null ? _rapidMode : motion == 0;
+            int mode = motion ?? _motionMode;
+            bool rapid = mode == 0;
             if (!rapid && !_feedSet) { Error(22); return; }
             var end = (double[])_planned.Clone();
             for (int i = 0; i < 3; i++)
@@ -488,6 +502,26 @@ public sealed class SimulatedGrbl : IGrblTransport
                 if (axis[i] is not double v) continue;
                 end[i] = g53 ? v * k : absolute ? v * k + Wco(i) : _planned[i] + v * k;
             }
+            if (mode is 2 or 3)
+            {
+                // G2/G3 in the XY plane: split into short lines like mc_arc, each checked against the soft limits.
+                if (arcI is null && arcJ is null && arcR is null) { Error(26); return; }
+                var arc = CNCStudio.Core.GCode.GCodePath.Arc(_planned[0], _planned[1], end[0], end[1], arcI * k, arcJ * k, arcR * k, mode == 2);
+                if (arc is not { } a) { Error(33); return; }
+                int pieces = Math.Max(1, (int)Math.Ceiling(Math.Abs(a.Sweep) * a.Radius / 1.0));
+                var from = (double[])_planned.Clone();
+                for (int s = 1; s <= pieces; s++)
+                {
+                    double t = (double)s / pieces, ang = a.Start + a.Sweep * t;
+                    var q = s == pieces ? end : new[] { a.Cx + a.Radius * Math.Cos(ang), a.Cy + a.Radius * Math.Sin(ang), from[2] + (end[2] - from[2]) * t };
+                    if (_settings[20] == 1 && !_checkMode && !WithinSoftLimits(q)) { RaiseAlarm(2, critical: false); return; }
+                    Enqueue(new Block { Kind = BlockKind.Move, Target = q, FeedMmMin = _feed });
+                }
+                _planned = end;
+                if (mCode is null) return;
+            }
+            else
+            {
             if (_settings[20] == 1 && !_checkMode && !WithinSoftLimits(end))
             {
                 RaiseAlarm(2, critical: false);
@@ -496,6 +530,7 @@ public sealed class SimulatedGrbl : IGrblTransport
             Enqueue(new Block { Kind = BlockKind.Move, Target = end, FeedMmMin = rapid ? null : _feed });
             _planned = end;
             if (mCode is null) return;
+            }
         }
         if (mCode == 0) { Enqueue(new Block { Kind = BlockKind.Pause, OkWhenDone = true }); return; }
         if (mCode is 2 or 30) { Enqueue(new Block { Kind = BlockKind.End, OkWhenDone = true }); return; }
@@ -579,7 +614,7 @@ public sealed class SimulatedGrbl : IGrblTransport
                     _hold = true;                          // M0: program pause, resumed with ~
                     return;
                 case BlockKind.End:
-                    _spindle = 0; _rapidMode = false; _absolute = true; _activeWcs = 0; // M2/M30 resets
+                    _spindle = 0; _rapidMode = false; _motionMode = 1; _absolute = true; _activeWcs = 0; // M2/M30 resets
                     _feedOv = 100; _rapidOv = 100; _ovChanged = true;              // RESTORE_OVERRIDES_AFTER_PROGRAM_END
                     Emit("[MSG:Pgm End]\r\n");
                     Complete(node);
@@ -759,7 +794,7 @@ public sealed class SimulatedGrbl : IGrblTransport
     {
         _queue.Clear(); _deferredLine = null;
         _hold = _holdDecel = _homing = _critical = _checkMode = false;
-        _absolute = true; _inches = false; _rapidMode = true; _activeWcs = 0; _spindle = 0; _feed = 0; _feedSet = false;
+        _absolute = true; _inches = false; _rapidMode = true; _motionMode = 0; _activeWcs = 0; _spindle = 0; _feed = 0; _feedSet = false;
         Array.Clear(_g92);
         _planned = (double[])_pos.Clone();
         _lastPins = Enumerable.Range(0, 3).Select(SwitchTriggered).ToArray();
