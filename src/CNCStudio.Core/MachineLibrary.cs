@@ -36,6 +36,9 @@ public sealed class MachineLibrary
     /// <summary>Where the machine's squaring checks are kept (Maskiner\Vinkelkontroll\&lt;id&gt;.json).</summary>
     public string SquaringLogPath(string id) => Grbl.SquaringLog.PathFor(Folder, id);
 
+    /// <summary>The machine's log: jobs, alarms, running time and maintenance (Maskiner\Historik\&lt;id&gt;.json).</summary>
+    public string MachineLogPath(string id) => MachineLog.PathFor(Folder, id);
+
     /// <summary>All machines: real ones by name, the demo machine last. Creates the first two if there are none.</summary>
     public IReadOnlyList<MachineProfile> All()
     {
@@ -119,6 +122,7 @@ public sealed class MachineLibrary
         if (all.Count(x => !IsDemo(x)) <= 1) return "Det måste finnas minst en maskin.";
         File.Delete(Path.Combine(Folder, id + ".json"));
         try { File.Delete(SquaringLogPath(id)); } catch (Exception) { }   // the machine's squaring checks go with it
+        try { File.Delete(MachineLogPath(id)); } catch (Exception) { }
         if (ReadActiveId() == id) SetActive(All().First(x => !IsDemo(x)).Id!);
         return null;
     }

@@ -68,6 +68,7 @@ public partial class MainWindow
             // An alarm or a reset (welcome) means the position may be lost: hide the tool until homed again.
             if (line.Kind is GrblLineKind.Alarm or GrblLineKind.Welcome)
                 Dispatcher.BeginInvoke(() => { _homedThisSession = false; if (_machineView) RenderMachine(refreshCam: false); });
+            if (line.Kind is GrblLineKind.Alarm) Dispatcher.BeginInvoke(() => LogAlarm(line));
             if (line.Kind is GrblLineKind.Message or GrblLineKind.Welcome)
                 Dispatcher.BeginInvoke(() => ShowResetState(client));
         };
@@ -78,6 +79,7 @@ public partial class MainWindow
             var hello = await client.ConnectAsync();
             _connectedFirmware = hello;
             _grbl = client;
+            LogConnected(hello);
             client.StartStatusPolling(TimeSpan.FromMilliseconds(250));
             _connectedBanner = (demo ? "ANSLUTEN – DEMOMASKIN" : "ANSLUTEN", $"{port} · {hello}", demo ? Color.FromRgb(92, 60, 140) : Color.FromRgb(36, 98, 63));
             SetConnectionBanner(_connectedBanner.Title, _connectedBanner.Detail, _connectedBanner.Color);

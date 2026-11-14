@@ -21,7 +21,7 @@ public sealed class MachinesWindow : Window
     private readonly Func<string?> _chosenId;
     private readonly Func<string?> _connectedId;
     private readonly Action<MachineProfile> _use, _edit;
-    private readonly Action<MachineProfile, Window> _calibrate, _backups, _squaring;
+    private readonly Action<MachineProfile, Window> _calibrate, _backups, _squaring, _log;
     private readonly Func<MachineProfile, bool> _delete;
     private readonly Action _create;
 
@@ -29,10 +29,11 @@ public sealed class MachinesWindow : Window
     /// <param name="connectedId">The connected machine, null when not connected.</param>
     public MachinesWindow(Func<string?> chosenId, Func<string?> connectedId, Action<MachineProfile> use,
         Action<MachineProfile> edit, Func<MachineProfile, bool> delete, Action create,
-        Action<MachineProfile, Window> calibrate, Action<MachineProfile, Window> backups, Action<MachineProfile, Window> squaring)
+        Action<MachineProfile, Window> calibrate, Action<MachineProfile, Window> backups, Action<MachineProfile, Window> squaring,
+        Action<MachineProfile, Window> log)
     {
         _chosenId = chosenId; _connectedId = connectedId; _use = use; _edit = edit; _delete = delete; _create = create;
-        _calibrate = calibrate; _backups = backups; _squaring = squaring;
+        _calibrate = calibrate; _backups = backups; _squaring = squaring; _log = log;
         Title = "Maskiner";
         Width = 720; SizeToContent = SizeToContent.Height; MaxHeight = 820; ResizeMode = ResizeMode.CanMinimize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -97,6 +98,10 @@ public sealed class MachinesWindow : Window
         var edit = Btn("Inställningar…", B(0x34, 0x47, 0x5A)); edit.IsEnabled = canSwitch || isConnected;
         edit.Click += (_, _) => { _edit(m); Build(); };
         buttons.Children.Add(edit);
+        var history = Btn("Logg och underhåll…", B(0x34, 0x47, 0x5A));
+        history.ToolTip = "Körda jobb, larm, körtid och underhåll för den här maskinen.";
+        history.Click += (_, _) => { _log(m, this); Build(); };
+        buttons.Children.Add(history);
         var copies = Btn("$$-kopior…", B(0x34, 0x47, 0x5A));
         copies.ToolTip = $"Säkerhetskopior av {m.Name}s GRBL-inställningar. Jämföra och återställa går när maskinen är ansluten.";
         copies.Click += (_, _) => _backups(m, this);

@@ -136,7 +136,9 @@ public partial class MainWindow
         UpdateJobButtons();
         RecoveryBanner.Visibility = Visibility.Collapsed;
         StatusText.Text = startIndex == 0 ? "Programmet körs." : $"Jobbet återupptas från rad {startIndex + 1}.";
+        var started = DateTime.Now;
         var result = await runner.RunAsync(startIndex, preamble);
+        var due = LogJob(started, result, runner.TotalLines, resumed: startIndex > 0);
         _runner = null;
         ShowJobProgress(runner);
         UpdateJobButtons();
@@ -170,13 +172,13 @@ public partial class MainWindow
                     $"1. Byt till {tool}.\n" +
                     "2. Jogga ned till materialytan och klicka Nolla Z (X och Y ändras inte).\n" +
                     "   Programmet laddas då automatiskt och kontrolleras mot den nya Z-nollan.\n" +
-                    "3. Klicka Starta.",
+                    "3. Klicka Starta." + DueText(due),
                     "Program klart", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
                 if (_loadedJob is { Count: > 1 } last) JobInfoText.Text = $"Alla {last.Count} program är klara.";
-                AppDialog.Show(this, (_loadedJob is { Count: > 1 } all ? $"Alla {all.Count} program är klara." : "Programmet är klart.") + stop,
+                AppDialog.Show(this, (_loadedJob is { Count: > 1 } all ? $"Alla {all.Count} program är klara." : "Programmet är klart.") + stop + DueText(due),
                     "Klart", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }

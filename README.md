@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.13)
+﻿# CNC Studio – källkod (senaste: 0.9.14)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,21 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.14 – Maskinlogg och underhåll
+Motsvarar gSenders *Your Machine*. Varje maskin har nu en egen logg. Du öppnar den med **Maskin → Maskinlogg och underhåll…** eller med knappen **Logg och underhåll…** på maskinens rad i Maskiner.
+- **Loggas automatiskt** på den anslutna maskinen:
+  - **Varje körning:** start, slut, programnamn, rader körda av totalt, och om den blev klar, stoppades eller avbröts (med meddelandet), samt om den var återupptagen.
+  - **Varje larm (ALARM:n):** kod, förklaring och vilket program som körde.
+  - **Varje anslutning:** tid, dator och firmware.
+- **Statistik:** total körtid, antal jobb (varav klara), genomsnittlig och längsta körning.
+- **Underhåll som räknas i körtimmar,** till exempel *Rengör skenor och hjul var 10:e timme*. Varje uppgift visar hur många timmar som gått av intervallet. Den blir gul när 80 % har gått och röd (*DAGS*) när intervallet är fullt. **Gjort** nollställer timmarna. Uppgifter kan läggas till, ändras och tas bort.
+  - En ny maskin får fyra **förslag** för en remdriven hobbymaskin: skenor och hjul (10 h), remspänning (25 h), hjul och glapp (50 h) och spännhylsan (25 h). Ändra dem efter din maskins manual.
+  - När ett program är klart nämner klart-rutan det underhåll som är förfallet.
+- **Fil:** loggen sparas i `Inställningar\Maskiner\Historik\<id>.json`, bredvid maskinprofilen men inte i den, så att projektfilerna inte följer med. Den synkas som profilerna. De senaste 500 jobben och larmen sparas, och äldre jobb räknas fortfarande in i körtiden. Tas maskinen bort följer loggen med.
+- Logiken finns i `MachineLog` i Core.
+
+**Tester:** 499 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.13 – Planfräsning över hela rörelseområdet
 En stor fräs, till exempel 35 mm, når utanför maskinens rörelseområde. Offerskivan är ofta större än rörelseområdet, och då ska hela ytan som fräsen når kunna planas.
