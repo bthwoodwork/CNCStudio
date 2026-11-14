@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.23)
+﻿# CNC Studio – källkod (senaste: 0.9.24)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,15 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.24 – Text med typsnitt
+
+- **Rita → Text…** (eller knappen *Text…* under RITA): skriv en eller flera rader, välj bland datorns typsnitt, fet/kursiv, justering, radavstånd och höjden i mm. Förhandsvisningen visar texten och dess storlek direkt.
+- Texten blir en vektorform precis som en importerad SVG: **fickfräs** den (gravyr) eller **skär ut** den. Hål i bokstäverna (o, a, e, å …) behålls, och bokstäver som går ihop (skrivstil, accenter) slås ihop till en yta så att inget fräses två gånger.
+- **Dubbelklicka på texten** (eller Rita → *Redigera text…*) för att ändra ord, typsnitt eller höjd. Den behåller plats, grupp och CAM-operation.
+- Texten och typsnittet sparas i projektet. Saknas typsnittet på en annan dator syns formen ändå, men den kan bara redigeras med ett annat typsnitt.
+- Tunna bokstäver kräver en smal fräs – CAM-kontrollen visar det som fräsen inte når. V-carve kommer senare.
+- Logiken finns i `TextShapes` (Core) med tester: skalning, sammanslagning, hål och fickfräsning runt hålen.
 
 ## 0.9.23 – Jogga med tangentbordet
 
