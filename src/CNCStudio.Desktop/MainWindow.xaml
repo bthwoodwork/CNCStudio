@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.28 – V-carve inlay" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.29 – spindel och kylning" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -500,7 +500,7 @@
             <ProgressBar x:Name="JobProgressBar" Height="8" Margin="3,6,3,2" Minimum="0" Maximum="1" Foreground="#4CE07A" Background="#24384C" BorderThickness="0"/>
             <TextBlock x:Name="JobProgressText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="#D5E3F0" Margin="3,0,3,4"/>
             <DockPanel Margin="0,2,0,0">
-              <TextBlock Text="Matning" FontSize="11" Foreground="#B8CADC" Margin="3,0,6,0"/>
+              <TextBlock Text="Matning" FontSize="11" Foreground="#B8CADC" Margin="3,0,6,0" Width="58" VerticalAlignment="Center"/>
               <TextBlock x:Name="FeedOvText" DockPanel.Dock="Right" Text="100 %" FontWeight="Bold" Width="46" TextAlignment="Right" Margin="0,0,3,0"/>
               <UniformGrid Columns="5">
                 <Button Content="−10" Tag="146" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
@@ -510,6 +510,34 @@
                 <Button Content="+10" Tag="145" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
               </UniformGrid>
             </DockPanel>
+            <DockPanel Margin="0,2,0,0" ToolTip="Snabbgångsöverstyrning: sänker G0-förflyttningarna till 50 eller 25 % – medan programmet kör (GRBL 0x95–0x97).">
+              <TextBlock Text="Snabbgång" FontSize="11" Foreground="#B8CADC" Margin="3,0,6,0" Width="58" VerticalAlignment="Center"/>
+              <TextBlock x:Name="RapidOvText" DockPanel.Dock="Right" Text="100 %" FontWeight="Bold" Width="46" TextAlignment="Right" Margin="0,0,3,0" VerticalAlignment="Center"/>
+              <UniformGrid Columns="3">
+                <Button Content="25 %" Tag="151" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="50 %" Tag="150" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="100 %" Tag="149" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+              </UniformGrid>
+            </DockPanel>
+            <DockPanel x:Name="SpindleOvRow" Margin="0,2,0,0" ToolTip="Spindelöverstyrning 10–200 % av programmets varvtal, medan det kör (GRBL 0x99–0x9D). Bara spindel som styrs av GRBL.">
+              <TextBlock Text="Spindel" FontSize="11" Foreground="#B8CADC" Margin="3,0,6,0" Width="58" VerticalAlignment="Center"/>
+              <TextBlock x:Name="SpindleOvText" DockPanel.Dock="Right" Text="100 %" FontWeight="Bold" Width="46" TextAlignment="Right" Margin="0,0,3,0" VerticalAlignment="Center"/>
+              <UniformGrid Columns="5">
+                <Button Content="−10" Tag="155" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="−1" Tag="157" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="100" Tag="153" Click="FeedOverride_Click" Padding="2,4" Margin="1" ToolTip="Återställ varvtalet till 100 %"/>
+                <Button Content="+1" Tag="156" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+                <Button Content="+10" Tag="154" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
+              </UniformGrid>
+            </DockPanel>
+            <Grid Margin="0,4,0,0">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="1.3*"/><ColumnDefinition Width="0.9*"/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <Button x:Name="SpindleButton" Content="Spindel på" Click="SpindleToggle_Click" Padding="2,4" Margin="1"
+                      ToolTip="Stillastående: startar spindeln med M3 och varvtalet bredvid, eller stoppar den (M5). Pausad: stoppar/startar spindeln (0x9E) – den startar själv igen vid Fortsätt."/>
+              <TextBox x:Name="SpindleRpmBox" Grid.Column="1" Text="18000" Margin="1" VerticalContentAlignment="Center" ToolTip="Varvtal för Spindel på (varv/min)"/>
+              <Button x:Name="FloodButton" Grid.Column="2" Content="Kylning" Click="Coolant_Click" Tag="flood" Padding="2,4" Margin="1" ToolTip="Kylning/utsug (M8) på eller av – även medan programmet kör (0xA0)."/>
+              <Button x:Name="MistButton" Grid.Column="3" Content="Dimma" Click="Coolant_Click" Tag="mist" Padding="2,4" Margin="1" ToolTip="Dimkylning (M7) på eller av – även medan programmet kör (0xA1)."/>
+            </Grid>
             <Separator Margin="0,10"/>
             <TextBlock Text="SENAST KÖRDA PÅ DEN HÄR MASKINEN" FontWeight="Bold" Margin="0,0,0,4"/>
             <ListBox x:Name="JobHistoryList" Height="170" Margin="3" Background="#10202E" Foreground="#E8F1FA" BorderBrush="#3C5167"

@@ -168,7 +168,10 @@ public sealed class GrblClient : IDisposable
         {
             GrblProtocol.SoftReset => "[Ctrl-X mjuk återställning]",
             GrblProtocol.JogCancel => "[0x85 avbryt jogg]",
-            >= 0x90 and <= 0x97 => $"[0x{command:X2} override]",
+            >= 0x90 and <= 0x9D => $"[0x{command:X2} override]",
+            GrblProtocol.SpindleStopToggle => "[0x9E spindel stopp/start]",
+            GrblProtocol.CoolantFloodToggle => "[0xA0 kylning på/av]",
+            GrblProtocol.CoolantMistToggle => "[0xA1 dimma på/av]",
             _ => ((char)command).ToString()
         });
         if (command == GrblProtocol.SoftReset) FailPending("GRBL återställdes (Ctrl-X).");

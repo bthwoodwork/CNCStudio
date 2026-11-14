@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.28)
+﻿# CNC Studio – källkod (senaste: 0.9.29)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,20 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.29 – Spindel, snabbgång och kylning
+
+- Program-panelen har fått två nya rader under **Matning**:
+  - **Snabbgång** 25 / 50 / 100 %. Sänker G0-förflyttningarna medan programmet kör.
+  - **Spindel** −10 / −1 / 100 / +1 / +10 %. Ändrar programmets varvtal, 10–200 %. Fungerar bara när spindeln styrs av GRBL.
+  - Procenten som visas kommer från maskinen själv.
+- Nya knappar för **Spindel på/av**, **Kylning** (M8) och **Dimma** (M7). De lyser gröna när maskinen rapporterar att något är på.
+  - **Stillastående:** Spindel på startar med M3 och varvtalet i rutan, efter en säkerhetsfråga. Spindel av stoppar med M5.
+  - **Pausat:** spindeln stoppas och startas med GRBL:s 0x9E och startar själv igen när du klickar Fortsätt.
+  - **Medan programmet kör** styr programmet spindeln. Då ändrar du varvtalet med spindelöverstyrningen.
+  - **Kylning och dimma** går att slå på och av även medan programmet kör.
+- Styrs spindeln för hand (inställning per maskin) är spindelknapparna avstängda.
+- Demomaskinen har spindelöverstyrning, kylning och dimma, så allt går att prova utan maskin. Reglerna finns i `SpindleCoolant` (Core) med tester.
 
 ## 0.9.28 – V-carve inlay (hona + hane)
 

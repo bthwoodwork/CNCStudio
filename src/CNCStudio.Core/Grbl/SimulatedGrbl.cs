@@ -206,6 +206,15 @@ public sealed class SimulatedGrbl : IGrblTransport
                 case GrblProtocol.RapidOverrideReset: _rapidOv = 100; _ovChanged = true; break;
                 case GrblProtocol.RapidOverrideMedium: _rapidOv = 50; _ovChanged = true; break;
                 case GrblProtocol.RapidOverrideLow: _rapidOv = 25; _ovChanged = true; break;
+                case GrblProtocol.SpindleOverrideReset: SetSpindleOv(100); break;
+                case GrblProtocol.SpindleOverrideCoarsePlus: SetSpindleOv(_spindleOv + 10); break;
+                case GrblProtocol.SpindleOverrideCoarseMinus: SetSpindleOv(_spindleOv - 10); break;
+                case GrblProtocol.SpindleOverrideFinePlus: SetSpindleOv(_spindleOv + 1); break;
+                case GrblProtocol.SpindleOverrideFineMinus: SetSpindleOv(_spindleOv - 1); break;
+                // Spindle stop only in Hold (protocol.c); it starts again on resume.
+                case GrblProtocol.SpindleStopToggle: if (_hold && _spindle > 0) { _spindleStopped = !_spindleStopped; _ovChanged = true; } break;
+                case GrblProtocol.CoolantFloodToggle: if (!_alarm && !_homing) { _flood = !_flood; _ovChanged = true; } break;
+                case GrblProtocol.CoolantMistToggle: if (!_alarm && !_homing) { _mist = !_mist; _ovChanged = true; } break;
             }
         }
         Flush();
@@ -301,7 +310,7 @@ public sealed class SimulatedGrbl : IGrblTransport
         else if (u == "$G")
         {
             Emit($"[GC:G{_motionMode} G{54 + _activeWcs} G17 {(_inches ? "G20" : "G21")} {(_absolute ? "G90" : "G91")} G94 " +
-                 $"{(_spindle > 0 ? "M3" : "M5")} M9 T0 F{N(_feed, 0)} S{N(_spindle, 0)}]\r\n");
+                 $"{(_spindle > 0 ? "M3" : "M5")} {(_flood && _mist ? "M7 M8" : _flood ? "M8" : _mist ? "M7" : "M9")} T0 F{N(_feed, 0)} S{N(_spindle, 0)}]\r\n");
             Ok();
         }
         else if (u == "$I") { Emit("[VER:1.1h.20190825:CNC Studio demomaskin]\r\n[OPT:V,15,128]\r\n"); Ok(); }
@@ -486,8 +495,11 @@ public sealed class SimulatedGrbl : IGrblTransport
             Enqueue(new Block { Kind = BlockKind.Dwell, Seconds = pValue.Value, OkWhenDone = true });
             return;
         }
-        if (mCode is 3 or 4) _spindle = spindle ?? _pendingS ?? _spindle;
-        if (mCode == 5) _spindle = 0;
+        if (mCode is 3 or 4) { _spindle = spindle ?? _pendingS ?? _spindle; _ovChanged = true; }
+        if (mCode == 5) { _spindle = 0; _ovChanged = true; }
+        if (mCode == 7) { _mist = true; _ovChanged = true; }
+        if (mCode == 8) { _flood = true; _ovChanged = true; }
+        if (mCode == 9) { _flood = _mist = false; _ovChanged = true; }
 
         if (probe != 0) { Probe(axis, absolute, g53, k, probe == 3); return; }
         if (motion is not null) { _motionMode = motion.Value; _rapidMode = motion == 0; }
@@ -569,6 +581,11 @@ public sealed class SimulatedGrbl : IGrblTransport
 
     /// <summary>config.h: feed override is clamped to 10–200 %.</summary>
     private void SetFeedOv(int value) { _feedOv = Math.Clamp(value, 10, 200); _ovChanged = true; }
+    private int _spindleOv = 100;
+    private bool _flood, _mist, _spindleStopped;
+    private void SetSpindleOv(int value) { _spindleOv = Math.Clamp(value, 10, 200); _ovChanged = true; }
+    /// <summary>A: spindle (S), flood (F), mist (M) – sent with Ov: only when something is on (report.c).</summary>
+    private string AccessoryText() => (_spindle > 0 && !_spindleStopped ? "S" : "") + (_flood ? "F" : "") + (_mist ? "M" : "");
 
     private void Enqueue(Block b)
     {
@@ -614,7 +631,7 @@ public sealed class SimulatedGrbl : IGrblTransport
                     _hold = true;                          // M0: program pause, resumed with ~
                     return;
                 case BlockKind.End:
-                    _spindle = 0; _rapidMode = false; _motionMode = 1; _absolute = true; _activeWcs = 0; // M2/M30 resets
+                    _spindle = 0; _flood = _mist = false; _ovChanged = true; _rapidMode = false; _motionMode = 1; _absolute = true; _activeWcs = 0; // M2/M30 resets
                     _feedOv = 100; _rapidOv = 100; _ovChanged = true;              // RESTORE_OVERRIDES_AFTER_PROGRAM_END
                     Emit("[MSG:Pgm End]\r\n");
                     Complete(node);
@@ -794,7 +811,7 @@ public sealed class SimulatedGrbl : IGrblTransport
     {
         _queue.Clear(); _deferredLine = null;
         _hold = _holdDecel = _homing = _critical = _checkMode = false;
-        _absolute = true; _inches = false; _rapidMode = true; _motionMode = 0; _activeWcs = 0; _spindle = 0; _feed = 0; _feedSet = false;
+        _absolute = true; _inches = false; _rapidMode = true; _motionMode = 0; _activeWcs = 0; _spindle = 0; _feed = 0; _feedSet = false; _flood = _mist = _spindleStopped = false; _feedOv = _rapidOv = _spindleOv = 100; _ovChanged = true;
         Array.Clear(_g92);
         _planned = (double[])_pos.Clone();
         _lastPins = Enumerable.Range(0, 3).Select(SwitchTriggered).ToArray();
@@ -815,6 +832,7 @@ public sealed class SimulatedGrbl : IGrblTransport
     {
         if (!_hold) return;
         _hold = false; _holdDecel = false;
+        if (_spindleStopped) { _spindleStopped = false; _ovChanged = true; }   // the spindle restarts on resume
         if (_queue.First is { Value.Kind: BlockKind.Pause } node) Complete(node); // M0 answers ok on resume
     }
 
@@ -853,13 +871,18 @@ public sealed class SimulatedGrbl : IGrblTransport
         var wco = Enumerable.Range(0, 3).Select(Wco).ToArray();
         if (((int)_settings[10] & 1) != 0) sb.Append("|MPos:").Append(V(_pos));
         else sb.Append("|WPos:").Append(V(_pos.Select((p, i) => p - wco[i]).ToArray()));
-        sb.Append("|FS:").Append(N(_currentFeed, 0)).Append(',').Append(N(_spindle, 0));
+        sb.Append("|FS:").Append(N(_currentFeed, 0)).Append(',').Append(N(_spindleStopped ? 0 : _spindle * _spindleOv / 100.0, 0));
         var pins = PinText();
         if (pins.Length > 0) sb.Append("|Pn:").Append(pins);
         var w = V(wco);
         // report.c sends WCO only now and then (and when it changed).
         if (w != _lastWco || _reportCount++ % 10 == 0) { sb.Append("|WCO:").Append(w); _lastWco = w; }
-        else if (_ovChanged || _reportCount % 10 == 5) { sb.Append($"|Ov:{_feedOv},{_rapidOv},100"); _ovChanged = false; }
+        else if (_ovChanged || _reportCount % 10 == 5)
+        {
+            sb.Append($"|Ov:{_feedOv},{_rapidOv},{_spindleOv}");
+            if (AccessoryText() is { Length: > 0 } a) sb.Append("|A:").Append(a);
+            _ovChanged = false;
+        }
         return sb.Append(">\r\n").ToString();
     }
 

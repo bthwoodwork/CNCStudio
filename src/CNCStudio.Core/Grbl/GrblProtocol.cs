@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -37,6 +37,17 @@ public static class GrblProtocol
     public const byte RapidOverrideReset = 0x95;
     public const byte RapidOverrideMedium = 0x96;
     public const byte RapidOverrideLow = 0x97;
+    // Spindle speed override (config.h CMD_SPINDLE_OVR_*): 10–200 %, coarse 10 %, fine 1 %.
+    public const byte SpindleOverrideReset = 0x99;
+    public const byte SpindleOverrideCoarsePlus = 0x9A;
+    public const byte SpindleOverrideCoarseMinus = 0x9B;
+    public const byte SpindleOverrideFinePlus = 0x9C;
+    public const byte SpindleOverrideFineMinus = 0x9D;
+    /// <summary>Stops/restarts the spindle – only while in feed hold (Hold); ignored in other states.</summary>
+    public const byte SpindleStopToggle = 0x9E;
+    /// <summary>Flood (M8) / mist (M7) coolant on/off – in Idle, Run and Hold.</summary>
+    public const byte CoolantFloodToggle = 0xA0;
+    public const byte CoolantMistToggle = 0xA1;
 
     public static GrblLine Parse(string raw)
     {
@@ -117,7 +128,10 @@ public static class GrblProtocol
                 case "WPos": status.WPos = Vec(val); break;
                 case "WCO": status.Wco = Vec(val); break;
                 case "Pn": status.Pins = val; break;
-                case "Ov": status.Overrides = Vec(val); break;   // feed,rapid,spindle in % (report.c)
+                case "Ov": status.Overrides = Vec(val); status.Accessories ??= ""; break;   // feed,rapid,spindle in % (report.c); A: follows only when something is on
+                case "A": status.Accessories = val; break;       // S spindle CW, C CCW, F flood, M mist
+                case "FS": if (Vec(val) is { Length: >= 2 } fs) { status.Feed = fs[0]; status.SpindleSpeed = fs[1]; } break;
+                case "F": if (Vec(val) is { Length: >= 1 } f1) status.Feed = f1[0]; break;
                 default: break;
             }
         }
@@ -193,4 +207,15 @@ public sealed class GrblStatus
     public string? Pins { get; set; }
     /// <summary>Feed, rapid and spindle override in percent; only sent now and then (Ov:).</summary>
     public double[]? Overrides { get; set; }
+    /// <summary>
+    /// Accessory state (A:) – S/C spindle on, F flood, M mist. Null when not in this report; "" when the report
+    /// had overrides but no A: (GRBL then sends no A:, meaning everything is off).
+    /// </summary>
+    public string? Accessories { get; set; }
+    /// <summary>Current feed (mm/min) and spindle speed (RPM, with the override) from FS:.</summary>
+    public double? Feed { get; set; }
+    public double? SpindleSpeed { get; set; }
+    public bool? SpindleOn => Accessories is null ? null : Accessories.Contains('S') || Accessories.Contains('C');
+    public bool? FloodOn => Accessories?.Contains('F');
+    public bool? MistOn => Accessories?.Contains('M');
 }
