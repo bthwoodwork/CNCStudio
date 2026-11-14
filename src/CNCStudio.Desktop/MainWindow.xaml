@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.19 – nytt utseende" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.20 – kör G-code från andra program" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -485,8 +485,9 @@
             <TextBlock x:Name="JobInfoText" Text="Inget program laddat – klicka Ladda från projektet." TextWrapping="Wrap" FontSize="11" Foreground="#B8CADC" Margin="3,0,3,4"/>
             <UniformGrid Columns="2">
               <Button x:Name="LoadJobButton" Content="Ladda från projektet" Click="LoadJob_Click" ToolTip="Skapar och kontrollerar G-code från projektet (samma kontroller som Exportera)"/>
-              <Button x:Name="CheckJobButton" Content="Kontrollkör ($C)" Click="CheckJob_Click" ToolTip="GRBL läser hela programmet utan att röra sig ($C) och rapporterar fel"/>
+              <Button x:Name="OpenGCodeButton" Content="Öppna G-code-fil…" Click="OpenGCode_Click" ToolTip="Kör ett program från Fusion 360, VCarve, Easel eller ett annat CAM-program. Filen kontrolleras för GRBL och du ser fakta om den innan den laddas."/>
             </UniformGrid>
+            <Button x:Name="CheckJobButton" Content="Kontrollkör ($C)" Click="CheckJob_Click" ToolTip="GRBL läser hela programmet utan att röra sig ($C) och rapporterar fel"/>
             <UniformGrid Columns="3" Margin="0,2,0,0">
               <Button x:Name="StartJobButton" Content="▶ Starta" Click="StartJob_Click" Background="#2E7A4A" FontWeight="SemiBold"/>
               <Button x:Name="PauseJobButton" Content="❚❚ Paus" Click="PauseJob_Click" ToolTip="Paus (feed hold !) / Fortsätt (~)"/>

@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.19)
+﻿# CNC Studio – källkod (senaste: 0.9.20)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,28 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.20 – Kör G-code från andra program
+Program från Fusion 360, VCarve, Easel och andra CAM-program kan nu köras i CNC Studio, som i gSender, UGS och Easel.
+- **Program → Öppna G-code-fil…** öppnar .nc-, .gcode-, .ngc-, .tap-, .cnc-, .gc- och .txt-filer.
+- **Filen granskas för GRBL innan den laddas** (`ExternalGCode`). Kommentarer, tomma rader och `%` tas bort. Det som GRBL 1.1 inte kan köra stoppar filen, med radnummer och förklaring:
+  - M6 (verktygsbyte). Spara ett program per fräs i CAM-programmet.
+  - G41/G42 (radiekompensering). Välj kompensering i datorn.
+  - G81–G89 (borrcykler). Låt CAM-programmet skriva ut dem som vanliga rörelser.
+  - G43 (som inte är G43.1), A-, B- och C-axlar, programnummer (O) och okända G- och M-koder.
+  - Inställningsändringar och annat som inte heller får finnas i makron, samt för långa rader.
+  - Rutan föreslår GRBL-postprocessorn i CAM-programmet.
+- **Fakta om filen innan den laddas** (som gSenders *file insight*):
+  - antal rader och om filen har bågar eller är i tum
+  - utbredning i X och Y, djupaste och högsta Z
+  - matning, varvtal och om filen startar spindeln
+  - verktyg (T-ord och T-kommentarer), pauser och ungefärlig tid
+  - Rutan varnar för tum, relativa rörelser och flera verktyg. Den påminner om var nollpunkten ska vara och om att filen inte kontrolleras mot material eller fastspänningar.
+- **Det laddade programmet körs som ett projektprogram:** Kontrollkör ($C), Starta, Paus, Stopp, matning, återupptagning efter avbrott, banan i maskinvyn och 3D-vyn och maskinloggen. Senast körda öppnar samma fil igen.
+- **Bågar (G2/G3) läses nu** (`GCodePath`), med I/J, R och hela cirklar, i tum och mm. De delas i bitar på högst 1 mm, och bågens yttersta punkter tas alltid med, så att utbredningen och kontrollerna stämmer. Demomaskinen kan också köra bågar och följer GRBL:s mjuka gränser längs bågen, så att filer kan provas på den.
+- **Kontrollen före start omfattar nu Z** (`JobEnvelope`). Med den Z-nolla som är satt (G54 Z + G92 Z + verktygslängd) får programmet inte gå upp i Z-brytaren eller under −$132. Rutan säger hur långt utanför det går och att Z-nollan ska kontrolleras. Det gäller även projektens program.
+
+**Tester:** 563 tester. En fil i Fusion-stil (bågar, spindel, lyft) körs till slut på den simulerade maskinen efter kontrollerna. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.19 – Nytt utseende
 Lappen "Snygga till GUI, ser lite ut som ett 90-tals windows-program". 90-talskänslan kom från Windows egna standardkontroller, som låg kvar i det mörka gränssnittet: knappar med grå gradient och 3D-kant, vita inmatningsfält med svart text, ljusgrå rullgardinsmenyer och Windows kryssrutor, rullningslister och verktygstips.

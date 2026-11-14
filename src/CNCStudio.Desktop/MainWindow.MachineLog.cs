@@ -46,7 +46,9 @@ public partial class MainWindow
                 Start = start, End = DateTime.Now, Name = _jobName.Length > 0 ? _jobName : _document.Name, Lines = totalLines, LinesRun = result.AckedLines,
                 Outcome = result.Outcome switch { JobOutcome.Finished => LoggedJobOutcome.Finished, JobOutcome.Stopped => LoggedJobOutcome.Stopped, _ => LoggedJobOutcome.Failed },
                 Message = result.Message, Computer = AppStorage.ComputerName, Resumed = resumed,
-                ProjectPath = resumed ? null : _path, ProgramNumber = resumed ? null : _loadedJob is { Count: > 1 } j ? j.Number : null
+                ProjectPath = resumed || _loadedExternalPath is not null ? null : _path,
+                ProgramNumber = resumed ? null : _loadedJob is { Count: > 1 } j ? j.Number : null,
+                GCodeFile = resumed ? null : _loadedExternalPath
             });
             due = log.DueTasks();
         });
@@ -81,7 +83,7 @@ public partial class MainWindow
             JobHistoryList.Items.Add(new System.Windows.Controls.ListBoxItem
             {
                 Tag = j, Padding = new Thickness(4, 2, 4, 2),
-                ToolTip = (j.ProjectPath ?? "Projektet okänt (osparat eller återupptaget)") + (j.Message.Length > 0 ? "\n" + j.Message : ""),
+                ToolTip = (j.GCodeFile is { } gf ? "G-code-fil: " + gf : j.ProjectPath ?? "Projektet okänt (osparat eller återupptaget)") + (j.Message.Length > 0 ? "\n" + j.Message : ""),
                 Content = new System.Windows.Controls.StackPanel { Children =
                 {
                     new System.Windows.Controls.TextBlock { Text = j.Name, TextTrimming = TextTrimming.CharacterEllipsis },
@@ -95,7 +97,7 @@ public partial class MainWindow
     }
 
     private void JobHistory_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
-        OpenHistoryButton.IsEnabled = _runner is null && SelectedHistoryJob is { ProjectPath: { } p } && System.IO.File.Exists(p);
+        OpenHistoryButton.IsEnabled = _runner is null && SelectedHistoryJob is { } j && (j.GCodeFile ?? j.ProjectPath) is { } p && System.IO.File.Exists(p);
 
     private LoggedJob? SelectedHistoryJob => (JobHistoryList?.SelectedItem as System.Windows.Controls.ListBoxItem)?.Tag as LoggedJob;
 
@@ -103,6 +105,12 @@ public partial class MainWindow
     private void OpenFromHistory_Click(object sender, RoutedEventArgs e)
     {
         if (_runner is not null || SelectedHistoryJob is not { } job) return;
+        if (job.GCodeFile is { } file)
+        {
+            if (!System.IO.File.Exists(file)) { Error("G-code-filen finns inte kvar: " + file); return; }
+            LoadExternal(file);
+            return;
+        }
         if (job.ProjectPath is not { } path || !System.IO.File.Exists(path))
         { Error("Projektet finns inte kvar (eller körningen var från ett osparat projekt)."); return; }
         if (!string.Equals(path, _path, StringComparison.OrdinalIgnoreCase))
