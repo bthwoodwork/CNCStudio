@@ -61,7 +61,7 @@ public partial class MainWindow
             (ready ? "" : "• Anslut, sätt i planfräsen och homa maskinen ($H).\n") +
             $"• X/Y: X0 Y0 är ytans främre vänstra hörn, {F(x)} / {F(y)} mm från hemhörnet. Välj ▾ vid Nolla X + Y → Vid materialet – maskinen rör sig inte.\n" +
             zStep +
-            "• Klicka Ladda från projektet under KÖR PROGRAM (Maskinkontroll) och sedan Starta. Programmet kontrolleras som vanligt innan det körs.";
+            "• Klicka Ladda från projektet i panelen Program och sedan Starta. Programmet kontrolleras som vanligt innan det körs.";
         if (!ready)
         {
             AppDialog.Show(this, text, "Planfräsa offerskivan", MessageBoxButton.OK, MessageBoxImage.Information);

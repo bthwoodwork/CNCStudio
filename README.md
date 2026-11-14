@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.14)
+﻿# CNC Studio – källkod (senaste: 0.9.15)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,20 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.15 – Anslutning, maskinstyrning och program var för sig
+Lappen "Dela upp maskinkontroll och maskinstart". Maskinen ansluts en gång, men styrs hela tiden, och programmen hör inte hemma i styrningen.
+- **Anslutningen ligger i verktygsraden längst till vänster**, som i gSender: en statusbricka (EJ ANSLUTEN / ANSLUTEN / DEMOMASKIN, med detaljer i tooltip), maskinväljaren med ☰, porten med ⟳ och **Anslut**. *Första test mot maskinen* finns kvar i Maskin-menyn.
+- **Maskinstyrning** (tidigare Maskinkontroll) innehåller bara det man gör med maskinen: läge och koordinatsystem, GRBL-konsol, brytartest, Återställ, koordinaterna, nollning, homing, probning och jogg.
+- **Program** är en ny dockbar panel, som standard under Maskinstyrning:
+  - *Avbrutet jobb* (återuppta eller glöm)
+  - *Kör program*: Ladda från projektet, Kontrollkör, Starta, Paus, Stopp, förlopp och matning
+  - **Senast körda på den här maskinen**, ur maskinloggen. Varje rad visar program, tid, längd och om körningen blev klar, stoppades eller avbröts. **Dubbelklick** eller **Öppna och ladda** öppnar projektet och laddar samma program igen, och det kontrolleras på nytt mot den nollpunkt som gäller nu. Har projektet flera program laddas samma program som förra gången. *Hela loggen…* öppnar maskinloggen.
+  - Programpanelen visas i arbetsytan Maskin och kan dockas, lossas och läggas som flik som de andra panelerna. Den finns också under **Visa → Visa program**.
+- Maskinloggen sparar nu också projektets sökväg och programnummer för varje körning. Körningar från osparade projekt och återupptagna jobb kan inte öppnas igen.
+- En fönsterlayout som sparats med 0.9.9–0.9.14 saknar programpanelen och ersätts därför en gång av standardlayouten.
+
+**Tester:** 499 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.14 – Maskinlogg och underhåll
 Motsvarar gSenders *Your Machine*. Varje maskin har nu en egen logg. Du öppnar den med **Maskin → Maskinlogg och underhåll…** eller med knappen **Logg och underhåll…** på maskinens rad i Maskiner.

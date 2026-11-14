@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.14 – maskinlogg och underhåll" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.15 – anslutning, maskinstyrning och program var för sig" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -83,7 +83,7 @@
  <MenuItem Header="_Rita"><MenuItem Header="Markera / flytta" Click="SelectTool_Click"/><MenuItem Header="Rektangel" Click="RectangleTool_Click"/><MenuItem Header="Ellips" Click="EllipseTool_Click"/><MenuItem Header="Polylinje" Click="PolylineTool_Click"/><Separator/><MenuItem Header="Stäng polylinje" Click="ClosePolyline_Click"/><MenuItem Header="Snappning på/av" Click="ToggleSnap_Click"/></MenuItem>
  <MenuItem Header="_Objekt"><MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/><Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/></MenuItem>
  <MenuItem Header="_CAM"><MenuItem Header="Exportera G-code…" Click="ExportGCode_Click" InputGestureText="Ctrl+E"/><Separator/><MenuItem Header="Planfräs hela materialet…" Click="FaceStock_Click"/><Separator/><MenuItem Header="Verktygsbibliotek…" Click="ManageTools_Click"/><MenuItem Header="Materialbibliotek…" Click="ManageMaterials_Click"/><Separator/><MenuItem Header="V-carve inlay-inställningar" Click="OpenInlay_Click"/><Separator/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Beräkna körbanor" Click="PreviewContour_Click"/><MenuItem Header="Visa/dölj XY-konturer (ej G-code)" Click="ToggleContourPreview_Click"/><MenuItem Header="Kontrollera fastspänningar (endast XY)" Click="ReviewCamSafety_Click"/><MenuItem Header="CAM-inställningar för markerat objekt" Click="ShowPanel_Click" Tag="Cam"/></MenuItem>
- <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem x:Name="View3DMenuItem" Header="3D-vy" Click="Toggle3D_Click" InputGestureText="F4"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinkontroll" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Återställ fönsterlayout" Click="ResetDockLayout_Click" ToolTip="Lägg tillbaka alla paneler där de var från början"/></MenuItem>
+ <MenuItem Header="_Visa"><MenuItem x:Name="DesignMenuItem" Header="Arbetsyta: Design" Click="DesignWorkspace_Click" InputGestureText="F1"/><MenuItem x:Name="CamMenuItem" Header="Arbetsyta: CAM" Click="CamWorkspace_Click" InputGestureText="F2"/><MenuItem x:Name="MachineMenuItem" Header="Arbetsyta: Maskin" Click="MachineWorkspace_Click" InputGestureText="F3"/><Separator/><MenuItem x:Name="View3DMenuItem" Header="3D-vy" Click="Toggle3D_Click" InputGestureText="F4"/><Separator/><MenuItem Header="Anpassa material" Click="Fit_Click" InputGestureText="F"/><MenuItem Header="Zoom 100 %" Click="ActualSize_Click"/><Separator/><MenuItem Header="Visa ritverktyg" Click="ShowPanel_Click" Tag="Tools"/><MenuItem Header="Visa egenskaper" Click="ShowPanel_Click" Tag="Properties"/><MenuItem Header="Visa CAM-panel" Click="ShowPanel_Click" Tag="Cam"/><MenuItem Header="Visa maskinstyrning" Click="ShowPanel_Click" Tag="Machine"/><MenuItem Header="Visa program" Click="ShowPanel_Click" Tag="Job"/><Separator/><MenuItem Header="Återställ fönsterlayout" Click="ResetDockLayout_Click" ToolTip="Lägg tillbaka alla paneler där de var från början"/></MenuItem>
  <MenuItem Header="_Maskin"><MenuItem Header="Första test mot maskinen…" Click="FirstTest_Click"/><Separator/><MenuItem Header="Maskiner (per maskin: inställningar, $$-kopior, kalibrering)…" Click="Machines_Click"/><MenuItem Header="Maskininställningar…" Click="MachineSettings_Click"/><MenuItem Header="Maskinlogg och underhåll…" Click="MachineLog_Click" ToolTip="Körda jobb, larm, körtid och underhåll för den valda maskinen"/><MenuItem Header="GRBL-konsol…" Click="OpenConsole_Click"/><MenuItem Header="Testa gränslägesbrytare…" Click="OpenLimitTest_Click"/><Separator/><MenuItem Header="Rita fastspänningsblock" Click="StartFixture_Click"/><MenuItem Header="Planfräsa offerskivan…" Click="Surfacing_Click" ToolTip="Fräs offerskivan plan med en bred fräs (som gSenders Wasteboard Surfacing). Blir ett eget projekt."/><Separator/><MenuItem Header="Visa maskinpanelen" Click="ShowPanel_Click" Tag="Machine"/><Separator/><MenuItem Header="Probning…" Click="Probe_Click"/><MenuItem Header="Gamepad…" Click="GamepadSettings_Click"/><Separator/><MenuItem Header="Nolla X" Click="Zero_Click" Tag="X"/><MenuItem Header="Nolla Y" Click="Zero_Click" Tag="Y"/><MenuItem Header="Nolla Z" Click="Zero_Click" Tag="Z"/><MenuItem Header="Nolla X + Y, behåll Z" Click="Zero_Click" Tag="XY"/><MenuItem Header="Nolla X + Y vid materialet (enligt placeringen)…" Click="ZeroAtPlacement_Click"/><MenuItem Header="Gå till X0 Y0" Click="GoTo_Click" Tag="XY"/><Separator/><MenuItem Header="Demomaskin: simulera strömavbrott" Click="SimulatePowerCut_Click"/></MenuItem>
  <MenuItem Header="_Hjälp"><MenuItem Header="Loggar och fellogg…" Click="ShowLogs_Click"/><Separator/><MenuItem Header="Om CNC Studio" Click="About_Click"/></MenuItem>
 </Menu>
@@ -145,6 +145,19 @@
    <Button x:Name="MachineTab" Content="Maskin" Style="{StaticResource WorkspaceTab}" Click="MachineWorkspace_Click" ToolTip="Maskinbordet: materialplacering, fastspänningar och maskinstyrning"/>
   </StackPanel>
   <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+   <!-- Connection: done once, so it lives up here (like gSender's top-left), apart from the machine control. -->
+   <Border x:Name="ConnectionBanner" Background="#533C34" CornerRadius="4" Padding="8,3" Margin="2,4,4,4" VerticalAlignment="Center">
+    <StackPanel Orientation="Horizontal">
+     <TextBlock x:Name="ConnectionStateText" Text="EJ ANSLUTEN" FontWeight="Bold" Foreground="#FFD0A8" VerticalAlignment="Center"/>
+     <TextBlock x:Name="ConnectionDetailText" Text="" FontSize="11" Foreground="#E8DCD0" Margin="8,0,0,0" MaxWidth="170" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+    </StackPanel>
+   </Border>
+   <ComboBox x:Name="MachinePicker" DisplayMemberPath="Name" SelectionChanged="MachinePicker_Changed" ToolTip="Vilken maskin du arbetar mot. Varje maskin har en egen profil – demomaskinen också. Ansluter du på en port väljs maskinen som senast använde den." Width="130" Margin="2,4" VerticalAlignment="Center"/>
+   <Button Content="☰" Click="Machines_Click" ToolTip="Maskiner: lägg till, ändra och ta bort maskiner, $$-kopior och kalibrering per maskin" Padding="7,2" Margin="0,4,4,4"/>
+   <ComboBox x:Name="PortPicker" ToolTip="COM-port för GRBL-kontrollern (115200 baud, 8-N-1)" Width="150" Margin="2,4" VerticalAlignment="Center"/>
+   <Button Content="⟳" Click="RefreshPorts_Click" ToolTip="Uppdatera listan med COM-portar" Padding="7,2" Margin="0,4,4,4"/>
+   <Button x:Name="ConnectButton" Content="Anslut" Click="Connect_Click" Background="#24618C" Padding="12,2" Margin="0,4" MinWidth="82"/>
+   <Border Style="{StaticResource ToolSeparator}"/>
    <Button Style="{StaticResource ToolIcon}" Content="&#xE8A5;" Click="New_Click" ToolTip="Nytt projekt (Ctrl+N)"/>
    <Button Style="{StaticResource ToolIcon}" Content="&#xE8E5;" Click="Open_Click" ToolTip="Öppna projekt (Ctrl+O)"/>
    <Button Style="{StaticResource ToolIcon}" Content="&#xE74E;" Click="Save_Click" ToolTip="Spara (Ctrl+S)"/>
@@ -348,29 +361,12 @@
    </Border>
      </ad:LayoutAnchorable>
     </ad:LayoutAnchorablePane>
-    <ad:LayoutAnchorablePane DockWidth="300">
-     <ad:LayoutAnchorable ContentId="Machine" Title="Maskinkontroll" CanClose="False" CanHide="True" FloatingWidth="340" FloatingHeight="700">
+    <ad:LayoutAnchorablePaneGroup Orientation="Vertical" DockWidth="300">
+    <ad:LayoutAnchorablePane DockHeight="2*">
+     <ad:LayoutAnchorable ContentId="Machine" Title="Maskinstyrning" CanClose="False" CanHide="True" FloatingWidth="340" FloatingHeight="700">
  <Border x:Name="MachinePanel" Background="#17212C" BorderBrush="#50657D" BorderThickness="0,0,1,0">
     <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
           
-          <Border x:Name="ConnectionBanner" Background="#533C34" CornerRadius="5" Padding="10" Margin="0,0,0,8">
-            <StackPanel>
-              <TextBlock x:Name="ConnectionStateText" Text="EJ ANSLUTEN" FontWeight="Bold" Foreground="#FFD0A8" HorizontalAlignment="Center"/>
-              <TextBlock x:Name="ConnectionDetailText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="#E8DCD0" HorizontalAlignment="Center" TextAlignment="Center"/>
-            </StackPanel>
-          </Border>
-          <DockPanel Margin="0,0,0,2">
-            <TextBlock Text="Maskin" Foreground="#B8CADC" VerticalAlignment="Center" Margin="3,0,6,0" Width="42"/>
-            <Button DockPanel.Dock="Right" Content="☰" Click="Machines_Click" ToolTip="Maskiner: lägg till, ändra och ta bort maskiner, $$-kopior och kalibrering per maskin" Padding="8,4"/>
-            <ComboBox x:Name="MachinePicker" Margin="3" DisplayMemberPath="Name" SelectionChanged="MachinePicker_Changed" ToolTip="Vilken maskin du arbetar mot. Varje maskin har en egen profil – demomaskinen också. Ansluter du på en port väljs maskinen som senast använde den."/>
-          </DockPanel>
-          <DockPanel Margin="0,0,0,4">
-            <TextBlock Text="Port" Foreground="#B8CADC" VerticalAlignment="Center" Margin="3,0,6,0" Width="42"/>
-            <Button DockPanel.Dock="Right" Content="⟳" Click="RefreshPorts_Click" ToolTip="Uppdatera listan med COM-portar" Padding="8,4"/>
-            <ComboBox x:Name="PortPicker" Margin="3" ToolTip="COM-port för GRBL-kontrollern (115200 baud, 8-N-1)"/>
-          </DockPanel>
-          <Button x:Name="ConnectButton" Content="Anslut" Click="Connect_Click" Background="#24618C"/>
-          <Button Content="Första test mot maskinen (steg för steg)…" Click="FirstTest_Click" Background="#5C3D8A" ToolTip="Ett eget, guidat flöde: anslut, läs inställningar, brytare, axelriktning, homing, jogg och luftkörning – ett steg i taget."/>
           <DockPanel Margin="0,6,0,2">
             <TextBlock Text="Läge" Foreground="#B8CADC" Margin="3,1,10,1"/>
             <ComboBox x:Name="WcsPicker" DockPanel.Dock="Right" Width="72" SelectionChanged="Wcs_Changed" ToolTip="Aktivt arbetskoordinatsystem (läses med $G)">
@@ -385,17 +381,6 @@
           </UniformGrid>
           <Button x:Name="ResetGrblButton" Content="Återställ (Ctrl-X)" Click="ResetGrbl_Click" IsEnabled="False" Margin="3,2,3,0"
                   ToolTip="Mjuk återställning av GRBL. Behövs efter ett larm från en brytare (Reset to continue). Stoppar all rörelse; efter återställning under rörelse krävs homing."/>
-          <!-- An interrupted job (power cut, crash, error) found on disk. -->
-          <Border x:Name="RecoveryBanner" Visibility="Collapsed" Background="#4A3313" BorderBrush="#FFB03B" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,8,0,0">
-            <StackPanel>
-              <TextBlock Text="AVBRUTET JOBB" FontWeight="Bold" Foreground="#FFD39F"/>
-              <TextBlock x:Name="RecoveryText" TextWrapping="Wrap" FontSize="11" Foreground="#F3E3CC" Margin="0,3,0,5"/>
-              <UniformGrid Columns="2">
-                <Button Content="Återuppta…" Click="ResumeJob_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Homing, sedan fortsätter jobbet från en säker punkt strax före avbrottet"/>
-                <Button Content="Glöm jobbet" Click="ForgetJob_Click"/>
-              </UniformGrid>
-            </StackPanel>
-          </Border>
           <Separator Margin="0,10"/>
 
           <!-- Real coordinates, zeroing and jogging (disabled until connected). -->
@@ -469,7 +454,28 @@
             <TextBlock Text="Klick = ett steg. Håll inne = kontinuerlig jogg – släpp för att stanna." TextWrapping="Wrap" FontSize="10.5" Foreground="#8CA3BA" Margin="3,4"/>
             <TextBlock x:Name="JogStatusText" Text="" TextWrapping="Wrap" FontSize="11" Foreground="#FFB38A" Margin="3,2"/>
 
-            <Separator Margin="0,10"/>
+          </StackPanel>
+          <TextBlock x:Name="MachineControlsHint" Text="Anslut för att nolla och jogga." TextWrapping="Wrap" Foreground="#8CA3BA" FontSize="11" Margin="3,4"/>
+        </StackPanel>
+      </Border></ScrollViewer></DockPanel>
+   </Border>
+     </ad:LayoutAnchorable>
+    </ad:LayoutAnchorablePane>
+    <ad:LayoutAnchorablePane DockHeight="*">
+     <ad:LayoutAnchorable ContentId="Job" Title="Program" CanClose="False" CanHide="True" FloatingWidth="340" FloatingHeight="600">
+ <Border x:Name="JobPanel" Background="#17212C" BorderBrush="#50657D" BorderThickness="0,0,1,0">
+    <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
+          <!-- An interrupted job (power cut, crash, error) found on disk. -->
+          <Border x:Name="RecoveryBanner" Visibility="Collapsed" Background="#4A3313" BorderBrush="#FFB03B" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,0">
+            <StackPanel>
+              <TextBlock Text="AVBRUTET JOBB" FontWeight="Bold" Foreground="#FFD39F"/>
+              <TextBlock x:Name="RecoveryText" TextWrapping="Wrap" FontSize="11" Foreground="#F3E3CC" Margin="0,3,0,5"/>
+              <UniformGrid Columns="2">
+                <Button Content="Återuppta…" Click="ResumeJob_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Homing, sedan fortsätter jobbet från en säker punkt strax före avbrottet"/>
+                <Button Content="Glöm jobbet" Click="ForgetJob_Click"/>
+              </UniformGrid>
+            </StackPanel>
+          </Border>
             <TextBlock Text="KÖR PROGRAM" FontWeight="Bold" Margin="0,0,0,4"/>
             <TextBlock x:Name="JobInfoText" Text="Inget program laddat – klicka Ladda från projektet." TextWrapping="Wrap" FontSize="11" Foreground="#B8CADC" Margin="3,0,3,4"/>
             <UniformGrid Columns="2">
@@ -494,13 +500,21 @@
                 <Button Content="+10" Tag="145" Click="FeedOverride_Click" Padding="2,4" Margin="1"/>
               </UniformGrid>
             </DockPanel>
-          </StackPanel>
-          <TextBlock x:Name="MachineControlsHint" Text="Anslut för att nolla och jogga." TextWrapping="Wrap" Foreground="#8CA3BA" FontSize="11" Margin="3,4"/>
-        </StackPanel>
-      </Border></ScrollViewer></DockPanel>
+            <Separator Margin="0,10"/>
+            <TextBlock Text="SENAST KÖRDA PÅ DEN HÄR MASKINEN" FontWeight="Bold" Margin="0,0,0,4"/>
+            <ListBox x:Name="JobHistoryList" Height="170" Margin="3" Background="#10202E" Foreground="#E8F1FA" BorderBrush="#3C5167"
+                     MouseDoubleClick="OpenFromHistory_Click" SelectionChanged="JobHistory_Changed"
+                     ToolTip="De senaste körningarna på den valda maskinen. Dubbelklicka för att öppna projektet och ladda samma program igen."/>
+            <UniformGrid Columns="2">
+              <Button x:Name="OpenHistoryButton" Content="Öppna och ladda" Click="OpenFromHistory_Click" IsEnabled="False"
+                      ToolTip="Öppnar projektet och laddar samma program igen (det skapas och kontrolleras på nytt)"/>
+              <Button Content="Hela loggen…" Click="MachineLog_Click" ToolTip="Maskinlogg och underhåll"/>
+            </UniformGrid>
+          </StackPanel></Border></ScrollViewer></DockPanel>
    </Border>
      </ad:LayoutAnchorable>
     </ad:LayoutAnchorablePane>
+    </ad:LayoutAnchorablePaneGroup>
     <ad:LayoutAnchorablePane DockWidth="300">
      <ad:LayoutAnchorable ContentId="Cam" Title="Smart CAM" CanClose="False" CanHide="True" FloatingWidth="340" FloatingHeight="700">
  <Border x:Name="CamPanel" Background="#27384C" BorderBrush="#50657D" BorderThickness="0,0,1,0">

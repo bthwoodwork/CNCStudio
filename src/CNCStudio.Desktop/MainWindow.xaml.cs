@@ -351,17 +351,18 @@ public partial class MainWindow : Window
         {
             case Workspace.Design:
                 SetPanelVisible("Tools", true); SetPanelVisible("Properties", true);
-                SetPanelVisible("Cam", false); SetPanelVisible("Machine", false);
+                SetPanelVisible("Cam", false); SetPanelVisible("Machine", false); SetPanelVisible("Job", false);
                 StatusText.Text = "Arbetsyta Design – rita och redigera på materialet.";
                 break;
             case Workspace.Cam:
                 SetPanelVisible("Tools", true); SetPanelVisible("Properties", false);
-                SetPanelVisible("Machine", false); SetPanelVisible("Cam", true);
+                SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Cam", true);
                 StatusText.Text = "Arbetsyta CAM – bearbetning och körbanor på materialet. Ingen G-code.";
                 break;
             case Workspace.Machine:
                 SetPanelVisible("Tools", false); SetPanelVisible("Cam", false);
-                SetPanelVisible("Machine", true);
+                SetPanelVisible("Machine", true); SetPanelVisible("Job", true);
+                RefreshJobHistory();
                 SetPanelVisible("Properties", true); // fixture and Z settings live there
                 StatusText.Text = "Arbetsyta Maskin – maskinbordet: materialplacering, fastspänningar och maskinstyrning.";
                 break;

@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using AvalonDock.Layout;
 using AvalonDock.Layout.Serialization;
@@ -8,14 +8,14 @@ namespace CNCStudio.Desktop;
 
 /// <summary>
 /// Docking as in Visual Studio (AvalonDock): the drawing area is the document in the middle, and Ritverktyg,
-/// Egenskaper, Maskinkontroll and Smart CAM are panels that can be dragged by their title bar, docked on any
+/// Egenskaper, Maskinstyrning, Program and Smart CAM are panels that can be dragged by their title bar, docked on any
 /// side, put together as tabs or left floating. The workspaces (Design, CAM, Maskin) still decide which
 /// panels are shown; a panel that is hidden comes back where the user last had it. The layout is saved per
 /// computer when the program closes and can be reset from Visa → Återställ fönsterlayout.
 /// </summary>
 public partial class MainWindow
 {
-    private static readonly string[] PanelIds = { "Tools", "Properties", "Machine", "Cam" };
+    private static readonly string[] PanelIds = { "Tools", "Properties", "Machine", "Job", "Cam" };
     private const string CanvasId = "Canvas";
     /// <summary>The layout as built from the XAML, to fall back to and to reset to.</summary>
     private string? _defaultDockLayout;
@@ -32,7 +32,7 @@ public partial class MainWindow
     {
         _dockContents = new Dictionary<string, object>
         {
-            ["Tools"] = ToolsPanel, ["Properties"] = PropertiesPanel, ["Machine"] = MachinePanel, ["Cam"] = CamPanel, [CanvasId] = CanvasArea
+            ["Tools"] = ToolsPanel, ["Properties"] = PropertiesPanel, ["Machine"] = MachinePanel, ["Job"] = JobPanel, ["Cam"] = CamPanel, [CanvasId] = CanvasArea
         };
         try { _defaultDockLayout = SerializeLayout(); } catch (Exception) { _defaultDockLayout = null; }
         var path = AppStorage.Current.DockLayoutPath;

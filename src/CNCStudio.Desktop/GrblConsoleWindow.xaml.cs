@@ -41,7 +41,7 @@ public partial class GrblConsoleWindow : Window
     private void UpdateState()
     {
         var g = _main.Grbl;
-        StateLine.Text = g is null ? "Inte ansluten – anslut i Maskinkontroll-panelen."
+        StateLine.Text = g is null ? "Inte ansluten – anslut uppe till vänster i verktygsraden."
             : $"Ansluten · läge {g.LastStatus?.State ?? "?"}" + (_busy ? " · väntar på svar…" : "");
         SendButton.IsEnabled = g is not null && !_busy;
     }
