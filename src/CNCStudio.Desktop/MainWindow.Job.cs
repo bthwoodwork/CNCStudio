@@ -221,6 +221,7 @@ public partial class MainWindow
     private void UpdateJobStatus(GrblStatus s)
     {
         if (s.Overrides is { Length: > 0 } ov) FeedOvText.Text = $"{ov[0]:0} %";
+        ShowSpindleCoolant(s);
         bool hold = s.State == "Hold";
         PauseJobButton.Content = hold ? "▶ Fortsätt" : "❚❚ Paus";
         if (hold && _runner is not null && s.SubState == "0")
