@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.15)
+﻿# CNC Studio – källkod (senaste: 0.9.16)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.16 – Diagonal jogg
+- **Joggkrysset har diagonaler** i de fyra hörnen: ↖ ↗ ↙ ↘.
+  - **Klick:** ett steg i både X och Y, till exempel 5 mm åt höger och 5 mm bakåt. Det blir `$J=G91 G21 X5 Y5 F…`, som i gSender.
+  - **Håll inne:** kontinuerlig jogg snett, som de raka knapparna. Varje kort jogg-steg är lika långt som rakt, så att fräsen stannar lika fort när knappen släpps.
+  - Gränskontrollen räknar med båda axlarna. En diagonal som skulle gå förbi en gräns på någon av axlarna stoppas, och statusraden säger varför.
+- Gamepadens spak joggade redan diagonalt.
+- Riktningen läses ur knappens tagg av `GrblMachineCommands.JogDirection` och `JogMove` i Core, som har tester.
+
+**Tester:** 515 tester. Kompilerad utan fel och varningar.
 
 ## 0.9.15 – Anslutning, maskinstyrning och program var för sig
 Lappen "Dela upp maskinkontroll och maskinstart". Maskinen ansluts en gång, men styrs hela tiden, och programmen hör inte hemma i styrningen.
