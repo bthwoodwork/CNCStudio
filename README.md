@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.17)
+﻿# CNC Studio – källkod (senaste: 0.9.18)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,20 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.18 – Maskininformation
+Motsvarar gSenders *Machine Information*. Du öppnar den med **Maskin → Maskininformation…** eller med knappen **Maskininfo…** i Maskinstyrning. Det är ett vanligt fönster som kan ligga öppet bredvid arbetet, och med **Alltid överst** stannar det framför huvudfönstret.
+- **Överst:** maskin, firmware och läge (Idle, Run, Alarm …).
+- **Lägen (ur `$G`)** i klartext: rörelse, koordinatsystem, plan, enheter, avståndsläge, matningsläge, spindel, kylning, verktyg, senaste matning och varvtal.
+  - **Gult** markerar ett läge som CNC Studios program inte räknar med: tum (G20), relativt (G91), ett annat koordinatsystem än G54, inverterad tid (G93) eller ett annat plan än XY.
+  - Lägena läses när fönstret öppnas, med **Läs lägen ($G)**, och automatiskt varje gång maskinen har stannat efter en körning eller jogg. Det sker bara när maskinen är Idle och inget program, makro eller jogg pågår.
+- **Ingångar (live, ur `Pn:`):** X-, Y- och Z-brytare, prob, dörr, håll, återställning och cykelstart. En röd prick betyder att ingången är aktiv.
+- **Lås stegmotorerna ($1=255):** håller motorerna strömsatta även när maskinen står still, så att axlarna inte kan skjutas ur läge, till exempel vid fräsbyte. Motorerna blir varmare.
+  - Ändringen frågar först och skrivs med en kopia av $$ och kontrolläsning.
+  - Avbockad går `$1` tillbaka till värdet från före låsningen, som sparas i maskinloggen. Finns inget sparat blir det GRBL:s standard, 25 ms.
+- Logiken finns i `MachineInfo` i Core och har tester. Bland annat kontrolleras att den simulerade GRBL:ens `$G`-svar går att läsa.
+
+**Tester:** 549 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.17 – Makron
 Egna kodbitar som körs med ett klick. Panelen **Makron** ligger som flik bredvid *Program* i arbetsytan Maskin och finns också under **Visa → Visa makron**.

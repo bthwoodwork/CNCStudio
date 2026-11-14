@@ -91,6 +91,8 @@ public sealed class MachineLog
     public DateTime? LastConnected { get; set; }
     public string? Firmware { get; set; }
     public string? LastComputer { get; set; }
+    /// <summary>$1 (step idle delay) from before the motors were locked with $1=255, to go back to.</summary>
+    public int? IdleDelayBeforeLock { get; set; }
 
     public static string PathFor(string machinesFolder, string machineId) => Path.Combine(machinesFolder, FolderName, machineId + ".json");
 
