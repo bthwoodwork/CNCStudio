@@ -30,6 +30,7 @@ public partial class MainWindow
 
     private void InitDocking()
     {
+        ModernLookMenuItem.IsChecked = AppStorage.Current.Settings.ModernLook != false;
         _dockContents = new Dictionary<string, object>
         {
             ["Tools"] = ToolsPanel, ["Properties"] = PropertiesPanel, ["Machine"] = MachinePanel, ["Job"] = JobPanel, ["Macros"] = MacrosPanel, ["Cam"] = CamPanel, [CanvasId] = CanvasArea
@@ -79,6 +80,17 @@ public partial class MainWindow
             AppStorage.WriteAtomic(AppStorage.Current.DockLayoutPath, SerializeLayout());
         }
         catch (Exception ex) { App.LogError(new InvalidOperationException("Fönsterlayouten kunde inte sparas.", ex)); }   // never stop the program from closing
+    }
+
+    /// <summary>Visa → Nytt utseende: saved for the next start (the look is chosen before the first window opens).</summary>
+    private void ModernLook_Click(object sender, RoutedEventArgs e)
+    {
+        AppStorage.Current.Settings.ModernLook = ModernLookMenuItem.IsChecked;
+        try { AppStorage.Current.SaveSettings(); } catch (Exception ex) { Error("Inställningen kunde inte sparas: " + ex.Message); return; }
+        AppDialog.Show(this, ModernLookMenuItem.IsChecked
+                ? "Det nya utseendet används nästa gång CNC Studio startas."
+                : "Windows egna knappar och fält används nästa gång CNC Studio startas.",
+            "Utseende", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void ResetDockLayout_Click(object sender, RoutedEventArgs e)

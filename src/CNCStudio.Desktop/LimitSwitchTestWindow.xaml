@@ -4,7 +4,7 @@
         Title="Test av gränslägesbrytare" Width="620" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner" Background="#17212C" Foreground="#E8F1FA">
   <Window.Resources>
-    <Style TargetType="Button"><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="14,6"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
+    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Margin" Value="4"/><Setter Property="Padding" Value="14,6"/><Setter Property="Background" Value="#34475A"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#506783"/></Style>
     <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
   </Window.Resources>
   <StackPanel Margin="16">

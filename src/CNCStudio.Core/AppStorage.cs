@@ -16,6 +16,9 @@ public sealed class AppSettings
 
     /// <summary>The main window's size and place when it was last closed (null = default size, centred).</summary>
     public WindowPlacement? MainWindow { get; set; }
+
+    /// <summary>The flat, dark look (Theme.xaml). Null = on; false = Windows' own controls, as before 0.9.19.</summary>
+    public bool? ModernLook { get; set; }
 }
 
 /// <summary>A window's size and place on the screen, in WPF units (1/96 inch).</summary>
