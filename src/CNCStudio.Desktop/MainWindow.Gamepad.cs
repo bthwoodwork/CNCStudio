@@ -35,6 +35,7 @@ public partial class MainWindow
         _padTimer.Tick += (_, _) => PollGamepad();
         _padTimer.Start();
         ShowGamepadStatus();
+        ShowKeyboardStatus();
     }
 
     private void PollGamepad()

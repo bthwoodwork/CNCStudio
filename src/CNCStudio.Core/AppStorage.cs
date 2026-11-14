@@ -210,6 +210,17 @@ public sealed class AppStorage
 
     public void SaveGamepadProfile(GamepadProfile profile) => WriteAtomic(GamepadProfilePath, JsonSerializer.Serialize(profile, Json));
 
+    /// <summary>The keyboard shortcuts for the machine (Inställningar\tangentbord.json) – shared like the other settings.</summary>
+    public string KeyboardShortcutsPath => Path.Combine(DataFolder, SettingsFolderName, "tangentbord.json");
+
+    public KeyboardShortcuts LoadKeyboardShortcuts()
+    {
+        try { return File.Exists(KeyboardShortcutsPath) ? (JsonSerializer.Deserialize<KeyboardShortcuts>(File.ReadAllText(KeyboardShortcutsPath), Json) ?? KeyboardShortcuts.Defaults()).Normalized() : KeyboardShortcuts.Defaults(); }
+        catch (Exception) { return KeyboardShortcuts.Defaults(); }
+    }
+
+    public void SaveKeyboardShortcuts(KeyboardShortcuts keys) => WriteAtomic(KeyboardShortcutsPath, JsonSerializer.Serialize(keys, Json));
+
     /// <summary>
     /// Earlier versions kept tools.json and maskinprofil.json directly in %APPDATA%\CNCStudio or in the
     /// sync folder's Inställningar. They are copied to the new places once (the originals are left alone).
