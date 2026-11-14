@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -50,6 +50,42 @@ public static class GrblMachineCommands
 
     /// <summary>Distance for one continuous-jog step at this speed (s = v · dt).</summary>
     public static double ContinuousStep(double feedMmPerMin) => feedMmPerMin / 60.0 * ContinuousJogStepSeconds;
+
+    /// <summary>
+    /// A jog button's direction: "X+", "Y-", "Z+", or a diagonal such as "X-Y+" (both X and Y). Returns the
+    /// sign per axis (−1, 0, +1), or null for a tag that is not a direction.
+    /// </summary>
+    public static (int X, int Y, int Z)? JogDirection(string tag)
+    {
+        if (string.IsNullOrEmpty(tag) || tag.Length % 2 != 0) return null;
+        int x = 0, y = 0, z = 0;
+        for (int i = 0; i < tag.Length; i += 2)
+        {
+            int sign = tag[i + 1] switch { '+' => 1, '-' => -1, _ => 0 };
+            if (sign == 0) return null;
+            switch (char.ToUpperInvariant(tag[i]))
+            {
+                case 'X' when x == 0: x = sign; break;
+                case 'Y' when y == 0: y = sign; break;
+                case 'Z' when z == 0: z = sign; break;
+                default: return null;
+            }
+        }
+        // Z only on its own: the jog buttons never move Z together with X/Y.
+        return z != 0 && (x != 0 || y != 0) ? null : (x, y, z);
+    }
+
+    /// <summary>
+    /// The move for one jog: a step moves <paramref name="stepXY"/> on each X/Y axis that moves (a diagonal step
+    /// goes the step in X and in Y, as in gSender), or <paramref name="stepZ"/> in Z. A continuous jog's short
+    /// segments are as long along a diagonal as straight, so stopping when the button is released is as quick.
+    /// </summary>
+    public static (double Dx, double Dy, double Dz) JogMove((int X, int Y, int Z) d, double stepXY, double stepZ, double feed, bool step)
+    {
+        if (d.Z != 0) return (0, 0, d.Z * (step ? stepZ : ContinuousStep(feed)));
+        double s = step ? stepXY : ContinuousStep(feed) / (d.X != 0 && d.Y != 0 ? Math.Sqrt(2) : 1);
+        return (d.X * s, d.Y * s, 0);
+    }
 
     /// <summary>Jog speed limited to the machine's max rates ($110–$112) for the axes that move.</summary>
     public static double ClampFeed(double feed, MachineProfile m, bool xy, bool z)

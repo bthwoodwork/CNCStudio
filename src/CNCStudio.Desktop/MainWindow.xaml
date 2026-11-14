@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.15 – anslutning, maskinstyrning och program var för sig" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.16 – diagonal jogg" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -433,6 +433,10 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="54"/><ColumnDefinition Width="54"/><ColumnDefinition Width="18"/><ColumnDefinition Width="54"/></Grid.ColumnDefinitions>
               <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="44"/><RowDefinition Height="44"/></Grid.RowDefinitions>
               <Button Grid.Column="1" Content="Y+" Tag="Y+" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
+              <Button Content="↖" Tag="X-Y+" FontSize="16" Foreground="#B8CADC" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost" ToolTip="Diagonalt: X− och Y+ samtidigt. Klick = ett steg i båda, håll inne = kontinuerligt."/>
+              <Button Grid.Column="2" Content="↗" Tag="X+Y+" FontSize="16" Foreground="#B8CADC" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost" ToolTip="Diagonalt: X+ och Y+ samtidigt. Klick = ett steg i båda, håll inne = kontinuerligt."/>
+              <Button Grid.Row="2" Content="↙" Tag="X-Y-" FontSize="16" Foreground="#B8CADC" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost" ToolTip="Diagonalt: X− och Y− samtidigt. Klick = ett steg i båda, håll inne = kontinuerligt."/>
+              <Button Grid.Row="2" Grid.Column="2" Content="↘" Tag="X+Y-" FontSize="16" Foreground="#B8CADC" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost" ToolTip="Diagonalt: X+ och Y− samtidigt. Klick = ett steg i båda, håll inne = kontinuerligt."/>
               <Button Grid.Row="1" Content="X−" Tag="X-" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>
               <Button Grid.Row="1" Grid.Column="1" Content="STOPP" Click="JogStop_Click" Background="#8A2E26" FontWeight="Bold" FontSize="11" ToolTip="Avbryt joggen direkt (0x85)"/>
               <Button Grid.Row="1" Grid.Column="2" Content="X+" Tag="X+" PreviewMouseLeftButtonDown="Jog_Down" PreviewMouseLeftButtonUp="Jog_Up" LostMouseCapture="Jog_Lost"/>

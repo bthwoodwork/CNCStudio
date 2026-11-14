@@ -189,11 +189,10 @@ public partial class MainWindow
         dx = dy = dz = feed = 0;
         if (!Parse(JogStepXY, out var sxy) || !Parse(JogStepZ, out var sz) || !Parse(JogFeed, out var f) || sxy <= 0 || sz <= 0 || f <= 0)
         { JogStatusText.Text = "Ange giltiga steg och hastighet för joggen."; return false; }
-        bool z = tag[0] == 'Z';
+        if (GrblMachineCommands.JogDirection(tag) is not { } d) return false;
+        bool z = d.Z != 0;
         feed = GrblMachineCommands.ClampFeed(f, _document.Machine, xy: !z, z: z);
-        double s = step ? (z ? sz : sxy) : GrblMachineCommands.ContinuousStep(feed);
-        double sign = tag[1] == '+' ? 1 : -1;
-        switch (tag[0]) { case 'X': dx = sign * s; break; case 'Y': dy = sign * s; break; default: dz = sign * s; break; }
+        (dx, dy, dz) = GrblMachineCommands.JogMove(d, sxy, sz, feed, step);
         return true;
     }
 
