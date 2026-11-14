@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.24 – text med typsnitt" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.25 – V-carving" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -578,7 +578,7 @@
               <StackPanel>
                 <TextBlock Text="Bearbetning" Style="{StaticResource FieldLabel}"/>
                 <ComboBox x:Name="CamKind" SelectedIndex="0" Margin="3,3,3,8" SelectionChanged="CamInput_Changed">
-                  <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/><ComboBoxItem Content="Borrning (Drill)" ToolTip="Hål med fräsens diameter i objektets mitt, rakt ned i steg"/><ComboBoxItem Content="Planfräsning (Face)" ToolTip="Fräser hela objektets yta plan, rad för rad, och går ut förbi kanterna. Körs först."/>
+                  <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/><ComboBoxItem Content="Borrning (Drill)" ToolTip="Hål med fräsens diameter i objektets mitt, rakt ned i steg"/><ComboBoxItem Content="Planfräsning (Face)" ToolTip="Fräser hela objektets yta plan, rad för rad, och går ut förbi kanterna. Körs först."/><ComboBoxItem Content="V-carving (V-fräs)" ToolTip="V-fräsen fräser formen med väggar längs konturen – djupare där formen är bredare, skarpa hörn. För text och skyltar."/>
                 </ComboBox>
                 <TextBlock Text="Fräs" Style="{StaticResource FieldLabel}"/>
                 <DockPanel>
@@ -589,6 +589,7 @@
                 <Grid>
                   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                   <StackPanel><TextBlock Text="Fräsdiameter (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamDiameter" Text="3.175" TextChanged="CamInput_Changed"/></StackPanel>
+                  <StackPanel x:Name="VCarveAnglePanel" Grid.Column="1" Visibility="Collapsed"><TextBlock Text="V-vinkel (grader)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamVAngle" Text="60" TextChanged="CamInput_Changed" ToolTip="V-fräsens spetsvinkel, t.ex. 60 eller 90. Hämtas från fräsen i biblioteket."/></StackPanel>
                 </Grid>
               </StackPanel>
             </Border>

@@ -23,6 +23,19 @@ public sealed record ContourPreview(IReadOnlyList<CamPoint> Centerline, IReadOnl
     /// <summary>Pocket only: where the tool centre may go (the pocket shrunk by the tool radius).</summary>
     public IReadOnlyList<IReadOnlyList<CamPoint>> PocketCenterRegion { get; init; } =
         Array.Empty<IReadOnlyList<CamPoint>>();
+    /// <summary>
+    /// True for V-carving: Centerlines are closed loops in cutting order, each cut at its own depth
+    /// (<see cref="LoopDepths"/>), already cut down to <see cref="LoopClearedDepths"/> before.
+    /// </summary>
+    public bool IsVCarve { get; init; }
+    public IReadOnlyList<double> LoopDepths { get; init; } = Array.Empty<double>();
+    public IReadOnlyList<double> LoopClearedDepths { get; init; } = Array.Empty<double>();
+    /// <summary>V-carving: true for a loop's last pass (its full depth); earlier passes of the same loop are false.</summary>
+    public IReadOnlyList<bool> LoopFinal { get; init; } = Array.Empty<bool>();
+    /// <summary>V-carving: the deepest cut (limited by the total depth and the bit's width).</summary>
+    public double VCarveMaxDepth { get; init; }
+    /// <summary>V-carving: wide parts were cleared flat at the deepest cut.</summary>
+    public bool VCarveHasFloor { get; init; }
     /// <summary>Pocket only: uncut area left between the loops (mm²) – should be ~0.</summary>
     public double PocketRestArea { get; init; }
     /// <summary>Pocket only: area in inside corners the round tool cannot reach (mm²).</summary>
@@ -37,6 +50,8 @@ public static class ContourToolpaths
         if (problem != null) throw new ArgumentException(problem);
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness);
+        if (operation.Kind == CamOperationKind.VCarve)
+            return VCarveToolpaths.Generate(shape, operation, materialThickness);
         if (operation.Kind == CamOperationKind.Drill)
             return DrillToolpaths.Generate(shape, operation);
         if (operation.Kind == CamOperationKind.Face)

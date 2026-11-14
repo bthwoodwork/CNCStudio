@@ -65,10 +65,10 @@ public static class CamOperationChecks
     {
         var list = new List<CamFinding>();
         var id = shape.Id;
-        if (op.ToolKind == ToolKind.VBit)
+        if (op.ToolKind == ToolKind.VBit && op.Kind != CamOperationKind.VCarve)
             list.Add(new CamFinding(CamSeverity.Critical, "VBitNotSupported",
                 "En V-fräs kan inte användas för kontur eller ficka – den skär inte med full diameter. " +
-                "Välj en rak fräs (V-carving kommer i en senare version).", id));
+                "Välj V-carving som bearbetning, eller en rak fräs för kontur och ficka.", id));
         if (op.ToolKind == ToolKind.BallNose)
             list.Add(new CamFinding(CamSeverity.Info, "BallNoseFloor",
                 "Kulfräs: botten och väggens nederkant blir rundade, inte plana.", id));
@@ -76,7 +76,7 @@ public static class CamOperationChecks
             list.Add(new CamFinding(CamSeverity.Warning, "HoleSizeMismatch",
                 $"Borrningen ger ett hål med fräsens diameter (Ø{F(op.ToolDiameter)} mm) i objektets mitt, men objektet är " +
                 $"{F(shape.Width)} × {F(shape.Height)} mm. Välj en fräs med objektets diameter, eller ficka för ett större hål.", id));
-        if (op.Kind != CamOperationKind.Drill && op.DepthPerPass > op.ToolDiameter + 1e-9)
+        if (op.Kind is not (CamOperationKind.Drill or CamOperationKind.VCarve) && op.DepthPerPass > op.ToolDiameter + 1e-9)
             list.Add(new CamFinding(CamSeverity.Warning, "DeepPass",
                 $"Djup per pass ({F(op.DepthPerPass)} mm) är större än fräsdiametern ({F(op.ToolDiameter)} mm). " +
                 "Risk för fräsbrott; ett vanligt riktvärde i trä är högst 1 × diametern.", id));
@@ -215,6 +215,7 @@ public sealed class CamPlanner
             findings.AddRange(CamGeometryChecks.MaterialBounds(document, shape, op, entry.Preview));
             findings.AddRange(PartClearance(document, shape, op, entry.Preview, geometryKeys));
             if (entry.Preview.IsPocket) findings.AddRange(PocketFindings(entry.Preview, op, shape));
+            if (entry.Preview.IsVCarve) findings.AddRange(VCarveFindings(entry.Preview, op, shape));
             var tabs = CamTabs.Plan(entry.Preview, op, document.MaterialThickness);
             findings.AddRange(TabFindings(op, shape, entry.Preview, tabs, document.MaterialThickness));
             results.Add(new CamOperationResult(op, shape, entry.Preview, findings, Tabs: tabs));
@@ -313,6 +314,20 @@ public sealed class CamPlanner
                 $"Stegning {op.StepoverPercent:0.#} % är hög; i trä används ofta 30–50 % av diametern.", shape.Id);
     }
 
+    private static IEnumerable<CamFinding> VCarveFindings(ContourPreview p, CamOperation op, DesignShape shape)
+    {
+        double byWidth = op.ToolDiameter / 2 / Math.Tan(op.ToolAngleDeg * Math.PI / 360);
+        if (byWidth < op.TotalDepth - 1e-9)
+            yield return new CamFinding(CamSeverity.Info, "VCarveDepthByWidth",
+                $"V-fräsen (Ø {op.ToolDiameter:0.###} mm, {op.ToolAngleDeg:0.#}°) är full bredd redan på {byWidth:0.##} mm djup – " +
+                $"djupare än så fräses inte (angivet {op.TotalDepth:0.##} mm).", shape.Id);
+        yield return new CamFinding(CamSeverity.Info, p.VCarveHasFloor ? "VCarveFloor" : "VCarveDepth",
+            p.VCarveHasFloor
+                ? $"V-carving: djupast {p.VCarveMaxDepth:0.##} mm. Partier bredare än {2 * VCarveToolpaths.HalfWidthAt(p.VCarveMaxDepth, op.ToolAngleDeg):0.#} mm får plan botten på det djupet, " +
+                  $"rensad med V-fräsen (låga åsar, högst {VCarveToolpaths.FloorRidgeMm:0.##} mm). Stora ytor går fortare att fickfräsa med en rak fräs först."
+                : $"V-carving: djupast {p.LoopDepths.DefaultIfEmpty(0).Max():0.##} mm (djupet följer formens bredd), {p.Centerlines.Count} varv.", shape.Id);
+    }
+
     /// <summary>Human-readable name used in messages, e.g. "Rektangel 2".</summary>
     public static string Label(CncDocument doc, DesignShape shape)
     {
@@ -362,7 +377,7 @@ public sealed class CamPlanner
     {
         return string.Join("|", shape.Kind, R(shape.Width), R(shape.Height),
             shape.Contours?.Count ?? -1, ContourHash(shape),
-            op.Kind, R(op.ToolDiameter), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
+            op.Kind, R(op.ToolDiameter), R(op.ToolAngleDeg), op.ToolKind, R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
             op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, R(thickness));
     }
 

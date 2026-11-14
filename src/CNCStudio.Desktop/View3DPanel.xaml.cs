@@ -133,7 +133,7 @@ public partial class View3DPanel : UserControl
         h.Add(doc.Stock.X); h.Add(doc.Stock.Y);
         h.Add(doc.Machine.WorkWidthMm); h.Add(doc.Machine.WorkLengthMm); h.Add(doc.Machine.HomeCorner);
         foreach (var f in doc.Fixtures) { h.Add(f.X); h.Add(f.Y); h.Add(f.Width); h.Add(f.Length); h.Add(f.HeightAboveStockMm); }
-        foreach (var o in report.Operations) { h.Add(o.Operation.ToolDiameter); h.Add(o.Operation.ToolKind); }
+        foreach (var o in report.Operations) { h.Add(o.Operation.ToolDiameter); h.Add(o.Operation.ToolKind); h.Add(o.Operation.ToolAngleDeg); }
         foreach (var m in report.Motion.Moves)
         {
             h.Add(m.Kind); h.Add(m.X0); h.Add(m.Y0); h.Add(m.Z0); h.Add(m.X1); h.Add(m.Y1); h.Add(m.Z1);

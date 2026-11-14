@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.24)
+﻿# CNC Studio – källkod (senaste: 0.9.25)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.25 – V-carving
+
+- Ny bearbetning **V-carving (V-fräs)** i Smart CAM. Välj en V-fräs i listan så väljs V-carving automatiskt, och vinkeln hämtas från fräsen (fältet *V-vinkel*).
+- V-fräsen fräser formen med väggar som följer konturen exakt: skarpa hörn blir skarpa, smala partier grunda och breda djupa. Det passar text, skyltar och logotyper. Hål i bokstäverna behålls.
+- **Djupet** följer formens bredd. Det begränsas av *Totalt djup* och av fräsens bredd, eftersom konen aldrig är bredare än fräsen. Partier som är bredare än så får **plan botten** på det djupet och rensas med V-fräsen i täta varv (åsar högst 0,2 mm). Stora ytor går fortare att fickfräsa först med en rak fräs.
+- *Djup per pass* gäller: djupa partier fräses i flera nivåer.
+- Hur det går till: formen dras in i små steg, och varje varv fräses på det djup där konen precis når konturen vid ytan. Mellan varven lyfts fräsen till nedmatningshöjden.
+- Ritytan visar varje varvs verkliga bredd. 3D-vyn och materialsimuleringen använder fräsens rätta vinkel (tidigare alltid 90°).
+- En V-fräs vid kontur eller ficka ger fortfarande ett kritiskt fel, men nu med tips om V-carving.
+- Logiken finns i `VCarveToolpaths` (Core) med tester: djup efter bredd, plan botten, fräsens bredd, validering samt rörelseplan och G-code.
+- Inlay (hane och hona) kommer senare.
 
 ## 0.9.24 – Text med typsnitt
 

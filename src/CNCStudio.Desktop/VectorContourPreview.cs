@@ -26,6 +26,8 @@ internal static class VectorContourPreview
         if (error is not null) throw new ArgumentException(error);
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness); // Clipper2, handles holes/islands
+        if (operation.Kind == CamOperationKind.VCarve)
+            return VCarveToolpaths.Generate(shape, operation, materialThickness);  // Clipper2 insets, holes/islands
         if (operation.Kind == CamOperationKind.Drill)
             return DrillToolpaths.Generate(shape, operation);                    // centre of the imported circle
         if (operation.Kind == CamOperationKind.Face)

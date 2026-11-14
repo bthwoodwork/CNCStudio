@@ -1429,6 +1429,7 @@ public partial class MainWindow : Window
             var operation = _selected is null ? null : _document.CamOperations.FirstOrDefault(o => o.ShapeId == _selected.Id);
             CamKind.SelectedIndex = operation is null ? 0 : (int)operation.Kind;
             CamDiameter.Text = F(operation?.ToolDiameter ?? 3.175);
+            CamVAngle.Text = F(operation?.ToolAngleDeg ?? new CamOperation().ToolAngleDeg);
             CamDepth.Text = F(operation?.TotalDepth ?? 6);
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
             CamTabs.IsChecked = operation?.UseTabs ?? true;
@@ -1468,11 +1469,13 @@ public partial class MainWindow : Window
         bool pocket = CamKind.SelectedIndex == (int)CamOperationKind.Pocket;
         bool drill = CamKind.SelectedIndex == (int)CamOperationKind.Drill;
         bool face = CamKind.SelectedIndex == (int)CamOperationKind.Face;
+        bool vcarve = CamKind.SelectedIndex == (int)CamOperationKind.VCarve;
+        if (VCarveAnglePanel is not null) VCarveAnglePanel.Visibility = vcarve ? Visibility.Visible : Visibility.Collapsed;
         PocketSettingsPanel.Visibility = pocket || face ? Visibility.Visible : Visibility.Collapsed;
         if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
         if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
-        CamTabs.Visibility = pocket || drill || face ? Visibility.Collapsed : Visibility.Visible;
-        TabSettingsPanel.Visibility = !pocket && !drill && !face && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        CamTabs.Visibility = pocket || drill || face || vcarve ? Visibility.Collapsed : Visibility.Visible;
+        TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         // Drilling plunges straight down, facing plunges beside the material: ramping does not apply.
         if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill || face ? Visibility.Collapsed : Visibility.Visible;
         if (CamPassLabel is not null) CamPassLabel.Text = drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
@@ -1488,7 +1491,14 @@ public partial class MainWindow : Window
         var kind = (CamOperationKind)Math.Max(0, CamKind.SelectedIndex);
         bool pocket = kind == CamOperationKind.Pocket;
         bool face = kind == CamOperationKind.Face;
-        bool useTabs = !pocket && !face && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets, holes or facing
+        bool vcarve = kind == CamOperationKind.VCarve;
+        bool useTabs = !pocket && !face && !vcarve && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets, holes, facing or V-carving
+        double vAngle = new CamOperation().ToolAngleDeg;
+        if (CamVAngle is not null && !Parse(CamVAngle, out vAngle))
+        {
+            if (vcarve) return null;
+            vAngle = new CamOperation().ToolAngleDeg;
+        }
         var defaults = new CamOperation();
         double stepover = defaults.StepoverPercent;
         if (CamStepover is not null && !Parse(CamStepover, out stepover))
@@ -1532,7 +1542,9 @@ public partial class MainWindow : Window
             TabCount = tabCount, TabWidth = tabWidth, TabHeight = tabHeight,
             FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm, StepoverPercent = stepover,
             ToolName = fromLibrary ? tool!.Name : null,
-            ToolKind = fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
+            // V-carving always uses a V-bit (also a custom one typed in by diameter and angle).
+            ToolKind = vcarve ? ToolKind.VBit : fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
+            ToolAngleDeg = vAngle,
             Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
             FaceOverhangMm = CamFaceOverhang is not null && Parse(CamFaceOverhang, out var overhang) ? overhang : defaults.FaceOverhangMm,
             FaceAlongY = CamFaceDirection?.SelectedIndex == 1,
@@ -1548,8 +1560,16 @@ public partial class MainWindow : Window
         string kind = op.Kind switch
         {
             CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur",
-            CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", _ => "Ficka"
+            CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carving", _ => "Ficka"
         };
+        if (error is null && op.Kind == CamOperationKind.VCarve)
+        {
+            double max = VCarveToolpaths.MaxDepth(op);
+            CamSummary.Text = $"V-carving · {F(op.ToolAngleDeg)}° V-fräs Ø {F(op.ToolDiameter)} mm · djupet följer formens bredd, högst {F(Math.Round(max, 2))} mm" +
+                (max < op.TotalDepth - 1e-9 ? " (fräsens full bredd)" : "") +
+                $" · bredare partier får plan botten · {F(op.DepthPerPass)} mm per pass";
+            return;
+        }
         if (error is null && op.Kind == CamOperationKind.Face)
         {
             CamSummary.Text = $"Planfräsning · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm totalt i {Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9):0} pass · " +

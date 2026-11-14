@@ -165,6 +165,11 @@ public static class MotionPlanner
                 PlanPocket(preview, paths, opIndex, op);
                 continue;
             }
+            if (preview.IsVCarve)
+            {
+                PlanVCarve(preview, paths, opIndex, op);
+                continue;
+            }
             if (preview.IsDrill)
             {
                 PlanDrill(preview, opIndex);
@@ -325,6 +330,33 @@ public static class MotionPlanner
                 cleared = cutZ;
             }
             moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.TravelHeightMm, "Lyft ur fickan"));
+            z = m.TravelHeightMm; at = pos;
+        }
+
+        // V-carving: each loop at its own depth. The loops are separate (each touches the outline at the surface),
+        // so the tool lifts to the plunge clearance between them and plunges (or ramps) again.
+        void PlanVCarve(ContourPreview preview, IReadOnlyList<IReadOnlyList<CamPoint>> loops, int opIndex, CamOperation op)
+        {
+            CamPoint? pos = null;
+            for (int k = 0; k < loops.Count; k++)
+            {
+                var loop = loops[k];
+                if (loop.Count < 2) continue;
+                var start = loop[0];
+                double depth = preview.LoopDepths[k], cutZ = -depth;
+                if (pos is null) TravelTo(start);
+                else
+                {
+                    if (z < m.PlungeClearanceMm - 1e-9)
+                        moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.PlungeClearanceMm, "Lyft till nästa varv"));
+                    moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, m.PlungeClearanceMm, start.X, start.Y, m.PlungeClearanceMm, "Till nästa varv"));
+                    z = m.PlungeClearanceMm;
+                }
+                PlungeAndCutLoop(loop, opIndex, k, PathMath.Length(loop), cutZ, -preview.LoopClearedDepths[k], op, "V-carving", depth);
+                pos = start;
+            }
+            if (pos is null) return;
+            moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.TravelHeightMm, "Lyft efter V-carving"));
             z = m.TravelHeightMm; at = pos;
         }
 
