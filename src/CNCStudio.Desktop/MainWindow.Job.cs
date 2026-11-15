@@ -138,7 +138,7 @@ public partial class MainWindow
         runner.ProgressChanged += () => Dispatcher.BeginInvoke(() => ShowJobProgress(runner));
         UpdateJobButtons();
         RecoveryBanner.Visibility = Visibility.Collapsed;
-        StatusText.Text = startIndex == 0 ? "Programmet körs." : $"Jobbet återupptas från rad {startIndex + 1}.";
+        StatusText.Text = startIndex == 0 ? "Programmet körs." : $"Programmet körs från rad {startIndex + 1}.";
         var started = DateTime.Now;
         var result = await runner.RunAsync(startIndex, preamble);
         var due = LogJob(started, result, runner.TotalLines, resumed: startIndex > 0);
@@ -237,6 +237,7 @@ public partial class MainWindow
         LoadJobButton.IsEnabled = !running;
         if (OpenGCodeButton is not null) OpenGCodeButton.IsEnabled = !running && _macroRunner is null;
         CheckJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null;
+        if (StartFromLineButton is not null) StartFromLineButton.IsEnabled = !running && _jobLines is not null && _grbl is not null && _macroRunner is null;
         if (OutlineJobButton is not null) OutlineJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null && _macroRunner is null;
         StartJobButton.IsEnabled = !running && _jobLines is not null && _grbl is not null && _macroRunner is null;
         // Say why Starta is grey instead of leaving the user to guess.
@@ -247,6 +248,35 @@ public partial class MainWindow
         System.Windows.Controls.ToolTipService.SetShowOnDisabled(StartJobButton, true);
         PauseJobButton.IsEnabled = _grbl is not null;
         StopJobButton.IsEnabled = _grbl is not null;
+    }
+
+    // ---- Start from a chosen line ----
+
+    private async void StartFromLine_Click(object sender, RoutedEventArgs e)
+    {
+        if (_runner is not null || _jobLines is null) return;
+        if (_macroRunner is not null) { Error("Ett makro körs – vänta tills det är klart (eller stoppa det)."); return; }
+        if (RequireIdle("Starta från rad") is not GrblClient g) return;
+        if (!_homedThisSession)
+        { Error("Kör homing först (⌂ Homing). Inkörningen lyfter Z i maskinkoordinater, som är kända först efter homing."); return; }
+        var lines = _jobLines;
+        var w = new StartFromLineWindow(lines, _jobName, i => ResumePlanner.PlanFromLine(lines, i, _document.Machine, _document.Motion)) { Owner = this };
+        if (w.ShowDialog() != true || w.Result is not ResumePlan plan) return;
+        if (plan.FromBeginning) { StartJob_Click(sender, e); return; }
+        if (_jobStore.LoadJob() is { Progress.Unfinished: true } &&
+            AppDialog.Show(this, "Det finns ett avbrutet jobb som inte är klart. Startar du nu glöms det.\n\nStarta ändå?",
+                "Starta från rad", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
+        if (!await CheckXyZero(g, lines, "Starta från rad")) return;
+        var text = plan.Description + "\n\nSå här kör maskinen in:\n" + string.Join("\n", plan.Preamble.Select(l => "• " + l)) + "\n\n" +
+            "KONTROLLERA FÖRST:\n• Nollpunkten är satt där programmet förutsätter (samma som om det kördes från början).\n• Inget ligger i vägen för fräsen.\n" +
+            (_document.Machine.Spindle == SpindleControl.Manual
+                ? "• Programmet pausar (M0) innan fräsen går ned – starta då fräsen och klicka Fortsätt.\n"
+                : "• Spindeln startas av programmet – håll händerna borta.\n") +
+            "\nStarta härifrån?";
+        if (AppDialog.Show(this, text, "Starta från rad", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
+        var g54 = await ReadG54(g);
+        _jobStore.Begin(_jobName, lines, plan.StartIndex, g54);
+        await RunJob(g, plan.StartIndex, plan.Preamble);
     }
 
     // ---- Resume after an interruption ----

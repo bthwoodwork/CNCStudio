@@ -35,17 +35,59 @@ public static class ResumePlanner
     private enum Kind { Travel, Plunge, Cut }
 
     private sealed record Candidate(int Index, Kind Kind, double X, double Y, double Z, double Feed,
-        double Rpm, double PlungeFeed, string Code);
+        double Rpm, double PlungeFeed, string Code, bool Inches, int Wcs)
+    {
+        /// <summary>The first program line that runs when continuing here.</summary>
+        public int Start => Kind == Kind.Plunge ? Index : Index + 1;
+    }
 
     public static ResumePlan Plan(IReadOnlyList<string> lines, int ackedLines, MachineProfile machine, MotionSettings motion)
     {
-        double x = double.NaN, y = double.NaN, z = double.NaN, feed = double.NaN, rpm = double.NaN, plungeFeed = double.NaN;
-        bool absolute = true, rapid = true, spindleStarted = false;
-        var candidates = new List<Candidate>();
         // Lines up to here have certainly been executed: at most PlannerBlocks lines can sit in the
         // planner after the last "ok", plus the one being executed.
         int limit = ackedLines - (PlannerBlocks + 1);
-        double clearance = Math.Max(motion.PlungeClearanceMm, 0.5);
+        var plan = Build(lines, c => c.Index <= limit, machine, motion);
+        if (plan.Pick is not Candidate pick)
+            return Beginning("Jobbet hann inte längre än början – det körs om från början.");
+        return plan.Result with
+        {
+            Description = $"Fortsätter från rad {pick.Index + 1} av {lines.Count}: {plan.Where}, " +
+                $"{ackedLines - pick.Index} rader före sista bekräftade raden (GRBL kan ha upp till {PlannerBlocks} rader i kö som inte hunnit köras). " +
+                "Den biten fräses en gång till."
+        };
+    }
+
+    /// <summary>
+    /// Starta från rad (as in gSender and Easel): start the program at line <paramref name="lineIndex"/> (0-based) –
+    /// or, since a line in the middle of a cut has no safe way in from above, at the nearest safe point before it
+    /// (a rapid at travel height, the start of a depth pass, or down through an already cut slot). The machine is
+    /// brought there the same way as when resuming: modes, Z up in machine coordinates, XY, spindle, down.
+    /// </summary>
+    public static ResumePlan PlanFromLine(IReadOnlyList<string> lines, int lineIndex, MachineProfile machine, MotionSettings motion)
+    {
+        if (lineIndex <= 0) return Beginning("Programmet startar från början.");
+        var plan = Build(lines, c => c.Start <= lineIndex, machine, motion);
+        if (plan.Pick is not Candidate pick)
+            return Beginning($"Det finns ingen säker punkt att börja på före rad {lineIndex + 1} – programmet startar från början.");
+        int skipped = lineIndex - plan.Result.StartIndex;
+        return plan.Result with
+        {
+            Description = $"Startar från rad {plan.Result.StartIndex + 1} av {lines.Count}" +
+                (skipped > 0 ? $" – {skipped} rader före rad {lineIndex + 1}, närmaste säkra punkt" : "") + $": {plan.Where}."
+        };
+    }
+
+    private static ResumePlan Beginning(string why) =>
+        new(0, Array.Empty<string>(), true, double.NaN, double.NaN, double.NaN, why);
+
+    private static (ResumePlan Result, Candidate? Pick, string Where) Build(IReadOnlyList<string> lines, Func<Candidate, bool> allowed,
+        MachineProfile machine, MotionSettings motion)
+    {
+        double x = double.NaN, y = double.NaN, z = double.NaN, feed = double.NaN, rpm = double.NaN, plungeFeed = double.NaN;
+        bool absolute = true, rapid = true, spindleStarted = false, inches = false;
+        int wcs = 54;
+        var candidates = new List<Candidate>();
+        double clearanceMm = Math.Max(motion.PlungeClearanceMm, 0.5);
 
         for (int i = 0; i < lines.Count; i++)
         {
@@ -66,6 +108,9 @@ public static class ResumePlanner
                     case 'G' when v == 1: rapid = false; break;
                     case 'G' when v == 90: absolute = true; break;
                     case 'G' when v == 91: absolute = false; break;
+                    case 'G' when v == 20: inches = true; break;
+                    case 'G' when v == 21: inches = false; break;
+                    case 'G' when v is >= 54 and <= 59 && v == Math.Floor(v): wcs = (int)v; break;
                     case 'X': nx = v; break;
                     case 'Y': ny = v; break;
                     case 'Z': nz = v; break;
@@ -77,28 +122,29 @@ public static class ResumePlanner
             }
             bool xy = nx is not null || ny is not null;
             bool known = absolute && spindleStarted && !double.IsNaN(x) && !double.IsNaN(y) && !double.IsNaN(z);
+            double clearance = inches ? clearanceMm / 25.4 : clearanceMm;     // in the program's units
             if (known && rapid && xy && z > 0 && (nz ?? z) > 0)
                 // A rapid XY move above the stock: continue after it, at its travel height.
-                candidates.Add(new(i, Kind.Travel, nx ?? x, ny ?? y, nz ?? z, feedBefore, rpmBefore, plungeBefore, code));
+                candidates.Add(new(i, Kind.Travel, nx ?? x, ny ?? y, nz ?? z, feedBefore, rpmBefore, plungeBefore, code, inches, wcs));
             else if (known && !rapid && !xy && nz is double down && down < z && down <= 0)
                 // A straight plunge at the start of a depth pass: re-run it from the plunge clearance.
-                candidates.Add(new(i, Kind.Plunge, x, y, clearance, feedBefore, rpmBefore, plungeBefore, code));
+                candidates.Add(new(i, Kind.Plunge, x, y, clearance, feedBefore, rpmBefore, plungeBefore, code, inches, wcs));
             else if (known && !rapid && xy && !double.IsNaN(feedBefore) && z < clearance)
                 // A cutting move: its start point is already cut down to z, so plunge there through the
                 // cleared slot and continue along the path.
-                candidates.Add(new(i, Kind.Cut, x, y, z, feedBefore, rpmBefore, plungeBefore, code));
+                candidates.Add(new(i, Kind.Cut, x, y, z, feedBefore, rpmBefore, plungeBefore, code, inches, wcs));
             if (!rapid && !xy && nz is not null && lineFeed is double pf) plungeFeed = pf;
             if (isM0 || isM3) spindleStarted = true;
             if (absolute) { x = nx ?? x; y = ny ?? y; z = nz ?? z; }
         }
 
-        var pick = candidates.LastOrDefault(c => c.Index <= limit);
-        if (pick is null)
-            return new ResumePlan(0, Array.Empty<string>(), true, double.NaN, double.NaN, double.NaN,
-                "Jobbet hann inte längre än början – det körs om från början.");
+        var pick = candidates.LastOrDefault(allowed);
+        if (pick is null) return (Beginning(""), null, "");
 
-        var pre = new List<string> { "G21", "G90", "G94", "G17", "G54",
-            $"G53 G0 Z{N(-machine.LimitMarginMm)}", $"G0 X{N(pick.X)} Y{N(pick.Y)}" };
+        // G53 Z first, in mm; then the program's own units and coordinate system for the way in.
+        var pre = new List<string> { "G21", "G90", "G94", "G17", $"G{pick.Wcs}", $"G53 G0 Z{N(-machine.LimitMarginMm)}" };
+        if (pick.Inches) pre.Add("G20");
+        pre.Add($"G0 X{N(pick.X)} Y{N(pick.Y)}");
         if (machine.Spindle == SpindleControl.Manual)
         {
             pre.Add(double.IsNaN(pick.Rpm)
@@ -127,7 +173,7 @@ public static class ResumePlanner
                 break;
             default:
                 double plunge = double.IsNaN(pick.PlungeFeed) ? pick.Feed : Math.Min(pick.PlungeFeed, pick.Feed);
-                pre.Add($"G0 Z{N(clearance)}");
+                pre.Add($"G0 Z{N(pick.Inches ? clearanceMm / 25.4 : clearanceMm)}");
                 pre.Add($"G1 Z{N(pick.Z)} F{N(plunge, 0)}");                    // down through the cut slot
                 // The cutting line itself, with its feed restored (F is modal and was set to the plunge feed).
                 pre.Add(pick.Code.Contains('F') ? pick.Code : $"{pick.Code}F{N(pick.Feed, 0)}");
@@ -135,10 +181,7 @@ public static class ResumePlanner
                 where = "mitt i en bana – fräsen matas ned i det redan frästa spåret";
                 break;
         }
-        return new ResumePlan(start, pre, false, pick.X, pick.Y, pick.Z,
-            $"Fortsätter från rad {pick.Index + 1} av {lines.Count}: {where}, " +
-            $"{ackedLines - pick.Index} rader före sista bekräftade raden (GRBL kan ha upp till {PlannerBlocks} rader i kö som inte hunnit köras). " +
-            "Den biten fräses en gång till.");
+        return (new ResumePlan(start, pre, false, pick.X, pick.Y, pick.Z, ""), pick, where);
     }
     /// <summary>Removes ( ) and ; comments and spaces, upper-case – what GRBL itself does before parsing.</summary>
     public static string Strip(string line)

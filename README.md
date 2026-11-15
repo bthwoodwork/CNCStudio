@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.29)
+﻿# CNC Studio – källkod (senaste: 0.9.30)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,20 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.30 – Starta från rad
+
+- **Starta från rad…** i Program-panelen, som i gSender och Easel. Visar programmets rader. Välj rad genom att klicka, skriva radnumret eller **hoppa till en del**. Programmets egna kommentarer blir delarna, till exempel en operation eller ett pass.
+- Ligger raden mitt i en fräsning börjar programmet på **närmaste säkra punkt före** den, med samma logik som *Återuppta* efter ett avbrott. Det kan vara en förflyttning på säker höjd, början av ett djuppass, eller nedmatning i ett spår som redan är fräst. Fönstret visar var det börjar och hur maskinen kör in.
+- **Inkörningen:**
+  1. Lägena sätts.
+  2. Z lyfts i maskinkoordinater.
+  3. Fräsen går till XY.
+  4. Spindeln startar. Styrs den för hand pausar programmet med M0.
+  5. Fräsen går ned och fortsätter.
+- Samma kontroller som Starta: homing och att X/Y-nollan håller fräsen inom maskinen.
+- Inkörningen (gäller även *Återuppta*) följer nu programmets egna enheter (G20/G21) och koordinatsystem (G54–G59). Det spelar roll för G-code från andra program. Z lyfts alltid i mm innan enheterna byts.
+- Logiken finns i `ResumePlanner.PlanFromLine` (Core) med tester, bland annat en körning på demomaskinen.
 
 ## 0.9.29 – Spindel, snabbgång och kylning
 
