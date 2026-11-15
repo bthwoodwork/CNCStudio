@@ -499,9 +499,17 @@ public partial class MainWindow : Window
     }
     private void PolylineTool_Click(object sender, RoutedEventArgs e)
     { _polyPoints.Clear(); _tool = Tool.Polyline; Render(); StatusText.Text = "Polylinje: klicka punkter, Enter = sluten, högerklick = öppen, Esc = avbryt. Shift+klick på objekt = ny punkt."; }
+    /// <summary>A rail button with a menu (Kombinera, Justera): the menu opens beside it on a normal click.</summary>
+    private void RailMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { ContextMenu: { } menu } b) return;
+        menu.PlacementTarget = b;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Right;
+        menu.IsOpen = true;
+    }
     private void ClosePolyline_Click(object sender, RoutedEventArgs e) => FinishPolyline(true);
     private void ToggleSnap_Click(object sender, RoutedEventArgs e)
-    { _snapEnabled = !_snapEnabled; SnapButton.Content = _snapEnabled ? "Snappning: På" : "Snappning: Av"; StatusText.Text = _snapEnabled ? "Snappning till hörn, ändpunkter och 1 mm-rutnät." : "Snappning avstängd."; }
+    { _snapEnabled = !_snapEnabled; SnapButton.Content = _snapEnabled ? "Snap på" : "Snap av"; StatusText.Text = _snapEnabled ? "Snappning till hörn, ändpunkter och 1 mm-rutnät." : "Snappning avstängd."; }
     private void FinishPolyline(bool closed)
     {
         if (_polyPoints.Count < (closed ? 3 : 2))

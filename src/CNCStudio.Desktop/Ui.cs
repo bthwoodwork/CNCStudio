@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -20,11 +20,53 @@ public static class Ui
     public static string? GetIcon(DependencyObject d) => (string?)d.GetValue(IconProperty);
     public static void SetIcon(DependencyObject d, string? value) => d.SetValue(IconProperty, value);
 
+    /// <summary>
+    /// <c>local:Ui.Rail="True"</c>: the icon above a short label, centred – for the narrow tool rail (like gSender's
+    /// left edge). The button's text is also its tooltip when it has none.
+    /// </summary>
+    public static readonly DependencyProperty RailProperty =
+        DependencyProperty.RegisterAttached("Rail", typeof(bool), typeof(Ui), new PropertyMetadata(false, OnIcon));
+
+    public static bool GetRail(DependencyObject d) => (bool)d.GetValue(RailProperty);
+    public static void SetRail(DependencyObject d, bool value) => d.SetValue(RailProperty, value);
+
     private static void OnIcon(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is not ContentControl c || e.NewValue is not string glyph || glyph.Length == 0) return;
-        c.ContentTemplate = Template(glyph);
-        c.HorizontalContentAlignment = HorizontalAlignment.Left;
+        if (d is not ContentControl c || GetIcon(c) is not string glyph || glyph.Length == 0) return;
+        if (GetRail(c))
+        {
+            c.ContentTemplate = RailTemplate(glyph);
+            c.HorizontalContentAlignment = HorizontalAlignment.Center;
+            c.Padding = new Thickness(2, 5, 2, 4);
+            if (c.ToolTip is null && c.Content is string text) c.ToolTip = text;
+        }
+        else
+        {
+            c.ContentTemplate = Template(glyph);
+            c.HorizontalContentAlignment = HorizontalAlignment.Left;
+        }
+    }
+
+    private static DataTemplate RailTemplate(string glyph)
+    {
+        var panel = new FrameworkElementFactory(typeof(StackPanel));
+        var icon = new FrameworkElementFactory(typeof(TextBlock));
+        icon.SetValue(TextBlock.TextProperty, glyph);
+        icon.SetValue(TextBlock.FontFamilyProperty, IconFont);
+        icon.SetValue(TextBlock.FontSizeProperty, 18.0);
+        icon.SetValue(TextBlock.FontWeightProperty, FontWeights.Normal);
+        icon.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        var text = new FrameworkElementFactory(typeof(TextBlock));
+        text.SetBinding(TextBlock.TextProperty, new Binding());
+        text.SetValue(TextBlock.FontSizeProperty, 10.5);
+        text.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+        text.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        text.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 3, 0, 0));
+        panel.AppendChild(icon);
+        panel.AppendChild(text);
+        var t = new DataTemplate { VisualTree = panel };
+        t.Seal();
+        return t;
     }
 
     private static DataTemplate Template(string glyph)
