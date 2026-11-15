@@ -28,7 +28,7 @@ public sealed record CamTree(IReadOnlyList<CamTreeProgram> Programs, IReadOnlyLi
     public static string KindLabel(CamOperationKind kind) => kind switch
     {
         CamOperationKind.Outside => "Kontur ut", CamOperationKind.Inside => "Kontur in",
-        CamOperationKind.Pocket => "Ficka", CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carving", CamOperationKind.VCarvePlug => "Inlay-hane", CamOperationKind.PocketRest => "Ficka – detaljer", CamOperationKind.VCarveClear => "V-carving – bottnar", _ => kind.ToString()
+        CamOperationKind.Pocket => "Ficka", CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carving", CamOperationKind.VCarvePlug => "Inlay-hane", CamOperationKind.PocketRest => "Ficka – detaljer", CamOperationKind.VCarveClear => "V-carving – bottnar", CamOperationKind.Carve3D => "3D-fräsning", CamOperationKind.Carve3DFinish => "3D – finfräsning", _ => kind.ToString()
     };
 
     public static CamTree Build(CncDocument doc, CamReport report)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Clipper2Lib;
@@ -132,7 +132,7 @@ public static class Arrange
 
     public static DesignShape Copy(DesignShape s, double dx, double dy, Guid? groupId) => new()
     {
-        Kind = s.Kind, GroupId = groupId, X = s.X + dx, Y = s.Y + dy, Width = s.Width, Height = s.Height, Text = s.Text?.Clone(),
+        Kind = s.Kind, GroupId = groupId, X = s.X + dx, Y = s.Y + dy, Width = s.Width, Height = s.Height, Text = s.Text?.Clone(), Model = s.Model,
         Contours = s.Contours.Select(c => new VectorContour { Closed = c.Closed, Points = c.Points.Select(p => new VectorPoint(p.X, p.Y)).ToList() }).ToList(),
     };
 }

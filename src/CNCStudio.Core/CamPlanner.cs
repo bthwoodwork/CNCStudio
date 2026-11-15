@@ -139,9 +139,9 @@ public sealed class CamPlanner
     public void Clear() { _cache.Clear(); _partCache.Clear(); }
 
     /// <summary>True when the shape's toolpath is cheap enough to recompute on every change.</summary>
-    public static bool IsCheap(DesignShape shape) =>
+    public static bool IsCheap(DesignShape shape) => shape.Model is null && (
         shape.Kind != ShapeKind.VectorPath ||
-        (shape.Contours?.Sum(c => c.Points?.Count ?? 0) ?? 0) <= AutoRecomputePointLimit;
+        (shape.Contours?.Sum(c => c.Points?.Count ?? 0) ?? 0) <= AutoRecomputePointLimit);
 
     /// <summary>
     /// Reviews every CAM operation. Heavy shapes whose path is outdated are recomputed only
@@ -340,7 +340,7 @@ public sealed class CamPlanner
 
     /// <summary>Shape geometry including position (no CAM settings).</summary>
     private static string GeometryKey(DesignShape s) =>
-        string.Join("|", s.Kind, R(s.X), R(s.Y), R(s.Width), R(s.Height), ContourHash(s));
+        string.Join("|", s.Kind, R(s.X), R(s.Y), R(s.Width), R(s.Height), ContourHash(s), s.Model?.Hash ?? "");
 
     private static int ContourHash(DesignShape shape)
     {
@@ -379,7 +379,8 @@ public sealed class CamPlanner
             shape.Contours?.Count ?? -1, ContourHash(shape),
             op.Kind, R(op.ToolDiameter), R(op.ToolAngleDeg), op.ToolKind, R(op.InlayStartDepthMm), R(op.InlayClearanceMm), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
             op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, R(thickness),
-            op.SecondToolEnabled, R(op.SecondToolDiameter),
+            op.SecondToolEnabled, R(op.SecondToolDiameter), op.SecondToolKind,
+            shape.Model is { } model ? model.Hash + "/" + R(model.DepthMm) + "/" + model.Quarter : "",
             op.Parent is null ? "" : "parent:" + Fingerprint(shape, op.Parent, thickness));
     }
 

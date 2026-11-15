@@ -46,7 +46,7 @@ public sealed record ExportBlocker(ExportBlockerKind Kind, string Message, Guid?
 /// </summary>
 public static class GCodeGenerator
 {
-    public const string Generator = "CNC Studio 0.9.37";
+    public const string Generator = "CNC Studio 0.9.38";
 
     public static IReadOnlyList<string> BlockingReasons(CncDocument doc, CamReport report) =>
         Blockers(doc, report).Select(b => b.Message).ToList();
@@ -228,6 +228,18 @@ public static class GCodeGenerator
                 continue;
             }
             var preview = ops[m.OperationIndex].Preview!;
+            if (preview.Is3D)
+            {
+                // 3D: the whole path with its own Z at every point.
+                var p3 = preview.Centerlines[m.PathIndex]; var pz = preview.PathZ[m.PathIndex];
+                for (int k = 1; k < p3.Count; k++)
+                {
+                    if (Same(x, p3[k].X) && Same(y, p3[k].Y) && Same(z, pz[k])) continue;
+                    lines.Add($"G1 {XY(p3[k].X, p3[k].Y)}" + (Same(z, pz[k]) ? "" : $" Z{F(pz[k])}") + Feed(op.FeedRate));
+                    x = p3[k].X; y = p3[k].Y; z = pz[k];
+                }
+                continue;
+            }
             var path = preview.Centerlines.Count > 0 ? preview.Centerlines[m.PathIndex] : preview.Centerline;
             var slice = PathMath.Slice(path, m.S0, m.S1);
             bool ramp = !Same(m.Z0, m.Z1);

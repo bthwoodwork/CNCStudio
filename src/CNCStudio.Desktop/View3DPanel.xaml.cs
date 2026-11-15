@@ -296,6 +296,12 @@ public partial class View3DPanel : UserControl
                 continue;
             }
             var r = report.Operations[m.OperationIndex];
+            if (r.Preview!.Is3D)
+            {
+                var p3 = r.Preview.Centerlines[m.PathIndex]; var pz = r.Preview.PathZ[m.PathIndex];
+                for (int i = 1; i < p3.Count; i++) { cuts.Add(P(p3[i - 1].X, p3[i - 1].Y, pz[i - 1])); cuts.Add(P(p3[i].X, p3[i].Y, pz[i])); }
+                continue;
+            }
             var path = r.Preview!.Centerlines.Count > 0 ? r.Preview.Centerlines[m.PathIndex] : r.Preview.Centerline;
             var slice = PathMath.Slice(path, m.S0, m.S1);
             double total = PathMath.Length(slice), run = 0;
