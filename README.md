@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.30)
+﻿# CNC Studio – källkod (senaste: 0.9.31)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.31 – Sparade platser
+
+- Maskinpanelen har fått en ny del, **PLATSER**: en knapp per sparad plats, till exempel *Fräsbyte* eller *Parkering*. Ett klick och maskinen åker dit. Z lyfts alltid först, sedan går den till X/Y och sist ned till platsens Z om den har ett (G53, maskinkoordinater).
+- **Platser…** (även under Maskin-menyn) visar dina platser:
+  - **Spara där fräsen står:** jogga dit, ge platsen ett namn och klicka.
+  - Skriv in värdena själv, ändra ordningen eller ta bort platser.
+  - **Lägg till förslag** ger *Fräsbyte* framtill i mitten och *Parkering* baktill.
+  - *Z stannar uppe* är förvalt, vilket passar fräsbyte och parkering.
+- Platserna hör till **maskinen**, inte till projektet. De sparas i `Inställningar\Maskiner\Platser\<id>.json` och följer med som de andra maskininställningarna.
+- Maskinen måste vara homad. Platser utanför maskinens rörelse, minus marginalen, godtas inte.
+- Logiken finns i `SavedLocations` (Core) med tester, bland annat en körning på demomaskinen.
 
 ## 0.9.30 – Starta från rad
 
