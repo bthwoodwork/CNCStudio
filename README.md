@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.31)
+﻿# CNC Studio – källkod (senaste: 0.9.32)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.32 – Bild till vektor
+
+- **Rita → Bild till vektor…** (eller knappen *Bild…* under RITA). Välj en PNG, JPG, BMP, GIF eller TIFF. Bilden visas med den spårade konturen ovanpå, och konturen ändras direkt när du drar i reglagen:
+  - **Tröskel**: hur mörkt som räknas som formen.
+  - **Invertera**: ljusa delar blir formen, till exempel vit text på svart.
+  - **Utjämning**: tar bort pixeltrappsteg och ger färre punkter.
+  - **Ta bort prickar och hål**: tar bort smuts och små hål.
+  - **Bredd i mm.**
+- Resultatet blir en vanlig vektorform mitt på materialet. Hål behålls, till exempel i bokstäver och ringar. Formen kan fickfräsas, V-carvas, skäras ut eller användas till inlay.
+- Bäst blir logotyper, teckningar och silhuetter med tydliga kanter, inte foton. Stora bilder skalas ned till högst 1200 pixlar på längsta sidan, och genomskinligt räknas som vitt.
+- Logiken finns i `ImageTrace` (Core) med tester: ring med hål, prickar, invertering, skala och fickfräsning.
 
 ## 0.9.31 – Sparade platser
 
