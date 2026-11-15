@@ -768,6 +768,9 @@ public partial class MainWindow : Window
 
     private void Render()
     {
+        // Events can fire while the window is still being built (a checkbox's IsChecked in the XAML):
+        // nothing is drawn until every part exists.
+        if (!IsInitialized || SelectedLabel is null) return;
         // Toolpaths are not recalculated while a shape is being moved, resized or drawn;
         // the review runs again (from cache where possible) when the gesture ends.
         bool geometryGesture = _moving || _resizing || _drawing;
@@ -1618,7 +1621,7 @@ public partial class MainWindow : Window
 
     private void ContourVisibility_Changed(object sender, RoutedEventArgs e)
     {
-        if (ContourVisibilityCheck is null) return; // XAML initialization
+        if (ContourVisibilityCheck is null || !IsInitialized) return; // XAML initialization
         _showContourPreview = ContourVisibilityCheck.IsChecked == true;
         if (DesignCanvas is not null && MachineCanvas is not null) Render();
     }
