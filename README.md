@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.35)
+﻿# CNC Studio – källkod (senaste: 0.9.36)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.36 – Grov- och finbearbetning med två fräsar
+
+- I Smart CAM har **Ficka**, **V-carving** och **Inlay-hane** fått rutan **Andra fräs**. Välj fräs ur biblioteket (diameter, matning och varvtal fylls i) eller ange den själv.
+  - **Ficka – detaljer och hörn med en mindre fräs efteråt:** den stora fräsen tar fickan. Den mindre fräsen tar bara det den stora inte når, alltså hörn och smala partier (restbearbetning). Den går inte runt igen där allt redan är fräst. Om den stora fräsen redan når allt får du veta att den andra inte behövs.
+  - **V-carving – rensa breda bottnar med en rak fräs först:** den raka fräsen fickfräser de plana bottnarna på fullt djup. V-fräsen gör sedan bara kanterna och en smal remsa av bottnen längs dem. Det går mycket fortare än att rensa med V-fräsen, och den raka fräsen rör aldrig V-väggarna.
+- Varje fräs blir **ett eget program**, som alltid när fräsarna är olika. Nolla Z med varje ny fräs. Bottnarna körs före V-carvingen, och detaljerna efter fickan.
+- Andra-fräsens pass syns som egna rader i CAM-trädet (*Ficka – detaljer*, *V-carving – bottnar*) och kontrolleras som allt annat. De sparas som en del av operationen.
+- **Rättat:** inlay-hanen kunde inte beräknas för vektorformer, som text, i programmet. Det fungerade bara i testerna.
+- Logiken finns i `CamSecondPass` (Core) med tester: ordning, restområde i en smal slits, ingen extra fräsning där den stora redan nått, bottnar för den raka fräsen och två program.
 
 ## 0.9.35 – Planhetskontroll
 

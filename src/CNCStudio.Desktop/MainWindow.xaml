@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.35 – planhetskontroll" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.36 – två fräsar" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -675,6 +675,18 @@
                             Checked="CamInput_Changed" Unchecked="CamInput_Changed"
                             ToolTip="För planfräsning av en offerskiva som är större än rörelseområdet: bara fräsens centrum (spindeln) behöver hålla marginalen till gränslägena – fräsen får gå utanför. Av: hela fräsen håller sig innanför, som vid all annan bearbetning."/>
                 </Grid>
+                <StackPanel x:Name="SecondToolPanel" Margin="0,8,0,0" Visibility="Collapsed">
+                  <CheckBox x:Name="CamSecondEnabled" Content="Andra fräs" Margin="4,2,4,4" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
+                  <StackPanel x:Name="SecondToolFields">
+                    <ComboBox x:Name="CamSecondTool" Margin="3" DisplayMemberPath="DisplayName" SelectionChanged="CamSecondTool_Changed" ToolTip="Den andra fräsen – diameter, matning och varvtal hämtas från biblioteket"/>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Diameter (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamSecondDiameter" Text="3.175" TextChanged="CamInput_Changed"/></StackPanel>
+                      <StackPanel Grid.Column="1"><TextBlock Text="Djup per pass (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamSecondPass" Text="2" TextChanged="CamInput_Changed"/></StackPanel>
+                    </Grid>
+                    <TextBlock x:Name="CamSecondHint" Text="" TextWrapping="Wrap" FontSize="10.5" Foreground="#8CA3BA" Margin="3,2,3,0"/>
+                  </StackPanel>
+                </StackPanel>
                 <CheckBox x:Name="CamTabs" IsChecked="True" Content="Hållflikar (vid genomskärning)" Margin="4,10,4,4" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
                 <Grid x:Name="TabSettingsPanel" Margin="18,0,0,2">
                   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>

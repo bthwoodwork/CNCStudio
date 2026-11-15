@@ -78,7 +78,9 @@ public static class VCarveToolpaths
             {
                 rings.Add((atMax, maxDepth));
                 double floorStep = Math.Max(2 * FloorRidgeMm * tan, 0.05);
-                for (var level = Simplify(Offset(atMax, -floorStep)); level.Count > 0; level = Simplify(Offset(level, -floorStep)))
+                // With a straight cutter clearing the bottom, the V-bit only cleans a band along its edge.
+                double band = op.SecondToolEnabled ? CamSecondPass.VBandMm(op) : double.MaxValue, done = 0;
+                for (var level = Simplify(Offset(atMax, -floorStep)); level.Count > 0 && (done += floorStep) <= band + 1e-9; level = Simplify(Offset(level, -floorStep)))
                 {
                     floor = true;
                     rings.Add((level, maxDepth));
