@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.38 – 3D-fräsning från STL" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.39 – ikoner och fönsterstil" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -194,23 +194,23 @@
  <Border x:Name="ToolsPanel" Background="#243447" BorderBrush="#50657D" BorderThickness="0,0,1,0">
     <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
  <TextBlock Text="RITA" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,5,0,7"/>
- <Button x:Name="SelectToolButton" Content="Markera" Click="SelectTool_Click" ToolTip="Markera objekt direkt med vänsterklick"/>
- <Button x:Name="RectangleToolButton" Content="Rektangel" Click="RectangleTool_Click"/>
- <Button x:Name="EllipseToolButton" Content="Ellips" Click="EllipseTool_Click"/>
- <Button x:Name="PolylineToolButton" Content="Polylinje" Click="PolylineTool_Click"/>
- <Button Content="Stäng linje" Click="ClosePolyline_Click"/>
- <Button Content="Figurer…" Click="Figure_Click" ToolTip="Figurbank: stjärna, polygon, hjärta, pil, ring, rundad rektangel"/>
- <Button Content="3D (STL)…" Click="ImportStl_Click" ToolTip="3D-modell från STL – fräses i rader (grov- och finfräsning)"/>
- <Button Content="Bild…" Click="ImageTrace_Click" ToolTip="Bild till vektor: en logotyp, teckning eller silhuett (PNG, JPG …) blir en form att fräsa."/>
- <Button x:Name="TextToolButton" Content="Text…" Click="TextTool_Click" ToolTip="Text med valfritt typsnitt – blir en form som kan fickfräsas eller skäras ut. Dubbelklicka på texten för att ändra den."/>
+ <Button x:Name="SelectToolButton" Content="Markera" local:Ui.Icon="&#xE7C9;" Click="SelectTool_Click" ToolTip="Markera objekt direkt med vänsterklick"/>
+ <Button x:Name="RectangleToolButton" Content="Rektangel" local:Ui.Icon="&#xE739;" Click="RectangleTool_Click"/>
+ <Button x:Name="EllipseToolButton" Content="Ellips" local:Ui.Icon="&#xEA3A;" Click="EllipseTool_Click"/>
+ <Button x:Name="PolylineToolButton" Content="Polylinje" local:Ui.Icon="&#xE70F;" Click="PolylineTool_Click"/>
+ <Button Content="Stäng linje" local:Ui.Icon="&#xE73E;" Click="ClosePolyline_Click"/>
+ <Button Content="Figurer…" local:Ui.Icon="&#xE734;" Click="Figure_Click" ToolTip="Figurbank: stjärna, polygon, hjärta, pil, ring, rundad rektangel"/>
+ <Button Content="3D (STL)…" local:Ui.Icon="&#xE81E;" Click="ImportStl_Click" ToolTip="3D-modell från STL – fräses i rader (grov- och finfräsning)"/>
+ <Button Content="Bild…" local:Ui.Icon="&#xEB9F;" Click="ImageTrace_Click" ToolTip="Bild till vektor: en logotyp, teckning eller silhuett (PNG, JPG …) blir en form att fräsa."/>
+ <Button x:Name="TextToolButton" Content="Text…" Click="TextTool_Click" local:Ui.Icon="&#xE8D2;" ToolTip="Text med valfritt typsnitt – blir en form som kan fickfräsas eller skäras ut. Dubbelklicka på texten för att ändra den."/>
  <Separator Margin="0,9"/>
  <Button x:Name="SnapButton" Content="Snap: På" Click="ToggleSnap_Click"/>
  <TextBlock Text="OBJEKT" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,14,0,7"/>
- <Button Content="Förena" Click="Union_Click"/>
- <Button Content="Subtrahera" Click="Difference_Click"/>
- <Button Content="Skärning" Click="Intersection_Click"/>
- <Button Content="XOR" Click="Xor_Click"/>
- <Button Content="Vektorkoll" Click="VectorCheck_Click"/>
+ <Button Content="Förena" local:Ui.Icon="&#xE710;" Click="Union_Click"/>
+ <Button Content="Subtrahera" local:Ui.Icon="&#xE738;" Click="Difference_Click"/>
+ <Button Content="Skärning" local:Ui.Icon="&#xE71B;" Click="Intersection_Click"/>
+ <Button Content="XOR" local:Ui.Icon="&#xE8AB;" Click="Xor_Click"/>
+ <Button Content="Vektorkoll" local:Ui.Icon="&#xE9D9;" Click="VectorCheck_Click"/>
  <TextBlock Text="JUSTERA" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,10,0,4" ToolTip="Ett objekt: mot materialet. Flera: mot markeringen. En grupp flyttas som en del."/>
  <UniformGrid Columns="3">
   <Button Content="⇤" Tag="Left" Click="Align_Click" ToolTip="Vänsterkant" Padding="0,3"/>
@@ -224,12 +224,12 @@
   <Button Content="Fördela ↔" Tag="H" Click="Distribute_Click" ToolTip="Lika mellanrum i sidled (minst tre objekt)" Padding="0,3"/>
   <Button Content="Fördela ↕" Tag="V" Click="Distribute_Click" ToolTip="Lika mellanrum i höjdled (minst tre objekt)" Padding="0,3"/>
  </UniformGrid>
- <Button Content="Offset…" Click="Offset_Click" ToolTip="Ny kontur utanför (+) eller innanför (−) formen – t.ex. en ram runt en text"/>
- <Button Content="Kopior i rutnät…" Click="GridCopies_Click" ToolTip="Kolumner × rader med mellanrum; CAM följer med"/>
- <Button Content="Packa på materialet…" Click="Nest_Click" ToolTip="Nesting: packar de markerade delarna (eller alla) tätt på materialet efter sin verkliga form, vrider dem om det hjälper"/>
+ <Button Content="Offset…" local:Ui.Icon="&#xE740;" Click="Offset_Click" ToolTip="Ny kontur utanför (+) eller innanför (−) formen – t.ex. en ram runt en text"/>
+ <Button Content="Kopior i rutnät…" local:Ui.Icon="&#xE80A;" Click="GridCopies_Click" ToolTip="Kolumner × rader med mellanrum; CAM följer med"/>
+ <Button Content="Packa på materialet…" local:Ui.Icon="&#xE7B8;" Click="Nest_Click" ToolTip="Nesting: packar de markerade delarna (eller alla) tätt på materialet efter sin verkliga form, vrider dem om det hjälper"/>
  <Separator Margin="0,9"/>
- <Button Content="Duplicera" Click="Duplicate_Click"/>
- <Button Content="Ta bort" Click="Delete_Click"/>
+ <Button Content="Duplicera" local:Ui.Icon="&#xE8C8;" Click="Duplicate_Click"/>
+ <Button Content="Ta bort" Click="Delete_Click" local:Ui.Icon="&#xE74D;"/>
  </StackPanel></Border></ScrollViewer></DockPanel>
    </Border>
      </ad:LayoutAnchorable>
@@ -372,8 +372,8 @@
             <Border Background="#1C2A39" Padding="8" CornerRadius="4" Margin="3,2,3,6">
               <TextBlock x:Name="MachineSummaryText" Text="" TextWrapping="Wrap" FontSize="11.5" Foreground="#D5E3F0"/>
             </Border>
-            <Button Content="Maskiner…" Click="Machines_Click" Margin="3,0,3,4" ToolTip="Alla maskiner – välj, ändra, lägg till och ta bort"/>
-            <Button Content="Maskininställningar…" Click="MachineSettings_Click" Background="#24618C" ToolTip="Arbetsområde, Z-rörelse, homing, gränslägesbrytare och säkerhetsmarginal"/>
+            <Button Content="Maskiner…" local:Ui.Icon="&#xE772;" Click="Machines_Click" Margin="3,0,3,4" ToolTip="Alla maskiner – välj, ändra, lägg till och ta bort"/>
+            <Button Content="Maskininställningar…" local:Ui.Icon="&#xE713;" Click="MachineSettings_Click" Background="#24618C" ToolTip="Arbetsområde, Z-rörelse, homing, gränslägesbrytare och säkerhetsmarginal"/>
            </StackPanel>
           </Expander>
          </StackPanel>
@@ -397,11 +397,11 @@
             <TextBlock x:Name="LiveStateText" Text="–" FontWeight="Bold"/>
           </DockPanel>
           <UniformGrid Columns="2" Margin="0,2,0,0">
-            <Button Content="GRBL-konsol…" Click="OpenConsole_Click" ToolTip="Skicka enskilda kommandon till maskinen"/>
-            <Button Content="Maskininfo…" Click="MachineInfo_Click" ToolTip="Firmware, aktiva lägen ($G), ingångar live och låsning av stegmotorerna"/>
-            <Button Content="Testa brytare…" Click="OpenLimitTest_Click" ToolTip="Tryck in brytarna för hand och se att de fungerar – gör detta före homing. Maskinen rör sig inte."/>
+            <Button Content="GRBL-konsol…" local:Ui.Icon="&#xE756;" Click="OpenConsole_Click" ToolTip="Skicka enskilda kommandon till maskinen"/>
+            <Button Content="Maskininfo…" local:Ui.Icon="&#xE946;" Click="MachineInfo_Click" ToolTip="Firmware, aktiva lägen ($G), ingångar live och låsning av stegmotorerna"/>
+            <Button Content="Testa brytare…" local:Ui.Icon="&#xE7BA;" Click="OpenLimitTest_Click" ToolTip="Tryck in brytarna för hand och se att de fungerar – gör detta före homing. Maskinen rör sig inte."/>
           </UniformGrid>
-          <Button x:Name="ResetGrblButton" Content="Återställ (Ctrl-X)" Click="ResetGrbl_Click" IsEnabled="False" Margin="3,2,3,0"
+          <Button x:Name="ResetGrblButton" Content="Återställ (Ctrl-X)" local:Ui.Icon="&#xE777;" Click="ResetGrbl_Click" IsEnabled="False" Margin="3,2,3,0"
                   ToolTip="Mjuk återställning av GRBL. Behövs efter ett larm från en brytare (Reset to continue). Stoppar all rörelse; efter återställning under rörelse krävs homing."/>
           <Separator Margin="0,10"/>
 
@@ -424,7 +424,7 @@
             </Grid>
             <TextBlock Text="Stora siffror = arbetskoordinater, små = maskinkoordinater (MPos)." FontSize="10.5" Foreground="#8CA3BA" Margin="3,0,3,4"/>
             <UniformGrid Columns="2">
-              <Button x:Name="HomeButton" Content="⌂  Homing ($H)" Click="Home_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Kör homing: först Z upp mot brytaren, sedan X och Y mot sina brytare. Därefter är maskinkoordinaterna kända."/>
+              <Button x:Name="HomeButton" Content="Homing ($H)" local:Ui.Icon="&#xE80F;" Click="Home_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Kör homing: först Z upp mot brytaren, sedan X och Y mot sina brytare. Därefter är maskinkoordinaterna kända."/>
               <DockPanel Margin="0">
                 <Button x:Name="ZeroXyMenuButton" DockPanel.Dock="Right" Content="▾" Click="ZeroXyMenu_Click" Background="#24618C" Padding="6,6" Margin="0,3,3,3"
                         ToolTip="Fler sätt att nolla X och Y: här, eller vid materialet enligt placeringen i maskinvyn">
@@ -436,12 +436,12 @@
                     </ContextMenu>
                   </Button.ContextMenu>
                 </Button>
-                <Button Content="Nolla X + Y" Tag="XY" Click="Zero_Click" Background="#24618C" Margin="3,3,0,3" ToolTip="Nollar X och Y där fräsen står – Z ändras inte (G10 L20 P0 X0 Y0). Pilen ▾: nolla vid materialet i stället."/>
+                <Button Content="Nolla X + Y" Tag="XY" Click="Zero_Click" local:Ui.Icon="&#xE81D;" Background="#24618C" Margin="3,3,0,3" ToolTip="Nollar X och Y där fräsen står – Z ändras inte (G10 L20 P0 X0 Y0). Pilen ▾: nolla vid materialet i stället."/>
               </DockPanel>
-              <Button Content="Gå till X0 Y0" Tag="XY" Click="GoTo_Click" ToolTip="Lyfter Z till nära överkanten (G53) och går till X0 Y0"/>
-              <Button Content="⊥  Probning…" Click="Probe_Click" Background="#6B4FA0" FontWeight="SemiBold" ToolTip="Sätt Z (standard) – eller X, Y och Z i hörnet – med probplatta (G38.2)."/>
-              <Button Content="Planhet…" Click="Flatness_Click" ToolTip="Planhetskontroll: proba 5 eller 9 punkter över materialet (eller det markerade) och se hur ojämnt det är – före V-carving och inlay."/>
-              <Button Content="Arbetsområde hit…" Click="SetTravelHere_Click" ToolTip="Efter homing: jogga till yttersta punkten maskinen får nå och klicka här. Avståndet från brytarna blir maskinens rörelse ($130/$131) – de mjuka gränserna."/>
+              <Button Content="Gå till X0 Y0" Tag="XY" Click="GoTo_Click" local:Ui.Icon="&#xE707;" ToolTip="Lyfter Z till nära överkanten (G53) och går till X0 Y0"/>
+              <Button Content="Probning…" local:Ui.Icon="&#xE7C1;" Click="Probe_Click" Background="#6B4FA0" FontWeight="SemiBold" ToolTip="Sätt Z (standard) – eller X, Y och Z i hörnet – med probplatta (G38.2)."/>
+              <Button Content="Planhet…" local:Ui.Icon="&#xE9D2;" Click="Flatness_Click" ToolTip="Planhetskontroll: proba 5 eller 9 punkter över materialet (eller det markerade) och se hur ojämnt det är – före V-carving och inlay."/>
+              <Button Content="Arbetsområde hit…" local:Ui.Icon="&#xE740;" Click="SetTravelHere_Click" ToolTip="Efter homing: jogga till yttersta punkten maskinen får nå och klicka här. Avståndet från brytarna blir maskinens rörelse ($130/$131) – de mjuka gränserna."/>
             </UniformGrid>
             <CheckBox x:Name="ShowToolBox" Content="Visa fräsens position i maskinvyn" IsChecked="True" Foreground="#E8F1FA" Margin="4,6,3,2" Checked="ShowTool_Changed" Unchecked="ShowTool_Changed"/>
             <DockPanel Margin="0,4,0,0">
@@ -450,14 +450,14 @@
               <TextBox x:Name="SetPositionBox" Text="0" ToolTip="Nytt värde för nuvarande position (mm)"/>
             </DockPanel>
             <DockPanel Margin="0,8,0,2">
-              <Button DockPanel.Dock="Right" Content="Platser…" Click="ManageLocations_Click" Padding="8,2" ToolTip="Spara och ändra platser maskinen åker till med ett klick (fräsbyte, parkering …)"/>
+              <Button DockPanel.Dock="Right" Content="Platser…" Click="ManageLocations_Click" local:Ui.Icon="&#xE718;" Padding="8,2" ToolTip="Spara och ändra platser maskinen åker till med ett klick (fräsbyte, parkering …)"/>
               <TextBlock Text="PLATSER" FontWeight="Bold" VerticalAlignment="Center"/>
             </DockPanel>
             <TextBlock x:Name="LocationsHint" Text="Inga sparade platser än. Platser… → lägg till fräsbyte och parkering, eller spara där fräsen står." TextWrapping="Wrap" FontSize="10.5" Foreground="#8CA3BA" Margin="3,0,3,2"/>
             <WrapPanel x:Name="LocationsPanel" Margin="0,0,0,2"/>
 
             <Separator Margin="0,10"/>
-            <DockPanel Margin="0,0,0,6"><StackPanel DockPanel.Dock="Right"><Button Content="🎮 Gamepad…" Click="GamepadSettings_Click" Padding="8,2" ToolTip="Styr maskinen med en Xbox-kompatibel gamepad: spakar joggar, knappar nollar/pausar m.m. Håll spärrknappen (LB) inne."/><Button Content="⌨ Tangenter…" Click="KeyboardSettings_Click" Padding="8,2" Margin="0,3,0,0" ToolTip="Jogga med tangentbordet: piltangenterna X/Y, Page Up/Down Z, Esc stoppar. Välj egna tangenter här."/></StackPanel><StackPanel><TextBlock Text="JOGG" FontWeight="Bold"/><TextBlock x:Name="GamepadStatusText" Text="Gamepad: ingen ansluten" FontSize="10.5" Foreground="#8CA3BA"/><TextBlock x:Name="GamepadLiveText" Text="" FontSize="10.5" Foreground="#FFD39F"/><TextBlock x:Name="KeyboardStatusText" Text="" FontSize="10.5" Foreground="#8CA3BA" TextWrapping="Wrap"/></StackPanel></DockPanel>
+            <DockPanel Margin="0,0,0,6"><StackPanel DockPanel.Dock="Right"><Button Content="Gamepad…" local:Ui.Icon="&#xE7FC;" Click="GamepadSettings_Click" Padding="8,2" ToolTip="Styr maskinen med en Xbox-kompatibel gamepad: spakar joggar, knappar nollar/pausar m.m. Håll spärrknappen (LB) inne."/><Button Content="Tangenter…" local:Ui.Icon="&#xE765;" Click="KeyboardSettings_Click" Padding="8,2" Margin="0,3,0,0" ToolTip="Jogga med tangentbordet: piltangenterna X/Y, Page Up/Down Z, Esc stoppar. Välj egna tangenter här."/></StackPanel><StackPanel><TextBlock Text="JOGG" FontWeight="Bold"/><TextBlock x:Name="GamepadStatusText" Text="Gamepad: ingen ansluten" FontSize="10.5" Foreground="#8CA3BA"/><TextBlock x:Name="GamepadLiveText" Text="" FontSize="10.5" Foreground="#FFD39F"/><TextBlock x:Name="KeyboardStatusText" Text="" FontSize="10.5" Foreground="#8CA3BA" TextWrapping="Wrap"/></StackPanel></DockPanel>
             <Grid HorizontalAlignment="Center">
               <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="54"/><ColumnDefinition Width="54"/><ColumnDefinition Width="18"/><ColumnDefinition Width="54"/></Grid.ColumnDefinitions>
               <Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="44"/><RowDefinition Height="44"/></Grid.RowDefinitions>

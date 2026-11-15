@@ -27,6 +27,10 @@ public partial class App : Application
         var icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/cncstudio.ico"));
         EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
             new RoutedEventHandler((sender, _) => { if (sender is Window w && w.Icon is null) w.Icon = icon; }));
+        // Dark title bar for every window, and the code-built windows' button row as a footer like the dialogs'.
+        if (CNCStudio.Core.AppStorage.Current.Settings.ModernLook != false)
+            EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
+                new RoutedEventHandler((sender, _) => { if (sender is Window w) WindowLook.Apply(w); }));
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
