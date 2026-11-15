@@ -189,7 +189,7 @@
   <ad:DockingManager.Theme><ad:Vs2013DarkTheme/></ad:DockingManager.Theme>
   <ad:LayoutRoot>
    <ad:LayoutPanel Orientation="Horizontal">
-    <ad:LayoutAnchorablePane DockWidth="144">
+    <ad:LayoutAnchorablePane DockWidth="160">
      <ad:LayoutAnchorable ContentId="Tools" Title="Ritverktyg" CanClose="False" CanHide="True" FloatingWidth="184" FloatingHeight="700">
  <Border x:Name="ToolsPanel" Background="#243447" BorderBrush="#50657D" BorderThickness="0,0,1,0">
     <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
