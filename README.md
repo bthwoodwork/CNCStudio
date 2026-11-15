@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.37)
+﻿# CNC Studio – källkod (senaste: 0.9.38)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,29 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.38 – 3D-fräsning från STL
+
+- **Rita → 3D-modell från STL…** (eller *3D (STL)…* under RITA). Filen kan vara binär eller ASCII.
+  - Du anger bredd och djup i mm. Längden följer bredden.
+  - Modellen läggs mitt på materialet med sin högsta punkt på materialets yta.
+  - STL-filen sparas i projektet, så projektet går att öppna på en annan dator.
+  - I ritytan visas modellen som sin omgivande rektangel med namn och djup.
+- **Ny bearbetning: 3D-fräsning (STL).** Väljs automatiskt för en 3D-modell. Fräsen går i rader längs X över modellens höjdkarta. Fräsens spets ligger alltid så att den raka eller runda änden precis nuddar ytan, så fräsen gör inga felskär i modellen.
+  - **En fräs:** nivå för nivå (djup per pass) ned till modellen.
+  - **Med andra fräs** (*Finfräs med en andra fräs efteråt*):
+    1. Den första fräsen grovfräser nivå för nivå. Den lämnar 0,5 mm och fräser bara där det finns material kvar på nivån.
+    2. Den andra, helst en kulfräs, finfräser hela ytan i ett sammanhängande sicksack med tät stegning (10 %).
+    3. Det blir två program, ett per fräs.
+  - Fräsen går aldrig utanför modellens rektangel. Kanterna får därför fräsens radie.
+- Banorna har ett Z-värde per punkt hela vägen: i G-code (G1 X Y Z), i 3D-vyn, i materialsimuleringen och i Z-kontrollerna.
+- Packa på materialet kan vrida 3D-modeller, och Duplicera och Kopior i rutnät kopierar dem.
+- Logiken finns i `Stl`, `Heightmap` och `Carve3DToolpaths` (Core) med tester:
+  - läsning av binär och ASCII-STL,
+  - höjdkarta och vridning,
+  - att fräsen aldrig går under ytan (kul och rak),
+  - grovfräsning med tillägg,
+  - hela kedjan till två program G-code.
 
 ## 0.9.37 – Styr från mobilen
 

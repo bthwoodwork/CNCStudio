@@ -170,6 +170,11 @@ public static class MotionPlanner
                 PlanVCarve(preview, paths, opIndex, op);
                 continue;
             }
+            if (preview.Is3D)
+            {
+                Plan3D(preview, paths, opIndex);
+                continue;
+            }
             if (preview.IsDrill)
             {
                 PlanDrill(preview, opIndex);
@@ -331,6 +336,27 @@ public static class MotionPlanner
             }
             moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.TravelHeightMm, "Lyft ur fickan"));
             z = m.TravelHeightMm; at = pos;
+        }
+
+        // 3D carving: each path is cut whole, its Z following the surface point by point (ContourPreview.PathZ).
+        // The cut move's Z1 is the path's deepest point (for the Z checks); the tool ends at the path's last Z.
+        void Plan3D(ContourPreview preview, IReadOnlyList<IReadOnlyList<CamPoint>> paths, int opIndex)
+        {
+            for (int k = 0; k < paths.Count; k++)
+            {
+                var path = paths[k]; var pz = preview.PathZ[k];
+                if (path.Count < 2) continue;
+                var s = path[0];
+                TravelTo(s);
+                moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, pz[0], $"Nedmatning till {F(-pz[0])} mm", opIndex));
+                moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, pz[0], path[^1].X, path[^1].Y, pz.Min(), "3D-fräsning", opIndex, k, 0, PathMath.Length(path)));
+                z = pz[^1]; at = path[^1];
+            }
+            if (at is not null && z < m.TravelHeightMm)
+            {
+                moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, at.X, at.Y, m.TravelHeightMm, "Lyft efter 3D-fräsning"));
+                z = m.TravelHeightMm;
+            }
         }
 
         // V-carving: each loop at its own depth. The loops are separate (each touches the outline at the surface),

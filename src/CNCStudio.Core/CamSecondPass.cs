@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Clipper2Lib;
@@ -27,7 +27,7 @@ public static class CamSecondPass
             var second = For(op);
             if (second is not null && second.Kind == CamOperationKind.VCarveClear) yield return second;   // flat bottoms first
             yield return op;
-            if (second is not null && second.Kind == CamOperationKind.PocketRest) yield return second;   // details after
+            if (second is not null && second.Kind is CamOperationKind.PocketRest or CamOperationKind.Carve3DFinish) yield return second;   // details / finishing after
         }
     }
 
@@ -40,6 +40,7 @@ public static class CamSecondPass
         switch (op.Kind)
         {
             case CamOperationKind.Pocket: kind = CamOperationKind.PocketRest; depth = op.TotalDepth; break;
+            case CamOperationKind.Carve3D: kind = CamOperationKind.Carve3DFinish; depth = op.TotalDepth; break;
             case CamOperationKind.VCarve or CamOperationKind.VCarvePlug:
                 kind = CamOperationKind.VCarveClear;
                 depth = VCarveToolpaths.MaxDepth(op);
@@ -49,10 +50,10 @@ public static class CamSecondPass
         return new CamOperation
         {
             ShapeId = op.ShapeId, Kind = kind, Parent = op,
-            ToolName = op.SecondToolName, ToolKind = ToolKind.FlatEndMill, ToolDiameter = op.SecondToolDiameter,
+            ToolName = op.SecondToolName, ToolKind = kind == CamOperationKind.Carve3DFinish ? op.SecondToolKind : ToolKind.FlatEndMill, ToolDiameter = op.SecondToolDiameter,
             TotalDepth = depth, DepthPerPass = op.SecondDepthPerPass, UseTabs = false,
             FeedRate = op.SecondFeedRate, PlungeRate = op.SecondPlungeRate, SpindleRpm = op.SecondSpindleRpm,
-            StepoverPercent = op.Kind == CamOperationKind.Pocket ? op.StepoverPercent : 40,
+            StepoverPercent = op.Kind == CamOperationKind.Pocket ? op.StepoverPercent : op.Kind == CamOperationKind.Carve3D ? 10 : 40,
             Plunge = op.Plunge, RampAngleDeg = op.RampAngleDeg, RampFeedPercent = op.RampFeedPercent, Direction = op.Direction,
         };
     }

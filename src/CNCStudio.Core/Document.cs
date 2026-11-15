@@ -35,6 +35,8 @@ public sealed class DesignShape
     public List<VectorContour> Contours { get; set; } = new();
     /// <summary>Set for a text object (Rita → Text): what it was made from, to edit it again. Null for other shapes.</summary>
     public TextSource? Text { get; set; }
+    /// <summary>Set for a 3D model (STL): the shape is the model's box seen from above (a rectangle). Null for other shapes.</summary>
+    public Model3D? Model { get; set; }
 }
 
 /// <summary>Drill: straight plunges at the shape's centre (the hole gets the tool's diameter), in pecks of DepthPerPass.</summary>
@@ -43,7 +45,8 @@ public sealed class DesignShape
 /// <para>VCarvePlug: the male part of a V-carve inlay – the V-bit carves around the shape, so it stands as a plug.</para>
 /// <para>PocketRest and VCarveClear are never stored: they are the second tool's pass, made from a Pocket or V-carving
 /// that has a second tool (see <see cref="CamSecondPass"/>).</para>
-public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve, VCarvePlug, PocketRest, VCarveClear }
+/// <para>Carve3D: a 3D model (STL) carved by raster passes; Carve3DFinish is its second tool's finishing pass.</para>
+public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve, VCarvePlug, PocketRest, VCarveClear, Carve3D, Carve3DFinish }
 
 public enum PlungeMode { Vertical, Ramp }
 
@@ -124,6 +127,8 @@ public sealed class CamOperation
     public double SecondPlungeRate { get; set; } = 300;
     public double SecondSpindleRpm { get; set; } = 18000;
     public double SecondDepthPerPass { get; set; } = 2;
+    /// <summary>The second tool's kind (3D finishing is usually a ball nose).</summary>
+    public ToolKind SecondToolKind { get; set; } = ToolKind.FlatEndMill;
 
     /// <summary>The second tool's pass only: the operation it was made from (never saved).</summary>
     [System.Text.Json.Serialization.JsonIgnore]
@@ -172,7 +177,12 @@ public static class CamValidation
         if (operation.Kind == CamOperationKind.VCarvePlug &&
             (!double.IsFinite(operation.InlayStartDepthMm) || operation.InlayStartDepthMm < 0 || operation.InlayStartDepthMm >= operation.TotalDepth))
             return "Hanens startdjup måste vara minst 0 och mindre än hanens djup.";
-        if (operation.SecondToolEnabled && operation.Kind is CamOperationKind.Pocket or CamOperationKind.VCarve or CamOperationKind.VCarvePlug)
+        if (operation.Kind is CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish && operation.UseTabs)
+            return "Hållflikar används inte för 3D-fräsning.";
+        if (operation.Kind is CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish &&
+            (!double.IsFinite(operation.StepoverPercent) || operation.StepoverPercent < 2 || operation.StepoverPercent > 90))
+            return "Stegningen för 3D-fräsning måste vara 2–90 % av fräsdiametern.";
+        if (operation.SecondToolEnabled && operation.Kind is CamOperationKind.Pocket or CamOperationKind.VCarve or CamOperationKind.VCarvePlug or CamOperationKind.Carve3D)
         {
             if (!double.IsFinite(operation.SecondToolDiameter) || operation.SecondToolDiameter <= 0 || operation.SecondToolDiameter > 100)
                 return "Andra fräsens diameter måste vara större än 0 och högst 100 mm.";

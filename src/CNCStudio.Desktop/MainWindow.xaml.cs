@@ -794,6 +794,13 @@ public partial class MainWindow : Window
             if (s.Kind != ShapeKind.VectorPath)
             { Canvas.SetLeft(element, s.X); Canvas.SetTop(element, s.Y); }
             DesignCanvas.Children.Add(element);
+            if (s.Model is { } model)
+            {
+                // A 3D model is shown as its box with its name and depth.
+                var label = new TextBlock { Text = $"3D: {model.Name} · {model.DepthMm:0.#} mm", FontSize = 12 / _zoom, Foreground = CanvasTheme.ShapeStroke, IsHitTestVisible = false };
+                Canvas.SetLeft(label, s.X + 3 / _zoom); Canvas.SetTop(label, s.Y + 3 / _zoom);
+                DesignCanvas.Children.Add(label);
+            }
             // All standalone shapes use the same invisible bounding rectangle,
             // regardless of whether their geometry is a rectangle, ellipse or vector path.
             if (_selection.Contains(s) && s.GroupId is null)
@@ -1182,7 +1189,7 @@ public partial class MainWindow : Window
                 Width = s.Width, Height = s.Height,
                 Contours = s.Contours.Select(c => new VectorContour { Closed = c.Closed,
                     Points = c.Points.Select(p => new VectorPoint(p.X, p.Y)).ToList() }).ToList(),
-                Text = s.Text?.Clone() }).ToList();
+                Text = s.Text?.Clone(), Model = s.Model }).ToList();
         _document.Shapes.AddRange(duplicates);
         var originals = _document.Shapes.Where(x => _selection.Contains(x)).ToList();
         for (int i = 0; i < Math.Min(originals.Count, duplicates.Count); i++)
@@ -1349,7 +1356,7 @@ public partial class MainWindow : Window
                 : _selection.Count > 1 ? $"Markerat: {_selection.Count} objekt – inställningarna gäller {CamPlanner.Label(_document, _selected)}"
                 : $"Markerat: {CamPlanner.Label(_document, _selected)} · {_selected.Width:0.###} × {_selected.Height:0.###} mm";
             var operation = _selected is null ? null : _document.CamOperations.FirstOrDefault(o => o.ShapeId == _selected.Id);
-            CamKind.SelectedIndex = operation is null ? 0 : (int)operation.Kind;
+            CamKind.SelectedIndex = operation is null ? (_selected?.Model is not null ? (int)CamOperationKind.Carve3D : 0) : (int)operation.Kind;
             CamDiameter.Text = F(operation?.ToolDiameter ?? 3.175);
             CamVAngle.Text = F(operation?.ToolAngleDeg ?? new CamOperation().ToolAngleDeg);
             CamInlayStart.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayStartDepthMm : 3);
@@ -1361,7 +1368,7 @@ public partial class MainWindow : Window
             _secondRpm = operation?.SecondToolEnabled == true ? operation.SecondSpindleRpm : null;
             SelectSecondTool(operation?.SecondToolName);
             CamInlayClearance.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayClearanceMm : 0.05);
-            CamDepth.Text = F(operation?.TotalDepth ?? 6);
+            CamDepth.Text = F(operation?.TotalDepth ?? _selected?.Model?.DepthMm ?? 6);
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
             CamTabs.IsChecked = operation?.UseTabs ?? true;
             var defaults = new CamOperation();
@@ -1400,24 +1407,27 @@ public partial class MainWindow : Window
         bool pocket = CamKind.SelectedIndex == (int)CamOperationKind.Pocket;
         bool drill = CamKind.SelectedIndex == (int)CamOperationKind.Drill;
         bool face = CamKind.SelectedIndex == (int)CamOperationKind.Face;
+        bool carve3d = CamKind.SelectedIndex == (int)CamOperationKind.Carve3D;
         bool plug = CamKind.SelectedIndex == (int)CamOperationKind.VCarvePlug;
         bool vcarve = CamKind.SelectedIndex == (int)CamOperationKind.VCarve || plug;
         if (VCarveAnglePanel is not null) VCarveAnglePanel.Visibility = vcarve ? Visibility.Visible : Visibility.Collapsed;
         if (InlayPlugPanel is not null) InlayPlugPanel.Visibility = plug ? Visibility.Visible : Visibility.Collapsed;
         if (SecondToolPanel is not null && CamSecondEnabled is not null && SecondToolFields is not null && CamSecondHint is not null)
         {
-            SecondToolPanel.Visibility = pocket || vcarve ? Visibility.Visible : Visibility.Collapsed;
-            CamSecondEnabled.Content = pocket ? "Detaljer och hörn med en mindre fräs efteråt" : "Rensa breda bottnar med en rak fräs först";
+            SecondToolPanel.Visibility = pocket || vcarve || carve3d ? Visibility.Visible : Visibility.Collapsed;
+            CamSecondEnabled.Content = pocket ? "Detaljer och hörn med en mindre fräs efteråt" : carve3d ? "Finfräs med en andra fräs efteråt (t.ex. kulfräs)" : "Rensa breda bottnar med en rak fräs först";
             SecondToolFields.Visibility = CamSecondEnabled.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            CamSecondHint.Text = pocket
+            CamSecondHint.Text = carve3d
+                ? $"Den första fräsen grovfräser nivå för nivå och lämnar {Carve3DToolpaths.RoughAllowanceMm:0.#} mm; den andra (helst kulfräs) finfräser hela ytan i tätare rader. Två program, ett per fräs."
+                : pocket
                 ? "Den stora fräsen tar fickan; den mindre tar bara det den stora inte når – hörn och smala partier. Två program, ett per fräs."
                 : "Den raka fräsen tar de breda plana bottnarna; V-fräsen bara kanterna. Mycket snabbare än att rensa med V-fräsen. Två program, ett per fräs.";
         }
-        PocketSettingsPanel.Visibility = pocket || face ? Visibility.Visible : Visibility.Collapsed;
+        PocketSettingsPanel.Visibility = pocket || face || carve3d ? Visibility.Visible : Visibility.Collapsed;
         if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
         if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
-        CamTabs.Visibility = pocket || drill || face || vcarve ? Visibility.Collapsed : Visibility.Visible;
-        TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        CamTabs.Visibility = pocket || drill || face || vcarve || carve3d ? Visibility.Collapsed : Visibility.Visible;
+        TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && !carve3d && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         // Drilling plunges straight down, facing plunges beside the material: ramping does not apply.
         if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill || face ? Visibility.Collapsed : Visibility.Visible;
         if (CamPassLabel is not null) CamPassLabel.Text = drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
@@ -1435,7 +1445,8 @@ public partial class MainWindow : Window
         bool face = kind == CamOperationKind.Face;
         bool vcarve = kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug;
         double inlayStart = 0, inlayClearance = 0;
-        bool second = (kind is CamOperationKind.Pocket || vcarve) && CamSecondEnabled?.IsChecked == true;
+        bool second = (kind is CamOperationKind.Pocket or CamOperationKind.Carve3D || vcarve) && CamSecondEnabled?.IsChecked == true;
+        if (kind == CamOperationKind.Carve3D && _selected.Model is { } model) depth = model.DepthMm;   // the model's depth decides
         double secondDia = 3.175, secondPass = 2;
         if (second && (CamSecondDiameter is null || CamSecondPass is null || !Parse(CamSecondDiameter, out secondDia) || !Parse(CamSecondPass, out secondPass)))
             return null;
@@ -1496,6 +1507,7 @@ public partial class MainWindow : Window
             ToolKind = vcarve ? ToolKind.VBit : fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
             ToolAngleDeg = vAngle, InlayStartDepthMm = inlayStart, InlayClearanceMm = inlayClearance,
             SecondToolEnabled = second, SecondToolDiameter = secondDia, SecondDepthPerPass = secondPass,
+            SecondToolKind = SecondTool is { Kind: not ToolKind.VBit } stk && Math.Abs(stk.Diameter - secondDia) < 1e-9 ? stk.Kind : ToolKind.FlatEndMill,
             SecondToolName = second && SecondTool is { } st && Math.Abs(st.Diameter - secondDia) < 1e-9 ? st.Name : null,
             SecondFeedRate = _secondFeed ?? feed, SecondPlungeRate = _secondPlunge ?? plunge, SecondSpindleRpm = _secondRpm ?? rpm,
             Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
@@ -1515,6 +1527,13 @@ public partial class MainWindow : Window
             CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur",
             CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carving", CamOperationKind.VCarvePlug => "Inlay-hane", _ => "Ficka"
         };
+        if (error is null && op.Kind == CamOperationKind.Carve3D)
+        {
+            CamSummary.Text = _selected?.Model is null ? "3D-fräsning kräver en 3D-modell – importera en med Rita → 3D-modell från STL…."
+                : $"3D-fräsning · Ø {F(op.ToolDiameter)} mm {(op.ToolKind == ToolKind.BallNose ? "kulfräs" : "rak")} · {F(op.TotalDepth)} mm djup i {Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9):0} nivåer · " +
+                  $"rader med {F(op.ToolDiameter * op.StepoverPercent / 100)} mm stegning" + (op.SecondToolEnabled ? $" · + finfräsning Ø {F(op.SecondToolDiameter)} mm" : "");
+            return;
+        }
         if (error is null && op.Kind == CamOperationKind.VCarvePlug)
         {
             CamSummary.Text = $"Inlay-hane · {F(op.ToolAngleDeg)}° V-fräs Ø {F(op.ToolDiameter)} mm · fräser runt formen från {F(op.InlayStartDepthMm)} mm vid konturen ned till {F(Math.Round(VCarveToolpaths.MaxDepth(op), 2))} mm · " +

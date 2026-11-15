@@ -84,6 +84,8 @@ public static class StockSimulator
     {
         if (!m.FollowsPath || r.Preview is null)
             return new() { (m.X0, m.Y0, m.Z0), (m.X1, m.Y1, m.Z1) };
+        if (r.Preview.Is3D)
+            return r.Preview.Centerlines[m.PathIndex].Select((p, i) => (p.X, p.Y, r.Preview.PathZ[m.PathIndex][i])).ToList();
         var path = r.Preview.Centerlines.Count > 0 ? r.Preview.Centerlines[m.PathIndex] : r.Preview.Centerline;
         var slice = PathMath.Slice(path, m.S0, m.S1);
         double total = PathMath.Length(slice), run = 0;

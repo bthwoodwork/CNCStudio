@@ -137,6 +137,7 @@ public static class Nesting
                 foreach (var c in s.Contours) foreach (var p in c.Points) { double u = p.X, v = p.Y; p.X = 1 - v; p.Y = u; }
             (s.Width, s.Height) = (s.Height, s.Width);
             s.X = nx; s.Y = ny;
+            if (s.Model is { } m) s.Model = m.Turned(-1);      // a 3D model turns with its box (clockwise on the screen)
         }
         if (quarter % 4 != 0) s.Text = null;          // a turned text is a shape now (the words cannot be re-made turned)
     }

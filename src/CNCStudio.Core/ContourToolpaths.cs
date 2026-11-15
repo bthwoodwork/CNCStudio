@@ -28,6 +28,9 @@ public sealed record ContourPreview(IReadOnlyList<CamPoint> Centerline, IReadOnl
     /// (<see cref="LoopDepths"/>), already cut down to <see cref="LoopClearedDepths"/> before.
     /// </summary>
     public bool IsVCarve { get; init; }
+    /// <summary>3D carving: each path has a Z per point in <see cref="PathZ"/> (work Z, 0 = stock top) and is cut whole.</summary>
+    public bool Is3D { get; init; }
+    public IReadOnlyList<IReadOnlyList<double>> PathZ { get; init; } = Array.Empty<IReadOnlyList<double>>();
     public IReadOnlyList<double> LoopDepths { get; init; } = Array.Empty<double>();
     public IReadOnlyList<double> LoopClearedDepths { get; init; } = Array.Empty<double>();
     /// <summary>V-carving: true for a loop's last pass (its full depth); earlier passes of the same loop are false.</summary>
@@ -52,6 +55,8 @@ public static class ContourToolpaths
         if (problem != null) throw new ArgumentException(problem);
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness);
+        if (operation.Kind is CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish)
+            return Carve3DToolpaths.Generate(shape, operation, materialThickness);
         if (operation.Kind is CamOperationKind.PocketRest or CamOperationKind.VCarveClear)
             return CamSecondPass.Generate(shape, operation, materialThickness);
         if (operation.Kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug)
