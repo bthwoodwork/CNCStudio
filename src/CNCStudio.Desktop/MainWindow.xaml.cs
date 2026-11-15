@@ -499,6 +499,25 @@ public partial class MainWindow : Window
     }
     private void PolylineTool_Click(object sender, RoutedEventArgs e)
     { _polyPoints.Clear(); _tool = Tool.Polyline; Render(); StatusText.Text = "Polylinje: klicka punkter, Enter = sluten, högerklick = öppen, Esc = avbryt. Shift+klick på objekt = ny punkt."; }
+    private bool? _rightPanelsForSelection;
+
+    /// <summary>
+    /// Egenskaper and Fräsning share the right column: with nothing selected Egenskaper (project and material) gets
+    /// most of it, with a shape selected Fräsning does. Only when that changes – a size the user drags stays until then.
+    /// </summary>
+    private void BalanceRightPanels(bool selected)
+    {
+        if (_rightPanelsForSelection == selected) return;
+        _rightPanelsForSelection = selected;
+        if (Anchorable("Properties")?.Parent is AvalonDock.Layout.LayoutAnchorablePane props &&
+            Anchorable("Cam")?.Parent is AvalonDock.Layout.LayoutAnchorablePane cam && props != cam &&
+            props.Parent == cam.Parent)
+        {
+            props.DockHeight = new GridLength(selected ? 0.8 : 1, GridUnitType.Star);
+            cam.DockHeight = new GridLength(selected ? 1.6 : 0.3, GridUnitType.Star);
+        }
+    }
+
     /// <summary>A rail button with a menu (Kombinera, Justera): the menu opens beside it on a normal click.</summary>
     private void RailMenu_Click(object sender, RoutedEventArgs e)
     {
@@ -1370,6 +1389,7 @@ public partial class MainWindow : Window
         {
             // The settings show only for a selected shape; without one, just the hint (the job list is its own panel).
             if (CamSettingsPanel is not null) CamSettingsPanel.Visibility = _selected is null ? Visibility.Collapsed : Visibility.Visible;
+            BalanceRightPanels(_selected is not null);
             CamSelectionLabel.Text = _selected is null ? "Markera en form på ritytan för att välja hur den ska fräsas. Alla operationer finns i panelen Jobb under ritytan."
                 : _selection.Count > 1 ? $"Markerat: {_selection.Count} objekt – inställningarna gäller {CamPlanner.Label(_document, _selected)}"
                 : $"Markerat: {CamPlanner.Label(_document, _selected)} · {_selected.Width:0.###} × {_selected.Height:0.###} mm";

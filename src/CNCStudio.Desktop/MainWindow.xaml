@@ -253,7 +253,7 @@
  </Grid>
      </ad:LayoutDocument>
     </ad:LayoutDocumentPane>
-    <ad:LayoutAnchorablePaneGroup Orientation="Horizontal" DockHeight="330">
+    <ad:LayoutAnchorablePaneGroup Orientation="Horizontal" DockHeight="260">
     <ad:LayoutAnchorablePane DockWidth="2*">
      <ad:LayoutAnchorable ContentId="CamJob" Title="Jobb – alla operationer per fräs" CanClose="False" CanHide="True" FloatingWidth="700" FloatingHeight="360">
  <Border x:Name="CamJobPanel" Background="#17212C">
