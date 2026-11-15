@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.36)
+﻿# CNC Studio – källkod (senaste: 0.9.37)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,25 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.37 – Styr från mobilen
+
+- Välj **Maskin → Styr från mobilen…** och klicka **Starta**. Fönstret visar en adress, till exempel `http://192.168.1.23:8765/`, och en **PIN-kod** med 6 siffror. Öppna adressen i telefonens webbläsare. Telefonen måste vara på samma wifi som datorn.
+- **På telefonen finns:**
+  - en stor **STOPP**-knapp,
+  - X/Y/Z-positionen och maskinens läge, samt programmets förlopp med **Paus** och **Fortsätt**,
+  - **jogg** (ett tryck = ett steg, Precis/Normal/Snabb),
+  - Nolla XY eller Z, Till X0 Y0, Homing, Lås upp och Kylning,
+  - knappar för dina **sparade platser**,
+  - matnings-, spindel- och snabbgångsöverstyrning.
+- **Säkerhet:**
+  - Varje anrop kräver PIN-koden, och efter fem fel väntar servern en minut.
+  - Telefonen kan bara ge de kommandona ovan. Den kan inte skicka egen G-code eller ändra inställningar.
+  - Program startas och spindeln slås på **bara vid datorn**.
+  - STOPP på telefonen är en omedelbar paus (feed hold). Du kan sedan fortsätta, eller stoppa programmet helt vid datorn.
+- Statusraden visar **📱 Mobilen på** medan servern är igång. Servern stängs när programmet stängs.
+- Windows frågar första gången om CNC Studio får ta emot anslutningar. Tillåt för privata nätverk.
+- Servern (`RemoteServer`, Core) är en liten inbyggd webbserver som inte kräver administratörsrättigheter. Den har tester för PIN, spärr och tillåtna kommandon, och en riktig anslutning över nätverket.
 
 ## 0.9.36 – Grov- och finbearbetning med två fräsar
 
