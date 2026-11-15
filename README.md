@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.41)
+﻿# CNC Studio – källkod (senaste: 0.9.42)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,15 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.42 – Design: jobbpanel och lugnare paneler
+
+- **Jobb** är en egen panel under ritytan i Design, på samma plats som Program och Körning ligger i Maskin.
+  - Till vänster finns alla operationer i körordning, ett program per fräs. Klicka på en rad för att markera formen, eller högerklicka för att kopiera inställningar, ta bort eller exportera.
+  - Till höger finns hela projektets kontroll, *Beräkna körbanor*, *Kontrollera hinder*, *Visa körbanorna* och **Exportera G-code**.
+- **Fräsning** visar inställningarna bara när en form är markerad. Annars syns en rad om att markera en form.
+- **Markerat objekt** fälls ihop när inget är markerat, så att projekt och material syns helt. Formen visas med namn, till exempel "Rektangel 2", i stället för "Rectangle".
+- *Visa → Visa jobb* tar fram panelen om den har stängts.
 
 ## 0.9.41 – Design-ytan: rita och fräsning på samma ställe
 
