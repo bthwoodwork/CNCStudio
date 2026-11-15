@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.32)
+﻿# CNC Studio – källkod (senaste: 0.9.33)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,17 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.33 – Justera, fördela, offset och kopior
+
+- **Justera:** vänster, mitten, höger, överkant, mitten eller nederkant. Finns under OBJEKT och i Objekt-menyn.
+  - Flera objekt justeras mot markeringen.
+  - Ett enda objekt, eller en grupp, justeras mot **materialet**. Det är det snabbaste sättet att centrera en skylt på skivan.
+  - En grupp flyttas alltid som en del.
+- **Fördela ↔ / ↕:** lika mellanrum mellan minst tre objekt. De två yttersta står kvar.
+- **Offset…:** en ny kontur ett valt antal mm utanför (+) eller innanför (−) formen, med rundade eller skarpa hörn. Används till exempel för en ram runt en text eller en förminskad kopia. Hålen följer med, och originalet ändras inte.
+- **Kopior i rutnät…:** till exempel "3 x 2, 10" ger 3 × 2 med 10 mm mellanrum. CAM-inställningarna följer med varje kopia. Statusraden varnar om rutnätet går utanför materialet.
+- Logiken finns i `Arrange` (Core) med tester.
 
 ## 0.9.32 – Bild till vektor
 
