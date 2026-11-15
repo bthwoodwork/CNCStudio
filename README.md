@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.39)
+﻿# CNC Studio – källkod (senaste: 0.9.40)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,23 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.40 – Maskin-ytan byggd som gSender
+
+Första steget mot "CNC Studio = gSender + designverktyg" (se Miro: *CNC Studio – flödet*, version 3). Arbetsytan **Maskin** (F3) är uppställd som gSender:
+
+- **Mitten:** maskinvyn eller 3D-vyn, stor.
+- **Till höger, Maskinstyrning:**
+  - Status och koordinatsystem (G54 …), Homing och Återställ.
+  - Positionen med **X0 / Y0 / Z0** (nolla) till vänster, arbets- och maskinkoordinater i mitten och **Gå till X / Y / Z** till höger.
+  - **Nolla X + Y** (▾: vid materialet) och **Gå till X0 Y0**.
+  - Joggkorset med Z, och under det steg, Z-steg och hastighet med **Precis / Normal / Snabb**.
+- **Under vyn, tre paneler bredvid varandra:**
+  - **Program:** ladda från projektet eller öppna G-code (Fusion …), kontrollkör, rita konturen, starta från rad, senast körda och avbrutet jobb.
+  - **Körning:** stora **Starta / Paus / Stopp**, förlopp, överstyrning av matning, snabbgång och spindel, samt spindel, kylning och dimma.
+  - **Probning och mer** (flik): probning, planhet, platser, sätt värde, arbetsområde, material och fastspänningar, gamepad och tangenter, konsol, maskininfo och brytartest. **Makron** finns som flik bredvid.
+- Egenskapspanelen döljs i Maskin. Material, fastspänningar och Z-höjder öppnas med *Material och fastspänningar…*.
+- Inga funktioner har ändrats, bara var de sitter. Panelerna kan fortfarande dras och dockas. En sparad layout från en tidigare version ersätts automatiskt av den nya. *Visa → Återställ fönsterlayout* tar alltid tillbaka den.
 
 ## 0.9.39 – Ikoner och samma stil i alla fönster
 

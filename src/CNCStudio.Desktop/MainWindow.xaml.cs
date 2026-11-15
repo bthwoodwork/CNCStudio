@@ -354,20 +354,24 @@ public partial class MainWindow : Window
             case Workspace.Design:
                 SetPanelVisible("Tools", true); SetPanelVisible("Properties", true);
                 SetPanelVisible("Cam", false); SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false);
+                SetPanelVisible("Run", false); SetPanelVisible("MachineExtras", false);
                 StatusText.Text = "Arbetsyta Design – rita och redigera på materialet.";
                 break;
             case Workspace.Cam:
                 SetPanelVisible("Tools", true); SetPanelVisible("Properties", false);
                 SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false); SetPanelVisible("Cam", true);
+                SetPanelVisible("Run", false); SetPanelVisible("MachineExtras", false);
                 StatusText.Text = "Arbetsyta CAM – bearbetning och körbanor på materialet. Ingen G-code.";
                 break;
             case Workspace.Machine:
                 SetPanelVisible("Tools", false); SetPanelVisible("Cam", false);
-                // Makron first, so Program is the tab in front when they share a pane.
-                SetPanelVisible("Machine", true); SetPanelVisible("Macros", true); SetPanelVisible("Job", true);
+                // Like gSender: the machine control on the right, program, run and the tool tabs under the view.
+                // Makron first, so "Probning och mer" is the tab in front in their shared pane.
+                SetPanelVisible("Properties", false);  // material, fixtures and Z: Probning och mer → Material och fastspänningar…
+                SetPanelVisible("Macros", true); SetPanelVisible("MachineExtras", true);
+                SetPanelVisible("Machine", true); SetPanelVisible("Job", true); SetPanelVisible("Run", true);
                 RefreshMacroList();
                 RefreshJobHistory();
-                SetPanelVisible("Properties", true); // fixture and Z settings live there
                 StatusText.Text = "Arbetsyta Maskin – maskinbordet: materialplacering, fastspänningar och maskinstyrning.";
                 break;
         }
