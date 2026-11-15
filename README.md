@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.38)
+﻿# CNC Studio – källkod (senaste: 0.9.39)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.39 – Ikoner och samma stil i alla fönster
+
+- **Ikoner på knapparna** i ritpanelen (Markera, Rektangel, Ellips, Polylinje, Text, Figurer, Bild, 3D, Förena …, Offset, Kopior, Packa, Duplicera, Ta bort) och i maskinpanelen (Maskiner, Inställningar, Konsol, Info, Testa brytare, Återställ, Homing, Nolla X + Y, Gå till X0 Y0, Probning, Planhet, Arbetsområde, Platser, Gamepad, Tangenter). Ikonerna har samma stil (Segoe-ikoner) som verktygsfältet och står kvar även när knapptexten ändras. Det sköts av egenskapen `local:Ui.Icon` (Ui.cs).
+- **Mörk titelrad** på alla fönster i Windows 10 (1809 eller senare) och Windows 11, i stället för den vita systemraden.
+- **De egna fönstren** (Platser, Inlay, Figurbank, Text, Bild till vektor, Starta från rad, Tangentbord, Gamepad, Makron, Maskiner m.fl.) har fått samma knapprad som dialogrutorna:
+  - egen bakgrund med en linje ovanför,
+  - knapparna till höger och lika breda,
+  - huvudknappen (*Spara*, *Lägg till*, *Skapa* …) i accentfärg.
+- Det görs på ett ställe (WindowLook.cs) när varje fönster öppnas. Ingen funktion ändras, och med Visa → *Nytt utseende* avstängt används det gamla utseendet.
 
 ## 0.9.38 – 3D-fräsning från STL
 
