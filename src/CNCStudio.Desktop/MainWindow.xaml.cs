@@ -329,6 +329,7 @@ public partial class MainWindow : Window
                 "Ett program körs på maskinen. Stänger du nu avbryts sändningen mitt i jobbet (läget sparas och kan återupptas).\n\nStänga ändå?",
                 "Program körs", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK)
         { e.Cancel = true; return; }
+        StopRemote();                       // the phone page stops answering with the program
         SavePlacement();
         SaveDockLayout();
         if (_grbl is not null) DisconnectGrbl("Programmet stängs.");
