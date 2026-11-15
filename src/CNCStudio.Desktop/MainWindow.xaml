@@ -225,8 +225,8 @@
   <Button Content="Fördela ↕" Tag="V" Click="Distribute_Click" ToolTip="Lika mellanrum i höjdled (minst tre objekt)" Padding="0,3"/>
  </UniformGrid>
  <Button Content="Offset…" local:Ui.Icon="&#xE740;" Click="Offset_Click" ToolTip="Ny kontur utanför (+) eller innanför (−) formen – t.ex. en ram runt en text"/>
- <Button Content="Kopior i rutnät…" local:Ui.Icon="&#xE80A;" Click="GridCopies_Click" ToolTip="Kolumner × rader med mellanrum; CAM följer med"/>
- <Button Content="Packa på materialet…" local:Ui.Icon="&#xE7B8;" Click="Nest_Click" ToolTip="Nesting: packar de markerade delarna (eller alla) tätt på materialet efter sin verkliga form, vrider dem om det hjälper"/>
+ <Button Content="Rutnät…" local:Ui.Icon="&#xE80A;" Click="GridCopies_Click" ToolTip="Kolumner × rader med mellanrum; CAM följer med"/>
+ <Button Content="Packa…" local:Ui.Icon="&#xE7B8;" Click="Nest_Click" ToolTip="Nesting: packar de markerade delarna (eller alla) tätt på materialet efter sin verkliga form, vrider dem om det hjälper"/>
  <Separator Margin="0,9"/>
  <Button Content="Duplicera" local:Ui.Icon="&#xE8C8;" Click="Duplicate_Click"/>
  <Button Content="Ta bort" Click="Delete_Click" local:Ui.Icon="&#xE74D;"/>
