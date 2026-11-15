@@ -547,12 +547,12 @@
     <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="12,10"><StackPanel>
           <!-- Like gSender's right column: state and work coordinate system, position with Zero / Go to per axis, then jogging. -->
           <DockPanel Margin="0,0,0,8">
-            <ComboBox x:Name="WcsPicker" DockPanel.Dock="Right" Width="72" SelectionChanged="Wcs_Changed" ToolTip="Aktivt arbetskoordinatsystem (läses med $G)">
+            <ComboBox x:Name="WcsPicker" DockPanel.Dock="Right" Width="72" SelectedIndex="0" SelectionChanged="Wcs_Changed" ToolTip="Aktivt arbetskoordinatsystem (läses med $G)">
               <ComboBoxItem Content="G54"/><ComboBoxItem Content="G55"/><ComboBoxItem Content="G56"/>
               <ComboBoxItem Content="G57"/><ComboBoxItem Content="G58"/><ComboBoxItem Content="G59"/>
             </ComboBox>
             <TextBlock DockPanel.Dock="Right" Text="Koordinatsystem" Foreground="#8CA3BA" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
-            <Border Background="#223243" CornerRadius="10" Padding="10,3" HorizontalAlignment="Left"><TextBlock x:Name="LiveStateText" Text="–" FontWeight="Bold"/></Border>
+            <Border Background="#223243" CornerRadius="10" Padding="10,3" HorizontalAlignment="Left"><TextBlock x:Name="LiveStateText" Text="Ej ansluten" FontWeight="Bold"/></Border>
           </DockPanel>
           <UniformGrid Columns="2" Margin="0,0,0,6">
             <Button x:Name="HomeButton" Content="Homing ($H)" local:Ui.Icon="&#xE80F;" Click="Home_Click" Background="#2E7A4A" FontWeight="SemiBold" ToolTip="Kör homing: först Z upp mot brytaren, sedan X och Y mot sina brytare. Därefter är maskinkoordinaterna kända."/>
@@ -565,13 +565,13 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition/><ColumnDefinition Width="54"/></Grid.ColumnDefinitions>
               <Grid.RowDefinitions><RowDefinition Height="46"/><RowDefinition Height="46"/><RowDefinition Height="46"/></Grid.RowDefinitions>
               <Button Grid.Row="0" Content="X0" Tag="X" Click="Zero_Click" Foreground="#FF6B6B" FontWeight="Bold" ToolTip="Nolla X: nuvarande X blir 0 i aktivt koordinatsystem (G10 L20 P0 X0)"/>
-              <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"><TextBlock x:Name="DroX" Text="–" FontSize="22" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Right"/><TextBlock x:Name="MposX" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Right"/></StackPanel>
+              <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"><TextBlock x:Name="DroX" Text="–" FontSize="26" FontWeight="Bold" FontFamily="Consolas" Foreground="#7FB6F0" HorizontalAlignment="Center"/><TextBlock x:Name="MposX" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Center"/></StackPanel>
               <Button Grid.Row="0" Grid.Column="2" Content="X" Tag="X" Click="GoTo_Click" local:Ui.Icon="&#xE768;" ToolTip="Gå till X0 (Z lyfts först)"/>
               <Button Grid.Row="1" Content="Y0" Tag="Y" Click="Zero_Click" Foreground="#6BD38A" FontWeight="Bold" ToolTip="Nolla Y: nuvarande Y blir 0 i aktivt koordinatsystem (G10 L20 P0 Y0)"/>
-              <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"><TextBlock x:Name="DroY" Text="–" FontSize="22" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Right"/><TextBlock x:Name="MposY" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Right"/></StackPanel>
+              <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"><TextBlock x:Name="DroY" Text="–" FontSize="26" FontWeight="Bold" FontFamily="Consolas" Foreground="#7FB6F0" HorizontalAlignment="Center"/><TextBlock x:Name="MposY" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Center"/></StackPanel>
               <Button Grid.Row="1" Grid.Column="2" Content="Y" Tag="Y" Click="GoTo_Click" local:Ui.Icon="&#xE768;" ToolTip="Gå till Y0 (Z lyfts först)"/>
               <Button Grid.Row="2" Content="Z0" Tag="Z" Click="Zero_Click" Foreground="#6FB4FF" FontWeight="Bold" ToolTip="Nolla Z: nuvarande Z blir 0 i aktivt koordinatsystem (G10 L20 P0 Z0)"/>
-              <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"><TextBlock x:Name="DroZ" Text="–" FontSize="22" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Right"/><TextBlock x:Name="MposZ" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Right"/></StackPanel>
+              <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0" VerticalAlignment="Center"><TextBlock x:Name="DroZ" Text="–" FontSize="26" FontWeight="Bold" FontFamily="Consolas" Foreground="#7FB6F0" HorizontalAlignment="Center"/><TextBlock x:Name="MposZ" Text="" FontSize="10.5" FontFamily="Consolas" Foreground="#8CA3BA" HorizontalAlignment="Center"/></StackPanel>
               <Button Grid.Row="2" Grid.Column="2" Content="Z" Tag="Z" Click="GoTo_Click" local:Ui.Icon="&#xE768;" ToolTip="Gå till Z0 (Z lyfts först)"/>
             </Grid>
             </Border>
@@ -615,10 +615,10 @@
               <StackPanel Grid.Column="2"><TextBlock Text="mm/min" FontSize="10.5"/><TextBox x:Name="JogFeed" Text="3000"/></StackPanel>
             </Grid>
               <StackPanel Grid.Column="2" VerticalAlignment="Center">
-              <StackPanel>
-              <RadioButton x:Name="PresetPrecise" Content="Precis" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="0"/>
-              <RadioButton x:Name="PresetNormal" Content="Normal" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="1" IsChecked="True"/>
-              <RadioButton x:Name="PresetRapid" Content="Snabb" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="2"/>
+              <StackPanel Margin="0,0,0,0">
+              <RadioButton x:Name="PresetPrecise" Margin="0,2" Content="Precis" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="0"/>
+              <RadioButton x:Name="PresetNormal" Margin="0,2" Content="Normal" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="1" IsChecked="True"/>
+              <RadioButton x:Name="PresetRapid" Margin="0,2" Content="Snabb" GroupName="JogPreset" Foreground="#E8F1FA" Checked="JogPreset_Checked" Tag="2"/>
             </StackPanel>
               </StackPanel>
             </Grid>
