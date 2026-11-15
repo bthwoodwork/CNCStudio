@@ -148,6 +148,29 @@ public sealed class ProbeCycle
         catch (InvalidOperationException ex) { return new(false, ex.Message, null, _steps); }
     }
 
+    /// <summary>
+    /// Planhetskontroll: one touch straight down from where the tool is (the plate lies under it, on the stock), then
+    /// back off. Returns the stock surface there as MPos Z (contact − plate thickness). Throws InvalidOperationException
+    /// with the reason when there is no contact.
+    /// </summary>
+    public async Task<double> ProbeSurfaceHereAsync(double searchMm, CancellationToken ct = default)
+    {
+        _ct = ct; _steps.Clear();
+        try { await Sync(); }                                   // the way here must be finished first
+        catch (ProbeFailed ex) { throw new InvalidOperationException(ex.Message); }
+        var status = await _g.RequestStatusAsync(TimeSpan.FromSeconds(2), ct);
+        if (status?.State != "Idle") throw new InvalidOperationException($"Maskinen måste stå still (Idle). Nu: {status?.State ?? "okänt"}.");
+        if (status.Pins?.Contains('P') == true) throw new InvalidOperationException("Proben är redan i kontakt – kontrollera klämman och kabeln.");
+        try
+        {
+            await Send("G21");
+            double z = await Touch(2, -1, searchMm);
+            await Send($"G53 G0 Z{N(z + _s.RetractMm)}");
+            return z - _s.PlateThicknessMm;
+        }
+        catch (ProbeFailed ex) { throw new InvalidOperationException(ex.Message); }
+    }
+
     /// <summary>+1 = the wall is approached moving towards plus (left side, front side), −1 = towards minus.</summary>
     public static int Side(ProbeCorner corner, int axis) => axis == 0
         ? (corner is ProbeCorner.FrontLeft or ProbeCorner.BackLeft ? +1 : -1)
