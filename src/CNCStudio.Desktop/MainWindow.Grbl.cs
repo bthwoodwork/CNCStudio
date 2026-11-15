@@ -121,7 +121,7 @@ public partial class MainWindow
         UpdateJobButtons();
         if (_machineView) RenderMachine(refreshCam: false);
         SetConnectionBanner("EJ ANSLUTEN", reason, Color.FromRgb(83, 60, 52));
-        LiveStateText.Text = "–";
+        LiveStateText.Text = "Ej ansluten";
         _jogHeld = false;
         SetMachineControlsEnabled(false);
         RefreshMachinePicker();

@@ -169,7 +169,7 @@ public partial class MainWindow
 
     private async void Wcs_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (_syncingWcs || WcsPicker.SelectedIndex < 0) return;
+        if (_syncingWcs || WcsPicker.SelectedIndex < 0 || !IsLoaded || Grbl is null) return;   // also when the window builds (G54 shown before connecting)
         if (RequireIdle("Byta koordinatsystem") is not GrblClient g) return;
         if (!await SendAsync(g, GrblMachineCommands.SelectWcs(54 + WcsPicker.SelectedIndex))) return;
         await ReadActiveWcsAsync(g);
