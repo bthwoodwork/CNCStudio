@@ -41,7 +41,9 @@ public sealed class DesignShape
 /// <para>Face: the shape's whole area cut flat in rows, running out past the edges (planfräsning).</para>
 /// <para>VCarve: a V-bit carves the shape with walls along the outline, deeper where it is wider (V-carving).</para>
 /// <para>VCarvePlug: the male part of a V-carve inlay – the V-bit carves around the shape, so it stands as a plug.</para>
-public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve, VCarvePlug }
+/// <para>PocketRest and VCarveClear are never stored: they are the second tool's pass, made from a Pocket or V-carving
+/// that has a second tool (see <see cref="CamSecondPass"/>).</para>
+public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve, VCarvePlug, PocketRest, VCarveClear }
 
 public enum PlungeMode { Vertical, Ramp }
 
@@ -110,6 +112,23 @@ public sealed class CamOperation
     /// <summary>Pocket and facing: distance between neighbouring loops/rows, as % of the tool diameter.</summary>
     public double StepoverPercent { get; set; } = 40;
 
+    // ---- Grov- och finbearbetning: a second tool for the same shape ----
+    /// <summary>
+    /// Pocket: a smaller cutter afterwards cuts what the main cutter could not reach (corners, narrow parts).
+    /// V-carving: a straight cutter first clears the wide flat bottoms, so the V-bit only cuts the edges.
+    /// </summary>
+    public bool SecondToolEnabled { get; set; }
+    public string? SecondToolName { get; set; }
+    public double SecondToolDiameter { get; set; } = 3.175;
+    public double SecondFeedRate { get; set; } = 1000;
+    public double SecondPlungeRate { get; set; } = 300;
+    public double SecondSpindleRpm { get; set; } = 18000;
+    public double SecondDepthPerPass { get; set; } = 2;
+
+    /// <summary>The second tool's pass only: the operation it was made from (never saved).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public CamOperation? Parent { get; set; }
+
     /// <summary>A copy with every setting, for another shape (used when duplicating).</summary>
     public CamOperation CopyFor(Guid shapeId)
     {
@@ -153,6 +172,18 @@ public static class CamValidation
         if (operation.Kind == CamOperationKind.VCarvePlug &&
             (!double.IsFinite(operation.InlayStartDepthMm) || operation.InlayStartDepthMm < 0 || operation.InlayStartDepthMm >= operation.TotalDepth))
             return "Hanens startdjup måste vara minst 0 och mindre än hanens djup.";
+        if (operation.SecondToolEnabled && operation.Kind is CamOperationKind.Pocket or CamOperationKind.VCarve or CamOperationKind.VCarvePlug)
+        {
+            if (!double.IsFinite(operation.SecondToolDiameter) || operation.SecondToolDiameter <= 0 || operation.SecondToolDiameter > 100)
+                return "Andra fräsens diameter måste vara större än 0 och högst 100 mm.";
+            if (operation.Kind == CamOperationKind.Pocket && operation.SecondToolDiameter >= operation.ToolDiameter - 1e-9)
+                return "Detaljfräsen måste vara mindre än fickans fräs – den tar det den stora inte når.";
+            if (!double.IsFinite(operation.SecondDepthPerPass) || operation.SecondDepthPerPass <= 0)
+                return "Andra fräsens djup per pass måste vara större än 0.";
+            if (!double.IsFinite(operation.SecondFeedRate) || operation.SecondFeedRate < 1 || operation.SecondFeedRate > 20000 ||
+                !double.IsFinite(operation.SecondPlungeRate) || operation.SecondPlungeRate < 1 || operation.SecondPlungeRate > 20000)
+                return "Andra fräsens matning måste vara 1–20000 mm/min.";
+        }
         if (operation.Kind == CamOperationKind.VCarvePlug &&
             (!double.IsFinite(operation.InlayClearanceMm) || operation.InlayClearanceMm < 0 || operation.InlayClearanceMm > 2))
             return "Spelet måste vara 0–2 mm.";

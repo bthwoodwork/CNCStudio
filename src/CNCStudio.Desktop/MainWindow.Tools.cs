@@ -38,8 +38,35 @@ public partial class MainWindow
             CamToolPicker.ItemsSource = new[] { CustomTool }
                 .Concat(_tools.Tools.OrderBy(t => _tools.CategoryOrder(t.CategoryOrDefault)).ThenBy(t => t.Diameter).ThenBy(t => t.Name)).ToList();
             CamToolPicker.SelectedIndex = 0;
+            if (CamSecondTool is not null)
+            {
+                CamSecondTool.ItemsSource = null;
+                CamSecondTool.ItemsSource = new[] { CustomTool }
+                    .Concat(_tools.Tools.Where(t => t.Kind != ToolKind.VBit).OrderBy(t => t.Diameter).ThenBy(t => t.Name)).ToList();
+                CamSecondTool.SelectedIndex = 0;
+            }
         }
         finally { _loadingCam = keep; }
+    }
+
+    private double? _secondFeed, _secondPlunge, _secondRpm;
+
+    private ToolDefinition? SecondTool => CamSecondTool?.SelectedItem is ToolDefinition t && t != CustomTool ? t : null;
+
+    private void SelectSecondTool(string? name)
+    {
+        if (CamSecondTool?.ItemsSource is not IEnumerable<ToolDefinition> items) return;
+        CamSecondTool.SelectedItem = items.FirstOrDefault(t => t != CustomTool && t.Name == name) ?? CustomTool;
+    }
+
+    private void CamSecondTool_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loadingCam || SecondTool is not ToolDefinition t) return;
+        var v = t.CuttingFor(_document.MaterialId);
+        CamSecondDiameter.Text = F(t.Diameter);
+        CamSecondPass.Text = F(v.DepthPerPass);
+        _secondFeed = v.FeedRate; _secondPlunge = v.PlungeRate; _secondRpm = v.SpindleRpm;
+        UpdateCamSummary();
     }
 
     /// <summary>Selects the library tool with this name, or "(egen)" if it is not in the library.</summary>

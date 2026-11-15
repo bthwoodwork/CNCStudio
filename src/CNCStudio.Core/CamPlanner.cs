@@ -160,9 +160,9 @@ public sealed class CamPlanner
                 geometryKeys[s.Id] = GeometryKey(s);
         // Material or fixtures outside the work area: no toolpath is computed until it is fixed.
         var placement = MachineSetupValidation.PlacementProblem(document);
-        foreach (var op in document.CamOperations)
+        foreach (var op in CamSecondPass.Expand(document.CamOperations))
         {
-            live.Add(op.ShapeId);
+            live.Add(CacheKey(op));
             var shape = document.Shapes.FirstOrDefault(s => s.Id == op.ShapeId);
             if (shape is null)
             {
@@ -232,7 +232,7 @@ public sealed class CamPlanner
     private CacheEntry? GetOrGenerate(DesignShape shape, CamOperation op, double thickness, bool mayCompute)
     {
         var key = Fingerprint(shape, op, thickness);
-        bool known = _cache.TryGetValue(op.ShapeId, out var hit);
+        bool known = _cache.TryGetValue(CacheKey(op), out var hit);
         if (known && hit!.Key == key)
         {
             if (hit.X == shape.X && hit.Y == shape.Y) return hit;
@@ -240,7 +240,7 @@ public sealed class CamPlanner
             // instead of recomputing it. Cheap even for very large imported shapes.
             var moved = hit with { X = shape.X, Y = shape.Y,
                 Preview = hit.Preview is null ? null : Translate(hit.Preview, shape.X - hit.X, shape.Y - hit.Y) };
-            _cache[op.ShapeId] = moved;
+            _cache[CacheKey(op)] = moved;
             return moved;
         }
         // A path that has never been computed (e.g. a just-opened project) is computed once.
@@ -249,7 +249,7 @@ public sealed class CamPlanner
         GenerationCount++;
         try { entry = new CacheEntry(key, shape.X, shape.Y, CamDirection.Apply(_generator(shape, op, thickness), shape, op), null); }
         catch (Exception ex) { entry = new CacheEntry(key, shape.X, shape.Y, null, ex.Message); } // fail closed
-        _cache[op.ShapeId] = entry;
+        _cache[CacheKey(op)] = entry;
         return entry;
     }
 
@@ -263,12 +263,12 @@ public sealed class CamPlanner
         var others = geometryKeys.Where(k => k.Key != shape.Id).OrderBy(k => k.Key).ToList();
         var key = Fingerprint(shape, op, doc.MaterialThickness) + "@" + R(shape.X) + "," + R(shape.Y) + "#" +
                   string.Join(";", others.Select(k => k.Key + "=" + k.Value + ":" + doc.Shapes.FindIndex(s => s.Id == k.Key)));
-        if (_partCache.TryGetValue(shape.Id, out var hit) && hit.Key == key) return hit.Findings;
+        if (_partCache.TryGetValue(CacheKey(op), out var hit) && hit.Key == key) return hit.Findings;
         var parts = others
             .Select(k => doc.Shapes.First(s => s.Id == k.Key))
             .Select(s => (s, Label(doc, s)));
         var findings = CamGeometryChecks.PartClearance(shape, op, preview, parts);
-        _partCache[shape.Id] = (key, findings);
+        _partCache[CacheKey(op)] = (key, findings);
         return findings;
     }
 
@@ -378,8 +378,19 @@ public sealed class CamPlanner
         return string.Join("|", shape.Kind, R(shape.Width), R(shape.Height),
             shape.Contours?.Count ?? -1, ContourHash(shape),
             op.Kind, R(op.ToolDiameter), R(op.ToolAngleDeg), op.ToolKind, R(op.InlayStartDepthMm), R(op.InlayClearanceMm), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
-            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, R(thickness));
+            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, R(thickness),
+            op.SecondToolEnabled, R(op.SecondToolDiameter),
+            op.Parent is null ? "" : "parent:" + Fingerprint(shape, op.Parent, thickness));
     }
 
     private static string R(double v) => v.ToString("R", CultureInfo.InvariantCulture);
+
+    /// <summary>The cache slot of an operation: its shape, or – for a second tool's pass – a slot of its own beside it.</summary>
+    private static Guid CacheKey(CamOperation op)
+    {
+        if (op.Parent is null) return op.ShapeId;
+        var b = op.ShapeId.ToByteArray();
+        b[15] ^= (byte)(0x5A + (int)op.Kind);
+        return new Guid(b);
+    }
 }

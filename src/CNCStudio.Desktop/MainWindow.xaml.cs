@@ -1352,6 +1352,13 @@ public partial class MainWindow : Window
             CamDiameter.Text = F(operation?.ToolDiameter ?? 3.175);
             CamVAngle.Text = F(operation?.ToolAngleDeg ?? new CamOperation().ToolAngleDeg);
             CamInlayStart.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayStartDepthMm : 3);
+            CamSecondEnabled.IsChecked = operation?.SecondToolEnabled == true;
+            CamSecondDiameter.Text = F(operation?.SecondToolDiameter ?? 3.175);
+            CamSecondPass.Text = F(operation?.SecondDepthPerPass ?? 2);
+            _secondFeed = operation?.SecondToolEnabled == true ? operation.SecondFeedRate : null;
+            _secondPlunge = operation?.SecondToolEnabled == true ? operation.SecondPlungeRate : null;
+            _secondRpm = operation?.SecondToolEnabled == true ? operation.SecondSpindleRpm : null;
+            SelectSecondTool(operation?.SecondToolName);
             CamInlayClearance.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayClearanceMm : 0.05);
             CamDepth.Text = F(operation?.TotalDepth ?? 6);
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
@@ -1396,6 +1403,15 @@ public partial class MainWindow : Window
         bool vcarve = CamKind.SelectedIndex == (int)CamOperationKind.VCarve || plug;
         if (VCarveAnglePanel is not null) VCarveAnglePanel.Visibility = vcarve ? Visibility.Visible : Visibility.Collapsed;
         if (InlayPlugPanel is not null) InlayPlugPanel.Visibility = plug ? Visibility.Visible : Visibility.Collapsed;
+        if (SecondToolPanel is not null && CamSecondEnabled is not null && SecondToolFields is not null && CamSecondHint is not null)
+        {
+            SecondToolPanel.Visibility = pocket || vcarve ? Visibility.Visible : Visibility.Collapsed;
+            CamSecondEnabled.Content = pocket ? "Detaljer och hörn med en mindre fräs efteråt" : "Rensa breda bottnar med en rak fräs först";
+            SecondToolFields.Visibility = CamSecondEnabled.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            CamSecondHint.Text = pocket
+                ? "Den stora fräsen tar fickan; den mindre tar bara det den stora inte når – hörn och smala partier. Två program, ett per fräs."
+                : "Den raka fräsen tar de breda plana bottnarna; V-fräsen bara kanterna. Mycket snabbare än att rensa med V-fräsen. Två program, ett per fräs.";
+        }
         PocketSettingsPanel.Visibility = pocket || face ? Visibility.Visible : Visibility.Collapsed;
         if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
         if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
@@ -1418,6 +1434,10 @@ public partial class MainWindow : Window
         bool face = kind == CamOperationKind.Face;
         bool vcarve = kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug;
         double inlayStart = 0, inlayClearance = 0;
+        bool second = (kind is CamOperationKind.Pocket || vcarve) && CamSecondEnabled?.IsChecked == true;
+        double secondDia = 3.175, secondPass = 2;
+        if (second && (CamSecondDiameter is null || CamSecondPass is null || !Parse(CamSecondDiameter, out secondDia) || !Parse(CamSecondPass, out secondPass)))
+            return null;
         if (kind == CamOperationKind.VCarvePlug &&
             (CamInlayStart is null || CamInlayClearance is null || !Parse(CamInlayStart, out inlayStart) || !Parse(CamInlayClearance, out inlayClearance)))
             return null;
@@ -1474,6 +1494,9 @@ public partial class MainWindow : Window
             // V-carving always uses a V-bit (also a custom one typed in by diameter and angle).
             ToolKind = vcarve ? ToolKind.VBit : fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
             ToolAngleDeg = vAngle, InlayStartDepthMm = inlayStart, InlayClearanceMm = inlayClearance,
+            SecondToolEnabled = second, SecondToolDiameter = secondDia, SecondDepthPerPass = secondPass,
+            SecondToolName = second && SecondTool is { } st && Math.Abs(st.Diameter - secondDia) < 1e-9 ? st.Name : null,
+            SecondFeedRate = _secondFeed ?? feed, SecondPlungeRate = _secondPlunge ?? plunge, SecondSpindleRpm = _secondRpm ?? rpm,
             Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
             FaceOverhangMm = CamFaceOverhang is not null && Parse(CamFaceOverhang, out var overhang) ? overhang : defaults.FaceOverhangMm,
             FaceAlongY = CamFaceDirection?.SelectedIndex == 1,
@@ -1502,7 +1525,7 @@ public partial class MainWindow : Window
             double max = VCarveToolpaths.MaxDepth(op);
             CamSummary.Text = $"V-carving · {F(op.ToolAngleDeg)}° V-fräs Ø {F(op.ToolDiameter)} mm · djupet följer formens bredd, högst {F(Math.Round(max, 2))} mm" +
                 (max < op.TotalDepth - 1e-9 ? " (fräsens full bredd)" : "") +
-                $" · bredare partier får plan botten · {F(op.DepthPerPass)} mm per pass";
+                $" · bredare partier får plan botten · {F(op.DepthPerPass)} mm per pass" + SecondSuffix(op);
             return;
         }
         if (error is null && op.Kind == CamOperationKind.Face)
@@ -1526,8 +1549,11 @@ public partial class MainWindow : Window
                 : "Hållflikar: " + (!op.UseTabs ? "Nej"
                     : op.TotalDepth >= _document.MaterialThickness - 1e-6
                         ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"
-                        : "används först vid genomskärning"));
+                        : "används först vid genomskärning")) + (error is null ? SecondSuffix(op) : "");
     }
+    private string SecondSuffix(CamOperation op) => !op.SecondToolEnabled ? "" : op.Kind == CamOperationKind.Pocket
+        ? $" · + detaljfräs Ø {F(op.SecondToolDiameter)} mm efteråt (hörn och smala partier)"
+        : $" · + rak fräs Ø {F(op.SecondToolDiameter)} mm först (breda bottnar)";
     private void SaveCam_Click(object sender, RoutedEventArgs e)
     {
         var op = ReadCam();

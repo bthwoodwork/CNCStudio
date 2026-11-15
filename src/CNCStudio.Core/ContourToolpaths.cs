@@ -52,6 +52,8 @@ public static class ContourToolpaths
         if (problem != null) throw new ArgumentException(problem);
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness);
+        if (operation.Kind is CamOperationKind.PocketRest or CamOperationKind.VCarveClear)
+            return CamSecondPass.Generate(shape, operation, materialThickness);
         if (operation.Kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug)
             return VCarveToolpaths.Generate(shape, operation, materialThickness);
         if (operation.Kind == CamOperationKind.Drill)
