@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.34)
+﻿# CNC Studio – källkod (senaste: 0.9.35)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.35 – Planhetskontroll
+
+- **Planhet…** i maskinpanelen, även under Maskin → *Planhetskontroll…*. Fräsen probar 5 eller 9 punkter över det markerade, eller över hela materialet, med den vanliga probplattan.
+  - Programmet guidar en punkt i taget: fräsen åker dit, du lägger plattan under och klickar *Proba*. Du kan hoppa över punkter.
+- **Rapporten** visar:
+  - skillnaden mellan högsta och lägsta punkt, och varje punkts höjd jämfört med medel,
+  - om ojämnheten är **lutning** (materialet ligger snett) eller **buktighet** (kupat eller skevt). Det räknas fram med ett anpassat plan.
+- **Vad det betyder för jobbet.** Med en V-fräs i projektet anges hur mycket smalare spåren blir där ytan ligger lägst. Rapporten föreslår också vad du kan göra: kontrollera underlaget, planfräsa offerskivan, hyvla eller planfräsa ytan.
+- Z-nollan ändras inte. Rapporten föreslår att du nollar på den högsta punkten.
+- Full höjdkarta med autonivellering har flyttats till *Kanske senare*. Den kräver en 3D-touchprob som känner av trä.
+- Logiken finns i `Flatness` och `ProbeCycle.ProbeSurfaceHereAsync` (Core) med tester, bland annat probning på demomaskinen.
 
 ## 0.9.34 – Nesting och figurbank
 
