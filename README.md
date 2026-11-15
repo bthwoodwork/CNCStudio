@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.42)
+﻿# CNC Studio – källkod (senaste: 0.9.43)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.43 – Smal verktygslist och kortare fräsningspanel
+
+- **Rita** är nu en **smal list** längs vänsterkanten, som i gSender: en ikon med kort text under, och hela namnet i verktygstipset. Ritytan får mer plats.
+  - Knapparna i listan är: Markera, Rektangel, Ellips, Linje, Text, Figurer, Bild, 3D, Importera, Snap │ Kombinera ▾, Justera ▾, Offset, Rutnät, Packa │ Duplicera och Ta bort.
+  - **Kombinera ▾** öppnar en meny med Förena, Subtrahera, Skärning, XOR och Kontrollera vektorer.
+  - **Justera ▾** öppnar en meny med de sex justeringarna och Fördela i sidled och höjdled.
+  - *Stäng linje* ligger kvar i Rita-menyn. Enter stänger också en polylinje.
+- **Fräsning** har blivit kortare. De numrerade rubrikerna är borta och korten ligger tätare. Nedmatning och fräsriktning ligger under en hopfälld rad, **AVANCERAT**.
+- Den sparade fönsterlayouten byter namn igen (`fönsterlayout-4.xml`), så att den smala listan får rätt bredd.
 
 ## 0.9.42 – Design: jobbpanel och lugnare paneler
 

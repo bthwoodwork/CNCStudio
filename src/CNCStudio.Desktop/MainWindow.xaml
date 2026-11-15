@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.42 – jobbpanel" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.43 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -189,49 +189,43 @@
   <ad:DockingManager.Theme><ad:Vs2013DarkTheme/></ad:DockingManager.Theme>
   <ad:LayoutRoot>
    <ad:LayoutPanel Orientation="Horizontal">
-    <ad:LayoutAnchorablePane DockWidth="160">
-     <ad:LayoutAnchorable ContentId="Tools" Title="Ritverktyg" CanClose="False" CanHide="True" FloatingWidth="184" FloatingHeight="700">
- <Border x:Name="ToolsPanel" Background="#243447" BorderBrush="#50657D" BorderThickness="0,0,1,0">
-    <DockPanel><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><Border Padding="10"><StackPanel>
- <TextBlock Text="RITA" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,5,0,7"/>
- <Button x:Name="SelectToolButton" Content="Markera" local:Ui.Icon="&#xE7C9;" Click="SelectTool_Click" ToolTip="Markera objekt direkt med vänsterklick"/>
- <Button x:Name="RectangleToolButton" Content="Rektangel" local:Ui.Icon="&#xE739;" Click="RectangleTool_Click"/>
- <Button x:Name="EllipseToolButton" Content="Ellips" local:Ui.Icon="&#xEA3A;" Click="EllipseTool_Click"/>
- <Button x:Name="PolylineToolButton" Content="Polylinje" local:Ui.Icon="&#xE70F;" Click="PolylineTool_Click"/>
- <Button Content="Stäng linje" local:Ui.Icon="&#xE73E;" Click="ClosePolyline_Click"/>
- <Button Content="Figurer…" local:Ui.Icon="&#xE734;" Click="Figure_Click" ToolTip="Figurbank: stjärna, polygon, hjärta, pil, ring, rundad rektangel"/>
- <Button Content="3D (STL)…" local:Ui.Icon="&#xE81E;" Click="ImportStl_Click" ToolTip="3D-modell från STL – fräses i rader (grov- och finfräsning)"/>
- <Button Content="Bild…" local:Ui.Icon="&#xEB9F;" Click="ImageTrace_Click" ToolTip="Bild till vektor: en logotyp, teckning eller silhuett (PNG, JPG …) blir en form att fräsa."/>
- <Button x:Name="TextToolButton" Content="Text…" Click="TextTool_Click" local:Ui.Icon="&#xE8D2;" ToolTip="Text med valfritt typsnitt – blir en form som kan fickfräsas eller skäras ut. Dubbelklicka på texten för att ändra den."/>
- <Separator Margin="0,9"/>
- <Button x:Name="SnapButton" Content="Snap: På" Click="ToggleSnap_Click"/>
- <TextBlock Text="OBJEKT" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,14,0,7"/>
- <Button Content="Förena" local:Ui.Icon="&#xE710;" Click="Union_Click"/>
- <Button Content="Subtrahera" local:Ui.Icon="&#xE738;" Click="Difference_Click"/>
- <Button Content="Skärning" local:Ui.Icon="&#xE71B;" Click="Intersection_Click"/>
- <Button Content="XOR" local:Ui.Icon="&#xE8AB;" Click="Xor_Click"/>
- <Button Content="Vektorkoll" local:Ui.Icon="&#xE9D9;" Click="VectorCheck_Click"/>
- <TextBlock Text="JUSTERA" FontSize="11" FontWeight="Bold" Foreground="#A5C0D9" Margin="0,10,0,4" ToolTip="Ett objekt: mot materialet. Flera: mot markeringen. En grupp flyttas som en del."/>
- <UniformGrid Columns="3">
-  <Button Content="⇤" Tag="Left" Click="Align_Click" ToolTip="Vänsterkant" Padding="0,3"/>
-  <Button Content="↔" Tag="CenterX" Click="Align_Click" ToolTip="Mitten i sidled" Padding="0,3"/>
-  <Button Content="⇥" Tag="Right" Click="Align_Click" ToolTip="Högerkant" Padding="0,3"/>
-  <Button Content="⤒" Tag="Top" Click="Align_Click" ToolTip="Överkant" Padding="0,3"/>
-  <Button Content="↕" Tag="CenterY" Click="Align_Click" ToolTip="Mitten i höjdled" Padding="0,3"/>
-  <Button Content="⤓" Tag="Bottom" Click="Align_Click" ToolTip="Nederkant" Padding="0,3"/>
- </UniformGrid>
- <UniformGrid Columns="2">
-  <Button Content="Fördela ↔" Tag="H" Click="Distribute_Click" ToolTip="Lika mellanrum i sidled (minst tre objekt)" Padding="0,3"/>
-  <Button Content="Fördela ↕" Tag="V" Click="Distribute_Click" ToolTip="Lika mellanrum i höjdled (minst tre objekt)" Padding="0,3"/>
- </UniformGrid>
- <Button Content="Offset…" local:Ui.Icon="&#xE740;" Click="Offset_Click" ToolTip="Ny kontur utanför (+) eller innanför (−) formen – t.ex. en ram runt en text"/>
- <Button Content="Rutnät…" local:Ui.Icon="&#xE80A;" Click="GridCopies_Click" ToolTip="Kolumner × rader med mellanrum; CAM följer med"/>
- <Button Content="Packa…" local:Ui.Icon="&#xE7B8;" Click="Nest_Click" ToolTip="Nesting: packar de markerade delarna (eller alla) tätt på materialet efter sin verkliga form, vrider dem om det hjälper"/>
- <Separator Margin="0,9"/>
- <Button Content="Duplicera" local:Ui.Icon="&#xE8C8;" Click="Duplicate_Click"/>
- <Button Content="Ta bort" Click="Delete_Click" local:Ui.Icon="&#xE74D;"/>
- </StackPanel></Border></ScrollViewer></DockPanel>
-   </Border>
+    <ad:LayoutAnchorablePane DockWidth="78">
+     <ad:LayoutAnchorable ContentId="Tools" Title="Rita" CanClose="False" CanHide="True" FloatingWidth="96" FloatingHeight="760">
+ <Border x:Name="ToolsPanel" Background="#1C2A39" BorderBrush="#3C5167" BorderThickness="0,0,1,0">
+ <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="4,6">
+  <StackPanel.Resources><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Margin" Value="0,2"/><Setter Property="MinHeight" Value="50"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style></StackPanel.Resources>
+  <Button x:Name="SelectToolButton" Content="Markera" local:Ui.Icon="&#xE7C9;" local:Ui.Rail="True" Click="SelectTool_Click" ToolTip="Markera och flytta (Esc)"/>
+  <Button x:Name="RectangleToolButton" Content="Rektangel" local:Ui.Icon="&#xE739;" local:Ui.Rail="True" Click="RectangleTool_Click"/>
+  <Button x:Name="EllipseToolButton" Content="Ellips" local:Ui.Icon="&#xEA3A;" local:Ui.Rail="True" Click="EllipseTool_Click"/>
+  <Button x:Name="PolylineToolButton" Content="Linje" local:Ui.Icon="&#xE70F;" local:Ui.Rail="True" Click="PolylineTool_Click" ToolTip="Polylinje: klicka punkter, Enter = sluten, högerklick = öppen"/>
+  <Button x:Name="TextToolButton" Content="Text" local:Ui.Icon="&#xE8D2;" local:Ui.Rail="True" Click="TextTool_Click" ToolTip="Text med valfritt typsnitt. Dubbelklicka på en text för att ändra den."/>
+  <Button Content="Figurer" local:Ui.Icon="&#xE734;" local:Ui.Rail="True" Click="Figure_Click" ToolTip="Figurbank: stjärna, polygon, hjärta, pil, ring, rundad rektangel"/>
+  <Button Content="Bild" local:Ui.Icon="&#xEB9F;" local:Ui.Rail="True" Click="ImageTrace_Click" ToolTip="Bild till vektor: logotyp, teckning eller silhuett blir en form"/>
+  <Button Content="3D" local:Ui.Icon="&#xE81E;" local:Ui.Rail="True" Click="ImportStl_Click" ToolTip="3D-modell från STL – fräses i rader"/>
+  <Button Content="Importera" local:Ui.Icon="&#xE896;" local:Ui.Rail="True" Click="ImportVector_Click" ToolTip="Importera SVG / DXF (Ctrl+I)"/>
+  <Button x:Name="SnapButton" Content="Snap på" local:Ui.Icon="&#xE879;" local:Ui.Rail="True" Click="ToggleSnap_Click" ToolTip="Snappning till hörn, ändpunkter och rutnät – klicka för att slå av eller på"/>
+  <Border Height="1" Background="#3C5167" Margin="6,6"/>
+  <Button Content="Kombinera" local:Ui.Icon="&#xE71B;" local:Ui.Rail="True" Click="RailMenu_Click" ToolTip="Förena, subtrahera, skärning, XOR – för flera markerade former">
+   <Button.ContextMenu><ContextMenu>
+    <MenuItem Header="Förena" Click="Union_Click"/><MenuItem Header="Subtrahera" Click="Difference_Click"/><MenuItem Header="Skärning" Click="Intersection_Click"/><MenuItem Header="XOR" Click="Xor_Click"/>
+    <Separator/><MenuItem Header="Kontrollera vektorer" Click="VectorCheck_Click"/>
+   </ContextMenu></Button.ContextMenu>
+  </Button>
+  <Button Content="Justera" local:Ui.Icon="&#xE8E4;" local:Ui.Rail="True" Click="RailMenu_Click" ToolTip="Justera och fördela. Ett objekt: mot materialet. Flera: mot markeringen.">
+   <Button.ContextMenu><ContextMenu>
+    <MenuItem Header="Vänsterkant" Tag="Left" Click="Align_Click"/><MenuItem Header="Mitten i sidled" Tag="CenterX" Click="Align_Click"/><MenuItem Header="Högerkant" Tag="Right" Click="Align_Click"/>
+    <Separator/><MenuItem Header="Överkant" Tag="Top" Click="Align_Click"/><MenuItem Header="Mitten i höjdled" Tag="CenterY" Click="Align_Click"/><MenuItem Header="Nederkant" Tag="Bottom" Click="Align_Click"/>
+    <Separator/><MenuItem Header="Fördela i sidled" Tag="H" Click="Distribute_Click"/><MenuItem Header="Fördela i höjdled" Tag="V" Click="Distribute_Click"/>
+   </ContextMenu></Button.ContextMenu>
+  </Button>
+  <Button Content="Offset" local:Ui.Icon="&#xE740;" local:Ui.Rail="True" Click="Offset_Click" ToolTip="Ny kontur utanför (+) eller innanför (−) formen"/>
+  <Button Content="Rutnät" local:Ui.Icon="&#xE80A;" local:Ui.Rail="True" Click="GridCopies_Click" ToolTip="Kopior i rutnät: kolumner × rader med mellanrum; CAM följer med"/>
+  <Button Content="Packa" local:Ui.Icon="&#xE7B8;" local:Ui.Rail="True" Click="Nest_Click" ToolTip="Packa delarna tätt på materialet (nesting)"/>
+  <Border Height="1" Background="#3C5167" Margin="6,6"/>
+  <Button Content="Duplicera" local:Ui.Icon="&#xE8C8;" local:Ui.Rail="True" Click="Duplicate_Click" ToolTip="Duplicera (Ctrl+D)"/>
+  <Button Content="Ta bort" local:Ui.Icon="&#xE74D;" local:Ui.Rail="True" Click="Delete_Click" ToolTip="Ta bort (Delete)"/>
+ </StackPanel></ScrollViewer>
+</Border>
      </ad:LayoutAnchorable>
     </ad:LayoutAnchorablePane>
     <ad:LayoutPanel Orientation="Vertical">
@@ -599,7 +593,7 @@
             
             <StackPanel.Resources>
               <Style x:Key="CamSection" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="FontWeight" Value="Bold"/><Setter Property="Foreground" Value="#8CA3BA"/><Setter Property="Margin" Value="3,0,3,4"/></Style>
-              <Style x:Key="CamCard" TargetType="Border"><Setter Property="Background" Value="#1C2A39"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Padding" Value="8,8,8,6"/><Setter Property="Margin" Value="0,0,0,10"/></Style>
+              <Style x:Key="CamCard" TargetType="Border"><Setter Property="Background" Value="#1C2A39"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Padding" Value="8,6,8,4"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
               <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="#BDCEE0"/><Setter Property="Margin" Value="3,0,3,0"/></Style>
             </StackPanel.Resources>
 
@@ -610,7 +604,6 @@
 
             <StackPanel x:Name="CamSettingsPanel">
             <!-- 1. What and with what -->
-            <TextBlock Text="1 · BEARBETNING OCH FRÄS" Style="{StaticResource CamSection}"/>
             <Border Style="{StaticResource CamCard}">
               <StackPanel>
                 <TextBlock Text="Bearbetning" Style="{StaticResource FieldLabel}"/>
@@ -637,7 +630,6 @@
             </Border>
 
             <!-- 2. How deep -->
-            <TextBlock Text="2 · DJUP" Style="{StaticResource CamSection}"/>
             <Border Style="{StaticResource CamCard}">
               <StackPanel>
                 <Grid>
@@ -681,7 +673,6 @@
             </Border>
 
             <!-- 3. Speeds -->
-            <TextBlock Text="3 · MATNING OCH VARVTAL" Style="{StaticResource CamSection}"/>
             <Border Style="{StaticResource CamCard}">
               <StackPanel>
                 <Grid>
@@ -695,7 +686,7 @@
             </Border>
 
             <!-- 4. Entry and direction (details) -->
-            <Expander x:Name="CamAdvancedExpander" Header="4 · NEDMATNING OCH FRÄSRIKTNING" IsExpanded="False" Margin="0,0,0,10">
+            <Expander x:Name="CamAdvancedExpander" Header="AVANCERAT · nedmatning och fräsriktning" IsExpanded="False" Margin="0,0,0,10">
               <Border Style="{StaticResource CamCard}" Margin="0,4,0,0">
                 <StackPanel>
                   <Grid x:Name="PlungeModePanel">
