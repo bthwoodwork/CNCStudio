@@ -358,12 +358,12 @@ public partial class MainWindow : Window
             case Workspace.Design:
                 SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false);
                 SetPanelVisible("Run", false); SetPanelVisible("MachineExtras", false);
-                SetPanelVisible("Tools", true); SetPanelVisible("Properties", true); SetPanelVisible("Cam", true);
+                SetPanelVisible("Tools", true); SetPanelVisible("Properties", true); SetPanelVisible("Cam", true); SetPanelVisible("CamJob", true);
                 if (cam && Anchorable("Cam") is { } c) c.IsActive = true;
                 StatusText.Text = "Design – rita, och välj till höger hur den markerade formen ska fräsas.";
                 break;
             case Workspace.Machine:
-                SetPanelVisible("Tools", false); SetPanelVisible("Cam", false);
+                SetPanelVisible("Tools", false); SetPanelVisible("Cam", false); SetPanelVisible("CamJob", false);
                 // Like gSender: the machine control on the right, program, run and the tool tabs under the view.
                 // Makron first, so "Probning och mer" is the tab in front in their shared pane.
                 SetPanelVisible("Properties", false);  // material, fixtures and Z: Probning och mer → Material och fastspänningar…
@@ -893,8 +893,10 @@ public partial class MainWindow : Window
                 DesignCanvas.Children.Add(marker);
             }
         }
+        // Nothing selected: the object's (empty) fields fold away so project and material show in full.
+        if (ObjectExpander is not null) ObjectExpander.IsExpanded = _selected is not null;
         SelectedLabel.Text = _selected is null ? "Inget objekt markerat" :
-            _selection.Count > 1 ? $"{_selection.Count} objekt markerade (visar aktivt)" : _selected.Kind.ToString();
+            _selection.Count > 1 ? $"{_selection.Count} objekt markerade (visar aktivt)" : CamPlanner.Label(_document, _selected);
         XBox.Text = _selected is null ? "" : F(_selected.X);
         YBox.Text = _selected is null ? "" : F(_selected.Y);
         WidthBox.Text = _selected is null ? "" : F(_selected.Width);
@@ -1355,7 +1357,9 @@ public partial class MainWindow : Window
         _loadingCam = true;
         try
         {
-            CamSelectionLabel.Text = _selected is null ? "Markera ett objekt för att tilldela CAM."
+            // The settings show only for a selected shape; without one, just the hint (the job list is its own panel).
+            if (CamSettingsPanel is not null) CamSettingsPanel.Visibility = _selected is null ? Visibility.Collapsed : Visibility.Visible;
+            CamSelectionLabel.Text = _selected is null ? "Markera en form på ritytan för att välja hur den ska fräsas. Alla operationer finns i panelen Jobb under ritytan."
                 : _selection.Count > 1 ? $"Markerat: {_selection.Count} objekt – inställningarna gäller {CamPlanner.Label(_document, _selected)}"
                 : $"Markerat: {CamPlanner.Label(_document, _selected)} · {_selected.Width:0.###} × {_selected.Height:0.###} mm";
             var operation = _selected is null ? null : _document.CamOperations.FirstOrDefault(o => o.ShapeId == _selected.Id);
