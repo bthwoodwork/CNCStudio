@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.33)
+﻿# CNC Studio – källkod (senaste: 0.9.34)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,17 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.34 – Nesting och figurbank
+
+- **Packa på materialet…** (nesting) finns under OBJEKT och i Objekt-menyn. Det packar de markerade delarna, eller alla om inget är markerat, tätt på materialet.
+  - Delarna packas efter sin **verkliga form**, inte bara den omgivande rektangeln. Till exempel blir två trianglar en rektangel.
+  - De största delarna placeras först, så långt bak till vänster som möjligt, och skjuts sedan upp och åt vänster så långt de glider.
+  - Du väljer avstånd mellan delarna och till kanten. Förslaget är största fräsen plus 2 mm, så att spåret mellan delarna ryms.
+  - Delarna får vridas 90/180/270° om du tillåter det. En grupp packas som en del. En vriden text blir en vanlig form.
+  - Delar som inte får plats står kvar och listas.
+- **Figurbank…** (knappen *Figurer…* under RITA och i Rita-menyn): stjärna, polygon, hjärta, pil, ring och rundad rektangel. Du väljer bredd och höjd, antal spetsar eller sidor, inre storlek och hörnradie, och ser en förhandsvisning direkt. Figuren hamnar mitt på materialet.
+- Logiken finns i `Nesting` och `Figures` (Core) med tester: ingen överlappning, rotation när något inte får plats annars, verklig form, figurernas storlek.
 
 ## 0.9.33 – Justera, fördela, offset och kopior
 
