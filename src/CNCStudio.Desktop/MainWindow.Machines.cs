@@ -58,7 +58,7 @@ public partial class MainWindow
             else if (!MachineLibrary.IsDemo(p) && PortPicker.SelectedItem as string == DemoPort && ports.FirstOrDefault(x => x != DemoPort) is string real)
                 PortPicker.SelectedItem = real;
         }
-        RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields(); Render();
+        RefreshMachineSummary(); RefreshMotionFields(); ShowStockFields(); RefreshLocations(); Render();
         RefreshJobHistory();
     }
 

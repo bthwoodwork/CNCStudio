@@ -225,7 +225,7 @@ public partial class MainWindow : Window
         InitDocking();   // the saved panel layout, before the workspace decides which panels are shown
         RefreshMacroList();
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
-        FitToMaterial(); InitGrblUi(); InitGamepad(); InitSettingsBackup();
+        FitToMaterial(); InitGrblUi(); InitGamepad(); InitSettingsBackup(); RefreshLocations();
         ShowStorageStatus();
         RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); RefreshMaterialPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);
@@ -1307,7 +1307,7 @@ public partial class MainWindow : Window
       NoMaterialText.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
       RefreshMachineSummary();
       ShowStockFields();
-      RefreshFixtureFields(); RefreshMotionFields(); SyncWorkZero(); RefreshMaterialPicker(); }
+      RefreshFixtureFields(); RefreshMotionFields(); SyncWorkZero(); RefreshMaterialPicker(); RefreshLocations(); }
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         // Without material the size fields are empty on purpose: the project is saved with its placeholders.
