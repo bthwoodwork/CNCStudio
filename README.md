@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.40)
+﻿# CNC Studio – källkod (senaste: 0.9.41)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.41 – Design-ytan: rita och fräsning på samma ställe
+
+- **Två arbetsytor** i stället för tre, som gSender plus designverktyg: **Design** (F1) och **Maskin** (F3). CAM är inte längre en egen arbetsyta.
+- I **Design** sitter, till höger och under varandra:
+  - **Egenskaper** överst: den markerade formens plats och storlek, samt projekt och material.
+  - **Fräsning** direkt under (tidigare Smart CAM): hur den markerade formen ska fräsas (kontur, ficka, V-carving, inlay, 3D …), fräs ur biblioteket, djup, matning och andra fräs. Längst ned finns hela projektets jobblista per fräs med kontrollen.
+  - Markerar du en form ser du alltså direkt både vad den är och hur den ska fräsas. Körbanorna visas på ritytan som förut.
+- **F2** öppnar Design med Fräsning i fokus. Knappar och meddelanden som tidigare ledde till "CAM" leder hit.
+- Den sparade fönsterlayouten byter namn (`fönsterlayout-3.xml`), så alla får den nya standardlayouten en gång. Därefter sparas dina egna ändringar som vanligt.
 
 ## 0.9.40 – Maskin-ytan byggd som gSender
 

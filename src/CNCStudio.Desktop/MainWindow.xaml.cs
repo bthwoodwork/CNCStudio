@@ -347,21 +347,20 @@ public partial class MainWindow : Window
     /// </summary>
     private void SetWorkspace(Workspace ws)
     {
+        // Two workspaces, like gSender + design tools: Design (drawing AND how each shape is cut) and Maskin.
+        // "CAM" is no longer a workspace of its own: it opens Design with Fräsning in front.
+        bool cam = ws == Workspace.Cam;
+        if (cam) ws = Workspace.Design;
         _workspace = ws;
         SetMachineView(ws == Workspace.Machine);
         switch (ws)
         {
             case Workspace.Design:
-                SetPanelVisible("Tools", true); SetPanelVisible("Properties", true);
-                SetPanelVisible("Cam", false); SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false);
+                SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false);
                 SetPanelVisible("Run", false); SetPanelVisible("MachineExtras", false);
-                StatusText.Text = "Arbetsyta Design – rita och redigera på materialet.";
-                break;
-            case Workspace.Cam:
-                SetPanelVisible("Tools", true); SetPanelVisible("Properties", false);
-                SetPanelVisible("Machine", false); SetPanelVisible("Job", false); SetPanelVisible("Macros", false); SetPanelVisible("Cam", true);
-                SetPanelVisible("Run", false); SetPanelVisible("MachineExtras", false);
-                StatusText.Text = "Arbetsyta CAM – bearbetning och körbanor på materialet. Ingen G-code.";
+                SetPanelVisible("Tools", true); SetPanelVisible("Properties", true); SetPanelVisible("Cam", true);
+                if (cam && Anchorable("Cam") is { } c) c.IsActive = true;
+                StatusText.Text = "Design – rita, och välj till höger hur den markerade formen ska fräsas.";
                 break;
             case Workspace.Machine:
                 SetPanelVisible("Tools", false); SetPanelVisible("Cam", false);
@@ -372,7 +371,7 @@ public partial class MainWindow : Window
                 SetPanelVisible("Machine", true); SetPanelVisible("Job", true); SetPanelVisible("Run", true);
                 RefreshMacroList();
                 RefreshJobHistory();
-                StatusText.Text = "Arbetsyta Maskin – maskinbordet: materialplacering, fastspänningar och maskinstyrning.";
+                StatusText.Text = "Maskin – anslut, nolla, jogga och kör.";
                 break;
         }
         MarkWorkspace();
