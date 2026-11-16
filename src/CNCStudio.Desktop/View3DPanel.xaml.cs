@@ -38,9 +38,69 @@ public partial class View3DPanel : UserControl
     private CancellationTokenSource? _simulation;
     private bool _fitted;
 
+    // ---- Dragging the material on the table (left mouse button; right rotates, middle pans) ----
+
+    /// <summary>The material was dragged to a new place on the table: the new <see cref="CncDocument.Stock"/> X/Y.</summary>
+    public event Action<double, double>? StockMoved;
+    private CncDocument? _doc;
+    private Point3D? _dragFrom;
+    private Vector3D _dragDelta;
+
+    /// <summary>Where the pointer meets the material's top plane (z = 0), in the view's frame.</summary>
+    private Point3D? TopPlanePoint(Point screen)
+    {
+        var ray = Viewport3DHelper.GetRay(Scene.Viewport, screen);
+        return ray?.PlaneIntersection(new Point3D(0, 0, 0), new Vector3D(0, 0, 1));
+    }
+
+    private bool OverMaterial(Point screen) => _doc is { HasMaterial: true } d && _stockW > 0 &&
+        TopPlanePoint(screen) is Point3D p && p.X >= 0 && p.X <= d.MaterialWidth && p.Y >= 0 && p.Y <= d.MaterialHeight;
+
+    private void Scene_LeftDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var pos = e.GetPosition(Scene.Viewport);
+        if (!OverMaterial(pos) || TopPlanePoint(pos) is not Point3D start) return;
+        _dragFrom = start; _dragDelta = new Vector3D();
+        Scene.CaptureMouse(); e.Handled = true;
+    }
+
+    private void Scene_Move(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        var pos = e.GetPosition(Scene.Viewport);
+        if (_dragFrom is not Point3D from || _doc is not { } d)
+        {
+            Scene.Cursor = OverMaterial(pos) ? System.Windows.Input.Cursors.SizeAll : null;
+            return;
+        }
+        if (TopPlanePoint(pos) is not Point3D now) return;
+        // Keep the material on the work area: Stock.X grows with view X, Stock.Y (towards the front) with −view Y.
+        double dx = Math.Clamp(now.X - from.X, -d.Stock.X, Math.Max(0, d.Machine.WorkWidthMm - d.MaterialWidth) - d.Stock.X);
+        double dy = Math.Clamp(now.Y - from.Y, -(Math.Max(0, d.Machine.WorkLengthMm - d.MaterialHeight) - d.Stock.Y), d.Stock.Y);
+        _dragDelta = new Vector3D(dx, dy, 0);
+        var move = new TranslateTransform3D(_dragDelta);
+        foreach (var v in new Visual3D[] { _stock, _cuts, _plunges, _rapids, _zero }) v.Transform = move;
+        InfoText.Text = $"Material på bordet: X {F(d.Stock.X + dx)} · Y {F(d.Stock.Y - dy)} mm";
+    }
+
+    private void Scene_LeftUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_dragFrom is null) return;
+        _dragFrom = null;
+        Scene.ReleaseMouseCapture(); e.Handled = true;
+        foreach (var v in new Visual3D[] { _stock, _cuts, _plunges, _rapids, _zero }) v.Transform = null;
+        if (_doc is not { } d || _dragDelta.Length < 0.001) return;
+        // The scene is drawn in the material's frame: after the move the table shifts instead, so move the
+        // camera along with it and the picture stays where the drag left it.
+        if (Scene.Camera is ProjectionCamera camera) camera.Position -= _dragDelta;
+        StockMoved?.Invoke(d.Stock.X + _dragDelta.X, d.Stock.Y - _dragDelta.Y);
+    }
+
     public View3DPanel()
     {
         InitializeComponent();
+        Scene.PreviewMouseLeftButtonDown += Scene_LeftDown;
+        Scene.PreviewMouseMove += Scene_Move;
+        Scene.PreviewMouseLeftButtonUp += Scene_LeftUp;
         // The checkboxes may already have added layers while the XAML loaded; SetVisible never adds twice.
         SetVisible(_zero, true);
         Layer_Changed(this, new RoutedEventArgs());
@@ -52,6 +112,7 @@ public partial class View3DPanel : UserControl
     /// </summary>
     public void Show(CncDocument doc, CamReport report)
     {
+        _doc = doc;
         var key = SceneKey(doc, report);
         if (key == _shownKey && _fitted) return;
         _shownKey = key;
@@ -110,6 +171,7 @@ public partial class View3DPanel : UserControl
     /// <summary>A project without material: no stock, paths, fixtures or work zero – only the machine table.</summary>
     public void ShowEmpty(CncDocument doc)
     {
+        _doc = doc;
         var key = $"empty:{doc.Machine.WorkWidthMm}:{doc.Machine.WorkLengthMm}:{doc.Machine.HomeCorner}";
         if (_shownKey == key) return;
         _simulation?.Cancel();
