@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.45)
+﻿# CNC Studio – källkod (senaste: 0.9.46)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.46 – Flytta materialet i 3D-vyn
+
+- **Dra materialet med vänster musknapp** i 3D-vyn: markören blir ett flyttkors över materialet, och materialet, banorna och nollpunkten följer musen över bordet. Positionen visas medan du drar.
+- När du släpper uppdateras projektet som i 2D: ett ångrasteg, och 2D, Maskin och fräsningen följer med. Vyn står kvar där draget slutade.
+- Materialet hålls inom arbetsområdet. Höger musknapp roterar och mittenknappen panorerar som förut.
+- **Samma rutnät på bordet som i 2D:** 10 mm svaga, 50 mm mellan och 100 mm tydliga linjer, räknat från bordets bakre vänstra hörn som i 2D-vyerna (tidigare bara 100 mm från hemhörnet).
 
 ## 0.9.45 – Flytta materialet på bordet
 

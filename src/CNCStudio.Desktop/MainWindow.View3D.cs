@@ -30,4 +30,13 @@ public partial class MainWindow
         Update3DJob();
         Update3DTool();
     }
+
+    /// <summary>The material dragged in the 3D view: one undo step, then everything (2D, Maskin, CAM) follows.</summary>
+    private void MoveStockFrom3D(double x, double y)
+    {
+        RememberChange();
+        _document.Stock.X = x; _document.Stock.Y = y;
+        ShowStockFields();
+        Render();
+    }
 }

@@ -60,6 +60,18 @@ public class MachineTable3DTests
     }
 
     [Fact]
+    public void Table_grid_matches_the_2D_view_with_10_50_and_100_mm_lines()
+    {
+        var a = MachineTable3D.For(Doc(0, 0, HomeCorner.BackRight));      // 750 × 500 table
+        var (major, medium, minor) = MachineTable3D.TableGrid(a);
+        Assert.Equal(7 + 4, major.Count);                                // 100, 200 … across and along
+        Assert.Equal(7 + 5, medium.Count);                               // 50, 150 … 750 is the edge
+        Assert.Equal(74 + 49 - major.Count - medium.Count, minor.Count);
+        Assert.Contains(major, l => l.X0 == a.Left + 100);               // from the back-left corner like 2D
+        Assert.Contains(major, l => l.Y0 == a.Back - 100);
+    }
+
+    [Fact]
     public void Without_material_the_table_starts_at_the_origin()
     {
         var d = Doc(50, 100);
