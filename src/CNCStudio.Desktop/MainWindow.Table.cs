@@ -137,20 +137,23 @@ public partial class MainWindow
         if (!_homedThisSession || Grbl is null || st?.MPos is not { Length: >= 3 } mpos || st.State == "Alarm") { View3DPanel.ShowTool(null); return; }
         var (x, y, _, _) = ToolOnTable(mpos);
         var (vx, vy) = MachineTable3D.FromTable(MachineTable3D.For(_document), x, y);
-        // Height like X and Y: from where the machine really is (MPos), against a fixed reference for the material's
-        // top. Zeroing does not move the tool – it does not move the machine either. The reference is taken once from
-        // the work zero the machine has, and only probing (which measures the surface) moves it.
-        if (_toolZReference is null)
+        // Height like X and Y: from where the machine really is (MPos), against the machine table's surface – fixed, so
+        // zeroing (which does not move the machine) does not move the tool, and material added later lies on the table
+        // under it. The table is taken once from the work zero the machine has (Z0 = the material's top, or the table
+        // without material) and only probing, which measures the material's surface, moves it.
+        double thickness = _document.HasMaterial ? _document.MaterialThickness : 0;
+        if (_tableZReference is null)
         {
             double? workZ = st.WPos is { Length: >= 3 } w ? w[2] : _lastWco is { Length: >= 3 } wco ? mpos[2] - wco[2] : null;
-            if (workZ is double wz) _toolZReference = mpos[2] - wz;
+            if (workZ is double wz) _tableZReference = mpos[2] - wz - thickness;
         }
-        double? z = _toolZReference is double r ? mpos[2] - r : null;
+        // The scene has the material's top at 0 and the table at −thickness (MachineTable3D).
+        double? z = _tableZReference is double table ? mpos[2] - table - thickness : null;
         View3DPanel.ShowTool(new View3DPanel.ToolPosition(vx, vy, z));
     }
 
-    /// <summary>MPos Z drawn as the material's top in the 3D view (null until known; reset when disconnected).</summary>
-    private double? _toolZReference;
+    /// <summary>MPos Z of the machine table's surface for the 3D view (null until known; reset when disconnected).</summary>
+    private double? _tableZReference;
 
     /// <summary>Moves the marker on each status report – no redraw of the view.</summary>
     private void UpdateToolMarker()
