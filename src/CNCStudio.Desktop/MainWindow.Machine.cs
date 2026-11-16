@@ -305,7 +305,9 @@ public partial class MainWindow
             _selectedFixture = f; RefreshFixtureFields();
             if (!f.Locked) { _movingFixture = true; _machineDragOriginal = new Point(f.X, f.Y); MachineCanvas.CaptureMouse(); }
         }
-        else if (source is string tag && tag == "stock")
+        // Anything drawn on the material (shapes, toolpaths, the zero marker) still grabs the material.
+        else if ((source is string tag && tag == "stock") || (_document.HasMaterial && !_fixtureDrawing &&
+            new Rect(_document.Stock.X, _document.Stock.Y, _document.MaterialWidth, _document.MaterialHeight).Contains(p)))
         {
             _movingStock = true; _machineDragOriginal = new Point(_document.Stock.X, _document.Stock.Y);
             MachineCanvas.CaptureMouse(); _selectedFixture = null;
