@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.50 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.51 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -530,12 +530,14 @@
              <TextBlock x:Name="StockOriginText" Text="Mätt från hemhörnet." Foreground="#AFBDD0" FontSize="11" Margin="3,0" TextWrapping="Wrap"/>
             </StackPanel>
            </DockPanel>
+           <CheckBox x:Name="StockLockBox" Content="Lås materialet" Foreground="#E8F1FA" Margin="3,6,3,2" Checked="StockLock_Changed" Unchecked="StockLock_Changed"
+                     ToolTip="Låst material kan inte dras (i 2D eller 3D) eller få ny position förrän du låser upp det. Sparas med projektet."/>
            <Grid Margin="0,4,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
             <StackPanel><TextBlock Text="X (mm)"/><TextBox x:Name="StockXBox" Text="50" KeyDown="StockBox_KeyDown"/></StackPanel>
             <StackPanel Grid.Column="1"><TextBlock Text="Y (mm)"/><TextBox x:Name="StockYBox" Text="50" KeyDown="StockBox_KeyDown"/></StackPanel>
            </Grid>
-           <Button Content="Flytta materialet dit" Click="SaveMachineSetup_Click" ToolTip="Flytta materialet så att den valda punkten hamnar på X/Y (Enter i fälten gör samma sak)"/>
+           <Button x:Name="StockMoveButton" Content="Flytta materialet dit" Click="SaveMachineSetup_Click" ToolTip="Flytta materialet så att den valda punkten hamnar på X/Y (Enter i fälten gör samma sak)"/>
           </StackPanel>
          </Expander>
 

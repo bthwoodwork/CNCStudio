@@ -38,13 +38,13 @@ public partial class MainWindow
                 : StatusText.Text;
             UpdateStockCursor();
         }
-        View3DPanel?.SetStockSelection(on, CurrentStockAnchor);
+        View3DPanel?.SetStockSelection(on, CurrentStockAnchor, _document.Stock.Locked);
     }
 
     private void UpdateStockCursor()
     {
         if (DesignCanvas is null) return;
-        DesignCanvas.Cursor = _tool != Tool.Select ? Cursors.Cross : _stockSelected ? Cursors.SizeAll : null;
+        DesignCanvas.Cursor = _tool != Tool.Select ? Cursors.Cross : _stockSelected && !_document.Stock.Locked ? Cursors.SizeAll : null;
     }
 
     /// <summary>The selected material in 2D: a dashed frame and the chosen point.</summary>
@@ -67,7 +67,7 @@ public partial class MainWindow
         var parts = tag.Split(',');
         _stockAnchorChoice = new StockAnchor(int.Parse(parts[0]), int.Parse(parts[1]));
         ShowStockFields();
-        if (_stockSelected) { View3DPanel?.SetStockSelection(true, CurrentStockAnchor); Render(); }
+        if (_stockSelected) { View3DPanel?.SetStockSelection(true, CurrentStockAnchor, _document.Stock.Locked); Render(); }
     }
 
     private void StockBox_KeyDown(object sender, KeyEventArgs e)
@@ -90,19 +90,23 @@ public partial class MainWindow
         _loadingAnchor = false;
         StockAnchorText.Text = "Punkt: " + anchor.Name;
         StockOriginText.Text = $"X/Y mätt från hemhörnet ({CornerName(_document.Machine.HomeCorner)}).";
+        bool locked = _document.Stock.Locked;
+        _loadingAnchor = true; StockLockBox.IsChecked = locked; _loadingAnchor = false;
+        StockXBox.IsEnabled = StockYBox.IsEnabled = StockMoveButton.IsEnabled = !locked;
     }
 
     private void SaveMachineSetup_Click(object sender, RoutedEventArgs e)
     {
         if (!Parse(StockXBox, out var tx) || !Parse(StockYBox, out var ty))
         { Error("Ange giltiga materialkoordinater (X och Y i mm).", StockXBox); return; }
+        if (_document.Stock.Locked) { Error("Materialet är låst. Avmarkera Lås materialet först.", StockLockBox); return; }
         var (x, y) = CurrentStockAnchor.FromTable(_document.Machine, tx, ty, _document.MaterialWidth, _document.MaterialHeight);
         var oldStock = _document.Stock;
-        _document.Stock = new StockPlacement { X = x, Y = y };
+        _document.Stock = new StockPlacement { X = x, Y = y, Locked = oldStock.Locked };
         var error = MachineSetupValidation.StockProblem(_document);
         _document.Stock = oldStock;
         if (error is not null) { Error(error); return; }
-        RememberChange(); _document.Stock = new StockPlacement { X = x, Y = y };
+        RememberChange(); _document.Stock = new StockPlacement { X = x, Y = y, Locked = oldStock.Locked };
         _selectedFixture = null; Render();
         if (_machineView) FitToMaterial();
         StatusText.Text = $"Materialet flyttat: {CurrentStockAnchor.Name} på X {F(tx)} Y {F(ty)} från hemhörnet.";
@@ -122,5 +126,18 @@ public partial class MainWindow
         SetWorkspace(Workspace.Design);
         SetStockSelected(true); Render();
         FocusField(StockXBox, null, "Ändra X/Y och tryck Enter – eller dra det markerade materialet.");
+    }
+
+    private void StockLock_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loadingAnchor || StockLockBox is null) return;
+        bool locked = StockLockBox.IsChecked == true;
+        if (locked == _document.Stock.Locked) return;
+        RememberChange();
+        _document.Stock.Locked = locked;
+        StatusText.Text = locked ? "Materialet är låst och kan inte flyttas av misstag." : "Materialet är upplåst och kan flyttas.";
+        ShowStockFields(); UpdateStockCursor();
+        View3DPanel?.SetStockSelection(_stockSelected, CurrentStockAnchor, locked);
+        Render();
     }
 }

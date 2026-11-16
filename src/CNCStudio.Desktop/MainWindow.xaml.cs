@@ -1089,6 +1089,8 @@ public partial class MainWindow : Window
         bool onStock = _document.HasMaterial && !_machineView && _tool == Tool.Select && sourceTag is not DesignShape && sourceTag is not ResizeHandle
             && p.X >= 0 && p.Y >= 0 && p.X <= _document.MaterialWidth && p.Y <= _document.MaterialHeight;
         if (sourceTag is DesignShape or ResizeHandle && _stockSelected) SetStockSelected(false);
+        if (onStock && _stockSelected && Keyboard.Modifiers == ModifierKeys.None && _document.Stock.Locked)
+        { StatusText.Text = "Materialet är låst – avmarkera Lås materialet under Material på bordet för att flytta det."; e.Handled = true; return; }
         if (onStock && _stockSelected && Keyboard.Modifiers == ModifierKeys.None)
         {
             _stockDragStart = e.GetPosition(Viewport);
