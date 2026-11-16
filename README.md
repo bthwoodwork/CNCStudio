@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.51)
+﻿# CNC Studio – källkod (senaste: 0.9.52)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,19 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.52 – G-code-editor
+
+**Arkiv → G-code-editor…**, eller knappen *G-code-editor…* under Program i Maskin, öppnar ett eget fönster för G-code från Fusion, VCarve eller CNC Studio. Från knappen öppnas den laddade filen direkt.
+
+- **Redigera som text** med radnummer i statusraden och Ctrl+S / Ctrl+O. Ändringarna kontrolleras på samma sätt som *Öppna G-code-fil*: kommandon GRBL inte har, för långa rader och liknande visas direkt, tillsammans med utbredning, djup, matning och beräknad tid.
+- **Spegla** vänster–höger eller fram–bak, och **rotera** 90° moturs, 90° medurs eller 180°. Det görs kring banans mitt, så att banan stannar på samma ställe, eller kring X0 Y0.
+- **Flytta** banan ett valfritt antal mm, eller **till nollpunkten** så att banans främre vänstra hörn hamnar på X0 Y0.
+- **Kopior i rutnät:** kolumner och rader med valfritt avstånd. Förslaget är banans storlek plus 10 mm. Mellan kopiorna lyfts fräsen till programmets högsta Z innan den flyttar, och programslutet (M30) står bara efter sista kopian. Raderna körs fram och tillbaka så att fräsen inte korsar hela rutnätet.
+- Bara X och Y ändras. Z, matning och varvtal står kvar, och kommentarer följer med. Bågar (G2/G3, med I/J eller R) hanteras, och vid spegling byter de riktning. Både absolut (G90) och relativt läge (G91) fungerar, liksom rader som bara anger X eller bara Y.
+- **Ändras inte:** program i tum (G20), bågar i XZ- eller YZ-planet, och rader med G10, G28, G30 eller G92, där X/Y är en sparad position eller nollpunkt. Raden anges, och inget ändras. G53-rader (maskinkoordinater) lämnas som de är.
+- **Ångra ändring** tar tillbaka speglingar, rotationer, flyttar och kopior, en i taget.
+- **Ladda för körning** laddar texten som programmet som ska köras, även utan att spara, och visar Maskin. Starta gör samma kontroller mot maskinen som för alla program.
 
 ## 0.9.51 – Lås materialet, och rättat fel i 3D-vyn
 
