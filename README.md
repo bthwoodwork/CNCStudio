@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.54)
+﻿# CNC Studio – källkod (senaste: 0.9.55)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,17 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.55 – Linjaler i 2D och 3D
+
+- **Design (2D):** linjalerna visar nu **arbetskoordinater**. 0, markerat i blått, är materialets nollpunkt, alltså X0 Y0 i programmet, och Y växer bakåt som i G-coden. De går över hela vyn, även över bordet utanför materialet, med negativa värden där. Tidigare visade de bara materialet, räknat från dess bakre vänstra hörn.
+- **Maskin (2D):** linjaler har tillkommit. De mäter bordet i mm från hemhörnet, samma mått som fälten under *Material på bordet*. Hörnrutan visar *bord* i stället för *mm*.
+- **3D-vyn:** linjaler längs materialets främre och vänstra kant i arbetskoordinater, i träfärg, och längs bordets främre och vänstra kant i mm från hemhörnet, i blågrått.
+  - Ett streck var 10:e mm (finare på små material), ett mellanlångt vid halva steget och siffror med lagom täthet.
+  - Kryssrutan **Linjaler** i 3D-panelen visar eller döljer dem.
+  - Bordets linjal följer med när materialet dras.
+  - *Anpassa vy* zoomar fortfarande bara till materialet.
+- Strecken räknas ut i `RulerTicks` (Core), med tester.
 
 ## 0.9.54 – Inga hänvisningar till andra program
 

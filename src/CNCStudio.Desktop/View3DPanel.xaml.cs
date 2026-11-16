@@ -25,6 +25,8 @@ public partial class View3DPanel : UserControl
     private readonly ModelVisual3D _fixtures = new();
     private readonly ModelVisual3D _zero = new();
     private readonly ModelVisual3D _table = new();
+    private readonly ModelVisual3D _tableRuler = new();
+    private readonly ModelVisual3D _stockRuler = new();
     private readonly ModelVisual3D _tool = new();
     private bool _toolShown;
 
@@ -93,7 +95,7 @@ public partial class View3DPanel : UserControl
     // gives when the button is released, so nothing jumps.
     private Point3D _dragCamera;
 
-    private Visual3D[] TableFixed => new Visual3D[] { _table, _fixtures, _tool };
+    private Visual3D[] TableFixed => new Visual3D[] { _table, _tableRuler, _fixtures, _tool };
 
     private void Scene_LeftDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -178,6 +180,7 @@ public partial class View3DPanel : UserControl
         BuildFixtures(doc);
         BuildZero(doc);
         BuildTable(doc);
+        BuildStockRuler(doc);
         BuildSelectionMark();
         Layer_Changed(this, new RoutedEventArgs());
         if (!_fitted) { SetCamera(w, l, t); _fitted = true; }
@@ -234,7 +237,7 @@ public partial class View3DPanel : UserControl
         _simulation?.Cancel();
         _stock.Content = null; _fixtures.Children.Clear(); _zero.Children.Clear();
         _cuts.Points = new Point3DCollection(); _plunges.Points = new Point3DCollection(); _rapids.Points = new Point3DCollection();
-        _stockW = _stockL = 0; BuildSelectionMark();
+        _stockW = _stockL = 0; _stockRuler.Children.Clear(); BuildSelectionMark();
         BuildTable(doc);
         Layer_Changed(this, new RoutedEventArgs());
         var a = MachineTable3D.For(doc);
@@ -510,6 +513,7 @@ public partial class View3DPanel : UserControl
             FontWeight = FontWeights.Bold, FontSize = 13
         });
         InfoText.Text = $"Maskinbord {F(a.Width)} × {F(a.Length)} mm, rutor 10/50/100 mm som i 2D.";
+        BuildTableRuler(doc, a, z);
     }
 
     // ---- Live tool position ----
@@ -555,6 +559,69 @@ public partial class View3DPanel : UserControl
         Layer_Changed(this, new RoutedEventArgs());
     }
 
+    // ---- Rulers ----
+
+    private static readonly Color TableRulerColor = Color.FromRgb(0x9E, 0xB7, 0xD1), StockRulerColor = Color.FromRgb(0xE0, 0xB8, 0x84),
+        RulerZero = Color.FromRgb(0x6F, 0xB6, 0xFF);
+
+    /// <summary>
+    /// The table's rulers, outside its front and left edges: mm from the home corner, as in Maskin's 2D rulers and
+    /// the fields under Material på bordet.
+    /// </summary>
+    private void BuildTableRuler(CncDocument doc, MachineTable3D.Area a, double z)
+    {
+        _tableRuler.Children.Clear();
+        bool left = doc.Machine.HomeCorner is HomeCorner.BackLeft or HomeCorner.FrontLeft;
+        bool front = doc.Machine.HomeCorner is HomeCorner.FrontLeft or HomeCorner.FrontRight;
+        // value = sign·position + offset along each edge
+        double sx = left ? 1 : -1, ox = left ? -a.Left : a.Right;
+        double sy = front ? 1 : -1, oy = front ? -a.Front : a.Back;
+        AddRuler(_tableRuler, TableRulerColor, z + 0.1, alongX: true, edge: a.Front, outward: -1, from: a.Left, to: a.Right, sign: sx, offset: ox, size: 1.4);
+        AddRuler(_tableRuler, TableRulerColor, z + 0.1, alongX: false, edge: a.Left, outward: -1, from: a.Front, to: a.Back, sign: sy, offset: oy, size: 1.4);
+    }
+
+    /// <summary>The material's rulers, just outside its front and left edges at the top: work coordinates (0 = X0 Y0).</summary>
+    private void BuildStockRuler(CncDocument doc)
+    {
+        _stockRuler.Children.Clear();
+        if (!doc.HasMaterial) return;
+        double w = doc.MaterialWidth, l = doc.MaterialHeight;
+        double ox = doc.WorkZero == WorkZero.Center ? -w / 2 : 0, oy = doc.WorkZero == WorkZero.Center ? -l / 2 : 0;
+        AddRuler(_stockRuler, StockRulerColor, 0.2, alongX: true, edge: 0, outward: -1, from: 0, to: w, sign: 1, offset: ox, size: 1);
+        AddRuler(_stockRuler, StockRulerColor, 0.2, alongX: false, edge: 0, outward: -1, from: 0, to: l, sign: 1, offset: oy, size: 1);
+    }
+
+    /// <summary>
+    /// One ruler along an edge (alongX: the edge y = <paramref name="edge"/> from x = from to to; otherwise the edge
+    /// x = edge from y = from to to). Ticks point outwards; the value at a position p is sign·p + offset.
+    /// </summary>
+    private static void AddRuler(ModelVisual3D target, Color color, double z, bool alongX, double edge, int outward,
+        double from, double to, double sign, double offset, double size)
+    {
+        double length = Math.Abs(to - from);
+        double step = RulerTicks.LabelStep(length);
+        double gap = 2 * size, minorLen = 3 * size, mediumLen = 5 * size, majorLen = 8 * size;
+        var line = new Point3DCollection(); var zero = new Point3DCollection();
+        Point3D P(double along, double across) => alongX ? new Point3D(along, edge + outward * across, z) : new Point3D(edge + outward * across, along, z);
+        line.Add(P(from, gap)); line.Add(P(to, gap));
+        foreach (var t in RulerTicks.Between(sign * from + offset, sign * to + offset, step))
+        {
+            double p = (t.Value - offset) / sign;
+            double len = t.Labelled ? majorLen : t.Medium ? mediumLen : minorLen;
+            var target2 = t.Value == 0 ? zero : line;
+            target2.Add(P(p, gap)); target2.Add(P(p, gap + len));
+            if (t.Labelled)
+                target.Children.Add(new BillboardTextVisual3D
+                {
+                    Text = t.Value.ToString("0.##", CultureInfo.CurrentCulture), Position = P(p, gap + majorLen + 5 * size),
+                    Foreground = new SolidColorBrush(t.Value == 0 ? RulerZero : color), Background = Brushes.Transparent,
+                    FontSize = 11, FontWeight = t.Value == 0 ? FontWeights.Bold : FontWeights.Normal
+                });
+        }
+        target.Children.Add(new LinesVisual3D { Color = color, Thickness = 1, Points = line });
+        if (zero.Count > 0) target.Children.Add(new LinesVisual3D { Color = RulerZero, Thickness = 2, Points = zero });
+    }
+
     // ---- View ----
 
     private void SetCamera(double w, double l, double t, double x0 = 0, double y0 = 0, bool fitAll = false)
@@ -570,9 +637,12 @@ public partial class View3DPanel : UserControl
     private void Fit(double ms, bool includeTable)
     {
         bool hide = !includeTable && Scene.Children.Contains(_table);
+        bool hideRuler = !includeTable && Scene.Children.Contains(_tableRuler);
         if (hide) Scene.Children.Remove(_table);
+        if (hideRuler) Scene.Children.Remove(_tableRuler);
         Scene.ZoomExtents(ms);
         if (hide) Scene.Children.Insert(0, _table);
+        if (hideRuler) Scene.Children.Add(_tableRuler);
     }
 
     private void Layer_Changed(object sender, RoutedEventArgs e)
@@ -592,6 +662,8 @@ public partial class View3DPanel : UserControl
         SetVisible(_rapids, ShowRapids.IsChecked == true);
         SetVisible(_fixtures, ShowFixtures.IsChecked == true);
         SetVisible(_table, ShowTable?.IsChecked == true);
+        SetVisible(_tableRuler, ShowRulers?.IsChecked == true && ShowTable?.IsChecked == true);
+        SetVisible(_stockRuler, ShowRulers?.IsChecked == true);
         // See-through material must be drawn after the paths, or it hides them in the depth buffer.
         if (StockMode.SelectedIndex == 1 && Scene.Children.Contains(_stock)) { Scene.Children.Remove(_stock); Scene.Children.Add(_stock); }
     }

@@ -1,9 +1,9 @@
-﻿<Window x:Class="CNCStudio.Desktop.MainWindow"
+<Window x:Class="CNCStudio.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.54 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.55 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -245,7 +245,7 @@
   <Canvas x:Name="TopRuler" Height="30" VerticalAlignment="Top" Background="#283C50" IsHitTestVisible="False" ClipToBounds="True" Panel.ZIndex="10"/>
   <Canvas x:Name="LeftRuler" Width="38" HorizontalAlignment="Left" Background="#283C50" IsHitTestVisible="False" ClipToBounds="True" Panel.ZIndex="10"/>
   <Border x:Name="RulerCorner" Background="#283C50" Width="38" Height="30" HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" Panel.ZIndex="11">
-   <TextBlock Text="mm" FontSize="10" FontWeight="SemiBold" Foreground="#DAE8F5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+   <TextBlock x:Name="RulerCornerText" Text="mm" FontSize="10" FontWeight="SemiBold" Foreground="#DAE8F5" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="Design: arbetskoordinater (0 = materialets nollpunkt). Maskin: bordet mätt från hemhörnet."/>
   </Border>
   <local:View3DPanel x:Name="View3DPanel" Visibility="Collapsed" Panel.ZIndex="20"/>
   <Button x:Name="View3DToggle" Content="3D" Click="Toggle3D_Click" Panel.ZIndex="30" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,40,14,0" Width="56" Height="46" FontSize="16" FontWeight="Bold" Background="#2E7DD7" Foreground="White" BorderBrush="#7FB6F0" ToolTip="Växla mellan 2D-ritning och 3D-vy (F4)"/>

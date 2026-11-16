@@ -22,9 +22,8 @@ public partial class MainWindow
         _machineView = machine;
         DesignCanvas.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
         MachineCanvas.Visibility = machine ? Visibility.Visible : Visibility.Collapsed;
-        TopRuler.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
-        LeftRuler.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
-        RulerCorner.Visibility = LeftRuler.Visibility;
+        _rulerCache = null;      // the rulers measure the table here, the material's work coordinates in Design
+        if (RulerCornerText is not null) RulerCornerText.Text = machine ? "bord" : "mm";
         SetFixtureDrawing(false);
         Render();
         Dispatcher.BeginInvoke(new Action(FitToMaterial), System.Windows.Threading.DispatcherPriority.Loaded);
@@ -107,6 +106,7 @@ public partial class MainWindow
         }
         AddHomeMarker();
         AddToolMarker(); // live tool position, only after homing
+        RefreshRulers();
     }
 
     /// <summary>Marks the X/Y homing corner (top of the view = back of the machine).</summary>

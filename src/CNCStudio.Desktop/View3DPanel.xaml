@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="CNCStudio.Desktop.View3DPanel"
+<UserControl x:Class="CNCStudio.Desktop.View3DPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:h="http://helix-toolkit.org/wpf">
@@ -18,6 +18,8 @@
         <CheckBox x:Name="ShowFixtures" Content="Fastspänningar" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"/>
         <CheckBox x:Name="ShowToolPos" Content="Fräsens position" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"
                   ToolTip="Var fräsen står just nu (från maskinens statusrapporter), som korset i maskinvyn. Visas när maskinen är ansluten och homad."/>
+        <CheckBox x:Name="ShowRulers" Content="Linjaler" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"
+                  ToolTip="Linjaler längs materialets kanter (arbetskoordinater, 0 = nollpunkten) och bordets kanter (mm från hemhörnet)."/>
         <CheckBox x:Name="ShowTable" Content="Maskinbord (arbetsyta)" IsChecked="True" Foreground="#E8F1FA" Margin="0,2" Checked="Layer_Changed" Unchecked="Layer_Changed"
                   ToolTip="Maskinens arbetsområde ($130 × $131) under materialet, med rutnät från hemhörnet och HEM-markering – som maskinvyn i 2D."/>
         <UniformGrid Columns="2" Margin="0,8,0,0">
