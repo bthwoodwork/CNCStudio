@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.48 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.49 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -512,6 +512,33 @@
           </Expander>
          </StackPanel>
 
+         <!-- Both workspaces: where the material lies on the machine table, from a chosen point on it. -->
+         <Expander x:Name="StockPlacementExpander" Header="MATERIAL PÅ BORDET" IsExpanded="False" Margin="0,10,0,3">
+          <StackPanel>
+           <TextBlock Text="Klicka på materialet i 2D eller 3D för att markera det, och dra sedan. Eller ange var en punkt på materialet ska ligga:" TextWrapping="Wrap" Foreground="#AFBDD0" FontSize="11" Margin="3,0,3,6"/>
+           <DockPanel>
+            <Border DockPanel.Dock="Left" BorderBrush="#C8A06E" BorderThickness="1" CornerRadius="3" Background="#4A3D2E" Margin="3,2,10,2" Padding="2"
+                    ToolTip="Vilken punkt på materialet X/Y gäller: ett hörn, mitten av en kant eller mitten. Överst = bakre kanten.">
+             <Grid x:Name="StockAnchorGrid">
+              <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <RadioButton GroupName="StockAnchor" Grid.Row="0" Grid.Column="0" Tag="0,0" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="0" Grid.Column="1" Tag="1,0" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="0" Grid.Column="2" Tag="2,0" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="1" Grid.Column="0" Tag="0,1" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="1" Grid.Column="1" Tag="1,1" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="1" Grid.Column="2" Tag="2,1" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="2" Grid.Column="0" Tag="0,2" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="2" Grid.Column="1" Tag="1,2" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/><RadioButton GroupName="StockAnchor" Grid.Row="2" Grid.Column="2" Tag="2,2" Checked="StockAnchor_Checked" Margin="4" HorizontalAlignment="Center"/>
+             </Grid>
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+             <TextBlock x:Name="StockAnchorText" Text="Punkt: främre vänstra hörnet" Foreground="#E8F1FA" Margin="3,0,3,4" TextWrapping="Wrap"/>
+             <TextBlock x:Name="StockOriginText" Text="Mätt från hemhörnet." Foreground="#AFBDD0" FontSize="11" Margin="3,0" TextWrapping="Wrap"/>
+            </StackPanel>
+           </DockPanel>
+           <Grid Margin="0,4,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="X (mm)"/><TextBox x:Name="StockXBox" Text="50" KeyDown="StockBox_KeyDown"/></StackPanel>
+            <StackPanel Grid.Column="1"><TextBlock Text="Y (mm)"/><TextBox x:Name="StockYBox" Text="50" KeyDown="StockBox_KeyDown"/></StackPanel>
+           </Grid>
+           <Button Content="Flytta materialet dit" Click="SaveMachineSetup_Click" ToolTip="Flytta materialet så att den valda punkten hamnar på X/Y (Enter i fälten gör samma sak)"/>
+          </StackPanel>
+         </Expander>
+
          <!-- Maskin workspace: the machine table. -->
          <StackPanel x:Name="MachineSections" Visibility="Collapsed">
           <Expander Header="FASTSPÄNNINGAR" IsExpanded="True" Margin="0,0,0,3">
@@ -535,17 +562,6 @@
              <Button Content="Uppdatera" Click="SaveFixture_Click" ToolTip="Spara värdena för vald fastspänning"/>
              <Button Content="Ta bort" Click="DeleteFixture_Click" ToolTip="Ta bort vald fastspänning"/>
             </UniformGrid>
-           </StackPanel>
-          </Expander>
-          <Expander Header="MATERIALPLACERING" IsExpanded="True" Margin="0,10,0,3">
-           <StackPanel>
-            <TextBlock Text="Materialets position på maskinbordet. Du kan också dra materialet direkt i vyn." TextWrapping="Wrap" Foreground="#AFBDD0" FontSize="11" Margin="3,0,3,4"/>
-            <Grid>
-             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-             <StackPanel><TextBlock Text="X (mm)"/><TextBox x:Name="StockXBox" Text="50"/></StackPanel>
-             <StackPanel Grid.Column="1"><TextBlock Text="Y (mm)"/><TextBox x:Name="StockYBox" Text="50"/></StackPanel>
-            </Grid>
-            <Button Content="Spara materialplacering" Click="SaveMachineSetup_Click"/>
            </StackPanel>
           </Expander>
           <Expander x:Name="ZExpander" Header="Z-HÖJDER OCH Z-BRYTARE" IsExpanded="True" Margin="0,10,0,3">

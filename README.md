@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.48)
+﻿# CNC Studio – källkod (senaste: 0.9.49)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,14 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.49 – Markera materialet och välj positionspunkt
+
+- **Markera först, dra sedan:** ett klick på materialet markerar det, både i 2D-ritningen och i 3D-vyn. Materialet får en streckad, ljusblå ram, och i 3D en ram runt ovansidan. Därefter flyttar ett drag på materialet det på bordet. Ett klick utanför materialet, eller på en form, tar bort markeringen.
+- **Utan markering** fungerar ritytan som förut: ett drag på materialet ritar en markeringsruta för formerna.
+- **Positionspunkt (3 × 3):** under *Material på bordet* i Egenskaper väljer du vilken punkt på materialet X/Y gäller: ett hörn, mitten av en kant eller mitten. Fälten visar den punktens avstånd från hemhörnet. Skriver du in nya värden och trycker Enter, eller *Flytta materialet dit*, flyttas materialet så att just den punkten hamnar där. Punkten markeras med en prick i 2D och en kula i 3D.
+- *Material på bordet* finns nu i både Design och Maskin och öppnas när materialet markeras. Standardpunkten är hörnet närmast hemhörnet, som tidigare.
+- I Maskin-vyn dras materialet direkt, som förut.
 
 ## 0.9.48 – Lugnare materialflytt i 3D-vyn
 

@@ -40,12 +40,6 @@ public partial class MainWindow
         (OriginLeft ? tx : _document.Machine.WorkWidthMm - tx - w,
          OriginFront ? _document.Machine.WorkLengthMm - ty - h : ty);
 
-    private void ShowStockFields()
-    {
-        var (x, y) = ToTable(_document.Stock.X, _document.Stock.Y, _document.MaterialWidth, _document.MaterialHeight);
-        StockXBox.Text = F(x); StockYBox.Text = F(y);
-    }
-
     private static string CornerName(HomeCorner c) => c switch
     {
         HomeCorner.BackLeft => "bak vänster", HomeCorner.BackRight => "bak höger",
