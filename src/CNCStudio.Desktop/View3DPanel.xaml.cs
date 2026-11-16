@@ -56,11 +56,20 @@ public partial class View3DPanel : UserControl
     private bool OverMaterial(Point screen) => _doc is { HasMaterial: true } d && _stockW > 0 &&
         TopPlanePoint(screen) is Point3D p && p.X >= 0 && p.X <= d.MaterialWidth && p.Y >= 0 && p.Y <= d.MaterialHeight;
 
+    // The scene is drawn in the material's frame, so moving the material really moves the table the other way.
+    // During the drag the table (and what sits on it) is shifted by −delta and the camera by −delta too: on screen the
+    // table stays still and the material follows the pointer – and that is exactly the picture the rebuilt scene
+    // gives when the button is released, so nothing jumps.
+    private Point3D _dragCamera;
+
+    private Visual3D[] TableFixed => new Visual3D[] { _table, _fixtures, _tool };
+
     private void Scene_LeftDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         var pos = e.GetPosition(Scene.Viewport);
-        if (!OverMaterial(pos) || TopPlanePoint(pos) is not Point3D start) return;
-        _dragFrom = start; _dragDelta = new Vector3D();
+        if (Scene.Camera is not ProjectionCamera camera || !OverMaterial(pos) || TopPlanePoint(pos) is not Point3D start) return;
+        camera.BeginAnimation(ProjectionCamera.PositionProperty, null);      // no zoom animation left running
+        _dragFrom = start; _dragDelta = new Vector3D(); _dragCamera = camera.Position;
         Scene.CaptureMouse(); e.Handled = true;
     }
 
@@ -72,13 +81,18 @@ public partial class View3DPanel : UserControl
             Scene.Cursor = OverMaterial(pos) ? System.Windows.Input.Cursors.SizeAll : null;
             return;
         }
-        if (TopPlanePoint(pos) is not Point3D now) return;
+        e.Handled = true;
+        if (Scene.Camera is not ProjectionCamera camera || TopPlanePoint(pos) is not Point3D seen) return;
+        // The camera has been moved by −delta: the same screen point seen from where it started is +delta further.
+        var now = seen + _dragDelta;
         // Keep the material on the work area: Stock.X grows with view X, Stock.Y (towards the front) with −view Y.
-        double dx = Math.Clamp(now.X - from.X, -d.Stock.X, Math.Max(0, d.Machine.WorkWidthMm - d.MaterialWidth) - d.Stock.X);
-        double dy = Math.Clamp(now.Y - from.Y, -(Math.Max(0, d.Machine.WorkLengthMm - d.MaterialHeight) - d.Stock.Y), d.Stock.Y);
+        double maxX = Math.Max(0, d.Machine.WorkWidthMm - d.MaterialWidth), maxY = Math.Max(0, d.Machine.WorkLengthMm - d.MaterialHeight);
+        double dx = Math.Clamp(now.X - from.X, -d.Stock.X, Math.Max(-d.Stock.X, maxX - d.Stock.X));
+        double dy = Math.Clamp(now.Y - from.Y, Math.Min(d.Stock.Y, -(maxY - d.Stock.Y)), d.Stock.Y);
         _dragDelta = new Vector3D(dx, dy, 0);
-        var move = new TranslateTransform3D(_dragDelta);
-        foreach (var v in new Visual3D[] { _stock, _cuts, _plunges, _rapids, _zero }) v.Transform = move;
+        var shift = new TranslateTransform3D(-_dragDelta);
+        foreach (var v in TableFixed) v.Transform = shift;
+        camera.Position = _dragCamera - _dragDelta;
         InfoText.Text = $"Material på bordet: X {F(d.Stock.X + dx)} · Y {F(d.Stock.Y - dy)} mm";
     }
 
@@ -87,12 +101,13 @@ public partial class View3DPanel : UserControl
         if (_dragFrom is null) return;
         _dragFrom = null;
         Scene.ReleaseMouseCapture(); e.Handled = true;
-        foreach (var v in new Visual3D[] { _stock, _cuts, _plunges, _rapids, _zero }) v.Transform = null;
-        if (_doc is not { } d || _dragDelta.Length < 0.001) return;
-        // The scene is drawn in the material's frame: after the move the table shifts instead, so move the
-        // camera along with it and the picture stays where the drag left it.
-        if (Scene.Camera is ProjectionCamera camera) camera.Position -= _dragDelta;
-        StockMoved?.Invoke(d.Stock.X + _dragDelta.X, d.Stock.Y - _dragDelta.Y);
+        foreach (var v in TableFixed) v.Transform = null;
+        if (_doc is not { } d || _dragDelta.Length < 0.001)
+        {
+            if (Scene.Camera is ProjectionCamera camera) camera.Position = _dragCamera;
+            return;
+        }
+        StockMoved?.Invoke(d.Stock.X + _dragDelta.X, d.Stock.Y - _dragDelta.Y);   // rebuilds the table at −delta
     }
 
     public View3DPanel()
