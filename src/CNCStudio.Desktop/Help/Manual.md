@@ -160,6 +160,10 @@ Panelen **Jobb** (nedanför ritytan) visar alla operationer i körordning, grupp
 
 **Beräkna körbanor** räknar om stora former som inte räknas automatiskt.
 
+## Riggblad
+
+**Riggblad…** (i Jobb-panelen och under CAM) öppnar en sida i webbläsaren att skriva ut eller spara som PDF (*Skriv ut → Microsoft Print to PDF*): material och materialtyp, nollpunkt, placering på bordet, en ritning ovanifrån med formerna, körbanorna, fastspänningarna och X0 Y0, programmen i ordning med fräs, varvtal, matning, operationer, djup och tid, rutor att bocka av vid fräsbyten, en checklista före körning och det CAM-kontrollen varnar för.
+
 ## Inlay
 
 **CAM → Skapa inlay (hona + hane)…** gör en V-carve inlay: honan V-carvas i det här projektet och hanen blir ett eget, speglat projekt med rätt startdjup och spel för lim.

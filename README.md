@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.61)
+﻿# CNC Studio – källkod (senaste: 0.9.62)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.62 – Riggblad
+
+- **Riggblad…** finns i Jobb-panelen och under CAM. Alla körbanor räknas först, som vid export. Sedan öppnas en sida i webbläsaren som du skriver ut eller sparar som PDF (*Skriv ut → Microsoft Print to PDF*). Den är anpassad för A4. Sidan innehåller:
+  - Projektnamn, datum, version och beräknad körtid.
+  - Material med mått och typ, nollpunkt X0 Y0 och Z0, placering på bordet från hemhörnet, maskin, hur fräsen startas och antal program.
+  - En ritning ovanifrån: materialet, formerna, körbanorna, fastspänningarna och nollpunktens axlar, med bak och fram utmärkta.
+  - Varje program i körordning: fräs, diameter, typ, varvtal, matning och skärtid. En tabell visar objekt, bearbetning, djup, djup per pass och status. Vid fräsbyten finns rutor att bocka i: *Byt fräs* och *Nolla Z*.
+  - En checklista före körning, och CAM-kontrollens varningar och kritiska fel.
+- Sidan är fristående HTML med inbyggd SVG och CSS och sparas i `%TEMP%\CNC Studio`. Logiken finns i `SetupSheet` (Core), med test.
 
 ## 0.9.61 – Avisering
 
