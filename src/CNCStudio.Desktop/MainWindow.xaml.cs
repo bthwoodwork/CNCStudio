@@ -1559,6 +1559,8 @@ public partial class MainWindow : Window
             CamInlayClearance.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayClearanceMm : 0.05);
             CamDepth.Text = F(operation?.Kind == CamOperationKind.Chamfer ? operation.ChamferWidthMm : operation?.TotalDepth ?? _selected?.Model?.DepthMm ?? 6);
             FillChamferFields(operation);
+            CamOnionSkin.IsChecked = operation?.OnionSkinMm > 0;
+            CamOnionSkinMm.Text = F(operation?.OnionSkinMm > 0 ? operation.OnionSkinMm : 0.3);
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
             CamTabs.IsChecked = operation?.UseTabs ?? true;
             var defaults = new CamOperation();
@@ -1623,8 +1625,12 @@ public partial class MainWindow : Window
         if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
         if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
         CamTabs.Visibility = pocket || drill || face || vcarve || carve3d || chamfer ? Visibility.Collapsed : Visibility.Visible;
+        bool onion = CamOnionSkin?.IsChecked == true;
+        if (OnionSkinPanel is not null) OnionSkinPanel.Visibility = CamTabs.Visibility;
+        if (CamOnionSkinMm is not null) CamOnionSkinMm.IsEnabled = onion;
+        CamTabs.IsEnabled = !onion;
         CamDogbones.Visibility = drill || face || vcarve || carve3d || chamfer ? Visibility.Collapsed : Visibility.Visible;
-        TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && !carve3d && !chamfer && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && !carve3d && !chamfer && !onion && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         // Drilling plunges straight down, facing plunges beside the material: ramping does not apply.
         if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill || face ? Visibility.Collapsed : Visibility.Visible;
         if (CamPassLabel is not null) CamPassLabel.Text = drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
@@ -1717,6 +1723,11 @@ public partial class MainWindow : Window
             FaceCenterReachesLimits = kind == CamOperationKind.Face && CamFaceCenterReachesLimits?.IsChecked == true,
             Dogbones = kind is CamOperationKind.Inside or CamOperationKind.Outside or CamOperationKind.Pocket && CamDogbones?.IsChecked == true,
             Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
+        if (kind is CamOperationKind.Outside or CamOperationKind.Inside && CamOnionSkin?.IsChecked == true)
+        {
+            if (!Parse(CamOnionSkinMm, out var skin)) return null;
+            result.OnionSkinMm = skin;
+        }
         return ReadChamfer(result) ? result : null;
     }
     private void UpdateCamSummary()
@@ -1774,6 +1785,7 @@ public partial class MainWindow : Window
             $"{Math.Ceiling(op.TotalDepth / op.DepthPerPass):0} pass · " +
             (op.Kind == CamOperationKind.Pocket
                 ? $"stegning {F(op.StepoverPercent)} % ({F(op.ToolDiameter * op.StepoverPercent / 100)} mm)"
+                : op.OnionSkinMm > 0 ? $"Tunt sista lager {F(op.OnionSkinMm)} mm (inga flikar)"
                 : "Hållflikar: " + (!op.UseTabs ? "Nej"
                     : op.TotalDepth >= _document.MaterialThickness - 1e-6
                         ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"

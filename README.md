@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.64)
+﻿# CNC Studio – källkod (senaste: 0.9.65)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,14 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.65 – Tunt sista lager (onion skin)
+
+- **Tunt sista lager i stället för flikar (mm):** en kryssruta med tjocklek, standard 0,3 mm, för utvändig och invändig kontur. Vid genomskärning stannar sista passet så mycket ovanför botten. Delarna sitter kvar i ett tunt lager och skärs med kniv eller slipas loss efteråt. Det blir inga flikar att putsa bort.
+- Med valet ikryssat används inga hållflikar, och flikrutan är grå. Varningen om att en del kan lossna ersätts av en upplysning om lagret. Sammanfattningen visar *Tunt sista lager … mm*.
+- **Gränser:** lagret kan vara 0,05–2 mm och tunnare än skärdjupet. Det gäller bara genomskärningar.
+- Bara sista passets djup ändras. Rörelseplanen, G-coden, 3D-simuleringen och körtiden följer med.
+- Logiken finns i `OnionSkin` (Core), med tre tester: djupen och inga flikar, inget lager ger genomskärning med flikar, och ett lager utanför gränserna godtas inte.
 
 ## 0.9.64 – Fasning med V-fräs
 

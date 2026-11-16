@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.64 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.65 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -708,6 +708,11 @@
                 </StackPanel>
                 <CheckBox x:Name="CamDogbones" Content="Dogbones i innerhörn (för fogar)" Margin="4,10,4,0" Checked="CamInput_Changed" Unchecked="CamInput_Changed"
                           ToolTip="Ett runt urtag i varje skarpt innerhörn som fräsen inte når, så att en fyrkantig tapp eller del passar. Hålets hörn vid invändig kontur och ficka, delens innerhörn vid utvändig kontur."/>
+                <DockPanel x:Name="OnionSkinPanel" Margin="0,8,0,0">
+                  <TextBox x:Name="CamOnionSkinMm" DockPanel.Dock="Right" Width="56" Text="0.3" TextChanged="CamInput_Changed" ToolTip="Hur tjockt lager som lämnas kvar i botten, i mm (0,05–2)"/>
+                  <CheckBox x:Name="CamOnionSkin" Content="Tunt sista lager i stället för flikar (mm)" Margin="4,2" VerticalAlignment="Center" Checked="CamInput_Changed" Unchecked="CamInput_Changed"
+                            ToolTip="Genomskärningen stannar så här mycket ovanför botten. Delarna sitter kvar i ett tunt lager och skärs eller slipas loss efteråt – inga flikar att putsa bort."/>
+                </DockPanel>
                 <CheckBox x:Name="CamTabs" IsChecked="True" Content="Hållflikar (vid genomskärning)" Margin="4,10,4,4" Checked="CamInput_Changed" Unchecked="CamInput_Changed"/>
                 <Grid x:Name="TabSettingsPanel" Margin="18,0,0,2">
                   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>

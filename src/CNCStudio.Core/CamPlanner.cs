@@ -92,10 +92,13 @@ public static class CamOperationChecks
             list.Add(new CamFinding(CamSeverity.Info, "ThroughCut",
                 $"Genomskärning ({F(op.TotalDepth)} mm i {F(materialThickness)} mm material). " +
                 "Använd offerskiva och kontrollera Z-nollpunkten.", id));
-            if (contour && !op.UseTabs)
+            if (contour && op.OnionSkinMm > 0)
+                list.Add(new CamFinding(CamSeverity.Info, "OnionSkin",
+                    $"Tunt sista lager: {F(op.OnionSkinMm)} mm lämnas kvar i botten – skär eller slipa loss delen efteråt.", id));
+            else if (contour && !op.UseTabs)
                 list.Add(new CamFinding(CamSeverity.Warning, "LoosePart",
                     "Genomskärning utan hållflikar: den utskurna delen kan lossna och slungas iväg av fräsen.", id));
-            if (contour && op.UseTabs && op.TabHeight >= op.TotalDepth - 1e-9)
+            if (contour && op.UseTabs && op.OnionSkinMm <= 0 && op.TabHeight >= op.TotalDepth - 1e-9)
                 list.Add(new CamFinding(CamSeverity.Warning, "TabTooHigh",
                     $"Flikhöjden ({F(op.TabHeight)} mm) är lika stor som skärdjupet – vid flikarna skärs inget alls.", id));
         }
@@ -247,7 +250,7 @@ public sealed class CamPlanner
         if (known && !mayCompute) return null;
         CacheEntry entry;
         GenerationCount++;
-        try { entry = new CacheEntry(key, shape.X, shape.Y, Dogbones.Apply(CamDirection.Apply(_generator(shape, op, thickness), shape, op), shape, op), null); }
+        try { entry = new CacheEntry(key, shape.X, shape.Y, OnionSkin.Apply(Dogbones.Apply(CamDirection.Apply(_generator(shape, op, thickness), shape, op), shape, op), op, thickness), null); }
         catch (Exception ex) { entry = new CacheEntry(key, shape.X, shape.Y, null, ex.Message); } // fail closed
         _cache[CacheKey(op)] = entry;
         return entry;
@@ -378,7 +381,7 @@ public sealed class CamPlanner
         return string.Join("|", shape.Kind, R(shape.Width), R(shape.Height),
             shape.Contours?.Count ?? -1, ContourHash(shape),
             op.Kind, R(op.ToolDiameter), R(op.ToolAngleDeg), op.ToolKind, R(op.InlayStartDepthMm), R(op.InlayClearanceMm), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
-            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, op.Dogbones, R(op.ChamferWidthMm), R(thickness),
+            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, op.Dogbones, R(op.ChamferWidthMm), R(op.OnionSkinMm), R(thickness),
             op.SecondToolEnabled, R(op.SecondToolDiameter), op.SecondToolKind,
             shape.Model is { } model ? model.Hash + "/" + R(model.DepthMm) + "/" + model.Quarter : "",
             op.Parent is null ? "" : "parent:" + Fingerprint(shape, op.Parent, thickness));

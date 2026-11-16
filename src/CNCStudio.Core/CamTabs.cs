@@ -87,7 +87,7 @@ public static class CamTabs
     private const double MinGapFactor = 1.0;
 
     public static bool AppliesTo(CamOperation op, double materialThickness) =>
-        op.UseTabs && op.Kind is CamOperationKind.Outside or CamOperationKind.Inside &&
+        op.UseTabs && op.OnionSkinMm <= 0 && op.Kind is CamOperationKind.Outside or CamOperationKind.Inside &&
         op.TotalDepth >= materialThickness - 1e-6;
 
     /// <summary>
