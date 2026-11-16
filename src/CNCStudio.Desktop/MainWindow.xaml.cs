@@ -684,6 +684,35 @@ public partial class MainWindow : Window
     private static bool AtMultiple(double coordinate, double step)
         => Math.Abs(coordinate / step - Math.Round(coordinate / step)) < 0.00001;
 
+    private readonly Canvas _designTableLayer = new() { IsHitTestVisible = false };
+    private (double X, double Y, double W, double H, double Zoom, double Step)? _designTableCache;
+
+    /// <summary>The machine table drawn behind the material in the design view: placed so the material sits
+    /// where it is on the table (Stock.X/Y), with the table's 10/50/100 mm grid.</summary>
+    private void AddDesignTable()
+    {
+        double w = _document.Machine.WorkWidthMm, h = _document.Machine.WorkLengthMm;
+        double ox = -_document.Stock.X, oy = -_document.Stock.Y, step = Math.Max(GridStep(_zoom), 10);
+        var key = (ox, oy, w, h, _zoom, step);
+        if (_designTableCache != key)
+        {
+            _designTableCache = key;
+            _designTableLayer.Children.Clear();
+            _designTableLayer.Width = w; _designTableLayer.Height = h;
+            Canvas.SetLeft(_designTableLayer, ox); Canvas.SetTop(_designTableLayer, oy);
+            _designTableLayer.Children.Add(new Rectangle { Width = w, Height = h, Fill = CanvasTheme.MachineBed });
+            var c = CanvasTheme.GridColor;
+            Brush GridBrush(double v) => new SolidColorBrush(Color.FromArgb(
+                AtMultiple(v, 100) ? (byte)75 : AtMultiple(v, 50) ? (byte)45 : (byte)18, c.R, c.G, c.B));
+            for (double x = 0; x <= w && x / step < 3000; x += step)
+                _designTableLayer.Children.Add(new Line { X1 = x, Y1 = 0, X2 = x, Y2 = h, Stroke = GridBrush(x), StrokeThickness = 0.8 / _zoom });
+            for (double y = 0; y <= h && y / step < 3000; y += step)
+                _designTableLayer.Children.Add(new Line { X1 = 0, Y1 = y, X2 = w, Y2 = y, Stroke = GridBrush(y), StrokeThickness = 0.8 / _zoom });
+            _designTableLayer.Children.Add(new Rectangle { Width = w, Height = h, Stroke = CanvasTheme.MachineBedEdge, StrokeThickness = 1.2 / _zoom });
+        }
+        DesignCanvas.Children.Add(_designTableLayer);
+    }
+
     private void RefreshAdaptiveGrid()
     {
         var key = (_zoom, DesignOffset.X, DesignOffset.Y, Viewport.ActualWidth,
@@ -802,11 +831,21 @@ public partial class MainWindow : Window
         DesignCanvas.Width = areaW;
         DesignCanvas.Height = areaH;
         DesignCanvas.Children.Clear();
-        DesignCanvas.Children.Add(_gridLayer);
-        RefreshAdaptiveGrid();
-        // Crisp material edge (constant 1 px on screen) – only when the project has material.
-        if (_document.HasMaterial) DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
-            Stroke = CanvasTheme.StockEdge, StrokeThickness = 1 / _zoom, IsHitTestVisible = false });
+        if (_document.HasMaterial)
+        {
+            // The machine table around the material (as in the 3D view), the material a solid block on it.
+            DesignCanvas.Background = CanvasTheme.DesignStock;
+            AddDesignTable();
+            DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
+                Fill = CanvasTheme.DesignStock, Stroke = CanvasTheme.DesignStockEdge, StrokeThickness = 1.4 / _zoom, IsHitTestVisible = false });
+        }
+        else
+        {
+            // No material: the work area itself is the table, with the drawing grid.
+            DesignCanvas.Background = CanvasTheme.Stock;
+            DesignCanvas.Children.Add(_gridLayer);
+            RefreshAdaptiveGrid();
+        }
         foreach (var s in _document.Shapes)
         {
             Shape element;

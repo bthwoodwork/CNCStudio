@@ -18,6 +18,9 @@ internal static class CanvasTheme
     // Material (stock) and grid
     public static readonly Brush Stock = B(255, 0x1B, 0x27, 0x34);
     public static readonly Brush StockEdge = B(255, 0x5D, 0x7A, 0x96);
+    // The material in the design view: a solid, warm wood tone on the table (like the 3D view).
+    public static readonly Brush DesignStock = B(255, 0x4A, 0x3D, 0x2E);
+    public static readonly Brush DesignStockEdge = B(255, 0xC8, 0xA0, 0x6E);
     public static readonly Color GridColor = Color.FromRgb(0x7F, 0xA3, 0xC6);
 
     // Design shapes
