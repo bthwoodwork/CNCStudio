@@ -135,6 +135,7 @@ Markera en form och öppna panelen **Fräsning** (F2):
 
 - **Fräs** väljs ur verktygsbiblioteket – diameter, matning, nedmatning, djup per pass och varvtal fylls i. Ändra fritt.
 - **Totalt djup** och **djup per pass**. Vid genomskärning läggs **hållflikar** (antal, bredd, höjd) så att delen sitter kvar.
+- **Flytta hållflikarna själv** – dra en gul flik längs banan i ritytan. Högerklicka på en flik för att ta bort den eller fördela flikarna jämnt igen, och på banan för att lägga till en flik där. Flikar som skulle hamna för nära en annan läggs inte ut.
 - **Tunt sista lager i stället för flikar** (genomskärning) – sista passet stannar t.ex. 0,3 mm ovanför botten. Delarna sitter kvar i ett tunt lager och skärs med kniv eller slipas loss efteråt – inga flikar att putsa bort.
 - **Stegning** för ficka och planfräsning.
 - **Fasa övre kanten med V-fräs** (kontur och ficka) – ett eget program med V-fräsen längs kanten innan delen skärs ut, medan den sitter fast. Välj V-fräs ur biblioteket och fasbredd.

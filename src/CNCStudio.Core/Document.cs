@@ -118,6 +118,12 @@ public sealed class CamOperation
     /// <summary>Through cut (outside/inside contour): stop this far above the bottom instead of tabs; 0 = off (<see cref="Core.OnionSkin"/>).</summary>
     public double OnionSkinMm { get; set; }
 
+    /// <summary>
+    /// Tabs placed by hand (dragged in the drawing), in mm from the shape's top-left corner; each lands on the nearest
+    /// point of the toolpath. Null or empty = the tabs are spread evenly (<see cref="TabCount"/>).
+    /// </summary>
+    public List<TabPoint>? ManualTabs { get; set; }
+
     // ---- Fasning med V-fräs ----
     /// <summary>Chamfer width at the top edge (Fasning, and the chamfer pass of a contour or pocket).</summary>
     public double ChamferWidthMm { get; set; } = 1.5;
@@ -156,6 +162,7 @@ public sealed class CamOperation
     public CamOperation CopyFor(Guid shapeId)
     {
         var copy = (CamOperation)MemberwiseClone();
+        copy.ManualTabs = ManualTabs?.Select(t => new TabPoint(t.X, t.Y)).ToList();
         copy.ShapeId = shapeId;
         return copy;
     }
@@ -399,6 +406,15 @@ public static class MotionValidation
             return "Slutpunktens X och Y måste vara tal.";
         return null;
     }
+}
+
+/// <summary>A hand-placed tab: a point in mm from its shape's top-left corner.</summary>
+public sealed class TabPoint
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+    public TabPoint() { }
+    public TabPoint(double x, double y) { X = x; Y = y; }
 }
 
 public sealed class StockPlacement

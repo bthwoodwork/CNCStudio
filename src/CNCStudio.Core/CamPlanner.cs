@@ -219,7 +219,7 @@ public sealed class CamPlanner
             findings.AddRange(PartClearance(document, shape, op, entry.Preview, geometryKeys));
             if (entry.Preview.IsPocket) findings.AddRange(PocketFindings(entry.Preview, op, shape));
             if (entry.Preview.IsVCarve) findings.AddRange(VCarveFindings(entry.Preview, op, shape));
-            var tabs = CamTabs.Plan(entry.Preview, op, document.MaterialThickness);
+            var tabs = CamTabs.Plan(entry.Preview, op, document.MaterialThickness, shape);
             findings.AddRange(TabFindings(op, shape, entry.Preview, tabs, document.MaterialThickness));
             results.Add(new CamOperationResult(op, shape, entry.Preview, findings, Tabs: tabs));
         }

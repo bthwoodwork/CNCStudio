@@ -96,7 +96,28 @@ public static class CamTabs
     /// </summary>
     public static double CenterlineLength(CamOperation op) => op.TabWidth + op.ToolDiameter;
 
-    public static IReadOnlyList<TabSpan> Plan(ContourPreview preview, CamOperation op, double materialThickness)
+    /// <summary>The point on the paths nearest to (x, y): which path, the arc length there and the distance.</summary>
+    public static (int Path, double S, double Distance) Nearest(IReadOnlyList<IReadOnlyList<CamPoint>> paths, double x, double y)
+    {
+        (int, double, double) best = (-1, 0, double.MaxValue);
+        for (int pi = 0; pi < paths.Count; pi++)
+        {
+            var p = paths[pi];
+            double run = 0;
+            for (int i = 1; i < p.Count; i++)
+            {
+                var a = p[i - 1]; var b = p[i];
+                double dx = b.X - a.X, dy = b.Y - a.Y, len2 = dx * dx + dy * dy, len = Math.Sqrt(len2);
+                double t = len2 < 1e-12 ? 0 : Math.Clamp(((x - a.X) * dx + (y - a.Y) * dy) / len2, 0, 1);
+                double qx = a.X + dx * t - x, qy = a.Y + dy * t - y, d = Math.Sqrt(qx * qx + qy * qy);
+                if (d < best.Item3) best = (pi, run + len * t, d);
+                run += len;
+            }
+        }
+        return best;
+    }
+
+    public static IReadOnlyList<TabSpan> Plan(ContourPreview preview, CamOperation op, double materialThickness, DesignShape? shape = null)
     {
         if (!AppliesTo(op, materialThickness)) return Array.Empty<TabSpan>();
         var paths = preview.Centerlines.Count > 0 ? preview.Centerlines :
@@ -104,6 +125,24 @@ public static class CamTabs
         double span = CenterlineLength(op);
         double top = Math.Max(0, op.TotalDepth - op.TabHeight);
         var tabs = new List<TabSpan>();
+        if (op.ManualTabs is { Count: > 0 } manual && shape is not null)
+        {
+            // Hand-placed: each on the path point nearest to where it was put; one that would overlap a tab
+            // already placed (or not fit on its path) is left out.
+            foreach (var m in manual)
+            {
+                var (pi, s, _) = Nearest(paths, shape.X + m.X, shape.Y + m.Y);
+                if (pi < 0) continue;
+                double perimeter = PathMath.Length(paths[pi]);
+                if (perimeter < span * (1 + MinGapFactor)) continue;
+                // Kept within the path (a tab right at the start point moves along a little) – the motion
+                // planner expects every tab between 0 and the path's length.
+                double start = Math.Clamp(s - span / 2, 0, perimeter - span), end = start + span;
+                bool overlaps = tabs.Any(t => t.PathIndex == pi && Math.Max(start - t.End, t.Start - end) < span * MinGapFactor);
+                if (!overlaps) tabs.Add(new TabSpan(pi, start, end, top));
+            }
+            return tabs;
+        }
         for (int pi = 0; pi < paths.Count; pi++)
         {
             double perimeter = PathMath.Length(paths[pi]);
@@ -120,5 +159,17 @@ public static class CamTabs
             }
         }
         return tabs;
+    }
+
+    /// <summary>The centres of the tabs as points in mm from the shape's top-left corner – to turn them into hand-placed tabs.</summary>
+    public static List<TabPoint> Centres(ContourPreview preview, IReadOnlyList<TabSpan> tabs, DesignShape shape)
+    {
+        var paths = preview.Centerlines.Count > 0 ? preview.Centerlines : new IReadOnlyList<CamPoint>[] { preview.Centerline };
+        return tabs.Where(t => t.PathIndex < paths.Count).Select(t =>
+        {
+            var path = paths[t.PathIndex];
+            var p = PathMath.PointAt(path, (t.Start + t.End) / 2);
+            return new TabPoint(Math.Round(p.X - shape.X, 3), Math.Round(p.Y - shape.Y, 3));
+        }).ToList();
     }
 }
