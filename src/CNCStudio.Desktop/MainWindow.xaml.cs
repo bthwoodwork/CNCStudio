@@ -684,6 +684,8 @@ public partial class MainWindow : Window
     private static bool AtMultiple(double coordinate, double step)
         => Math.Abs(coordinate / step - Math.Round(coordinate / step)) < 0.00001;
 
+    private Point? _stockDragStart;
+    private Point _stockDragOriginal, _stockDragOffset;
     private readonly Canvas _designTableLayer = new() { IsHitTestVisible = false };
     private (double X, double Y, double W, double H, double Zoom, double Step)? _designTableCache;
 
@@ -838,6 +840,10 @@ public partial class MainWindow : Window
             AddDesignTable();
             DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
                 Fill = CanvasTheme.DesignStock, Stroke = CanvasTheme.DesignStockEdge, StrokeThickness = 1.4 / _zoom, IsHitTestVisible = false });
+            // The material's edge is a handle: drag it to move the material on the table (shapes follow it).
+            DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
+                Stroke = Brushes.Transparent, StrokeThickness = 10 / _zoom, Tag = "stock", Cursor = Cursors.SizeAll,
+                ToolTip = "Dra i kanten för att flytta materialet på maskinbordet" });
         }
         else
         {
@@ -1072,6 +1078,13 @@ public partial class MainWindow : Window
     {
         var p = e.GetPosition(DesignCanvas);
         var sourceTag = (e.OriginalSource as FrameworkElement)?.Tag;
+        if (sourceTag is "stock" && _tool == Tool.Select && !_machineView)
+        {
+            _stockDragStart = e.GetPosition(Viewport);
+            _stockDragOriginal = new Point(_document.Stock.X, _document.Stock.Y);
+            _stockDragOffset = new Point(DesignOffset.X, DesignOffset.Y);
+            DesignCanvas.CaptureMouse(); e.Handled = true; return;
+        }
         var handle = sourceTag as ResizeHandle;
         var clicked = handle?.Shape ?? sourceTag as DesignShape;
         // An armed drawing tool draws on top of other objects too (a hole inside a rectangle);
@@ -1149,6 +1162,21 @@ public partial class MainWindow : Window
     }
     private void Canvas_Move(object sender, MouseEventArgs e)
     {
+        if (_stockDragStart is Point stockStart)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            var now = e.GetPosition(Viewport);
+            _document.Stock.X = Clamp(_stockDragOriginal.X + (now.X - stockStart.X) / _zoom, 0,
+                Math.Max(0, _document.Machine.WorkWidthMm - _document.MaterialWidth));
+            _document.Stock.Y = Clamp(_stockDragOriginal.Y + (now.Y - stockStart.Y) / _zoom, 0,
+                Math.Max(0, _document.Machine.WorkLengthMm - _document.MaterialHeight));
+            // The table stays where it is on screen; the material (and the view's origin) follows the pointer.
+            DesignOffset.X = MachineOffset.X = _stockDragOffset.X + (_document.Stock.X - _stockDragOriginal.X) * _zoom;
+            DesignOffset.Y = MachineOffset.Y = _stockDragOffset.Y + (_document.Stock.Y - _stockDragOriginal.Y) * _zoom;
+            Canvas.SetLeft(_designTableLayer, -_document.Stock.X); Canvas.SetTop(_designTableLayer, -_document.Stock.Y);
+            ShowStockFields(); RefreshRulers();
+            return;
+        }
         if (_marqueeActive)
         {
             if (e.LeftButton != MouseButtonState.Pressed) return;
@@ -1209,6 +1237,21 @@ public partial class MainWindow : Window
     }
     private void Canvas_Up(object sender, MouseButtonEventArgs e)
     {
+        if (_stockDragStart is not null)
+        {
+            _stockDragStart = null;
+            DesignCanvas.ReleaseMouseCapture();
+            double x = _document.Stock.X, y = _document.Stock.Y;
+            if (Math.Abs(x - _stockDragOriginal.X) > .001 || Math.Abs(y - _stockDragOriginal.Y) > .001)
+            {
+                // One undo step: record the position before the drag.
+                _document.Stock.X = _stockDragOriginal.X; _document.Stock.Y = _stockDragOriginal.Y;
+                RememberChange();
+                _document.Stock.X = x; _document.Stock.Y = y;
+            }
+            _designTableCache = null; ShowStockFields(); Render();
+            return;
+        }
         if (_marqueeActive)
         {
             _marqueeEnd = e.GetPosition(DesignCanvas);
