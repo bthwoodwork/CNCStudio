@@ -65,6 +65,7 @@ Verktygslisten till vänster (och menyn **Rita**):
 - **Rektangel**, **Ellips**, **Linje** (polylinje – dubbelklicka eller klicka på startpunkten för att avsluta).
 - **Text** – typsnitt, storlek och stil. Dubbelklicka på en text för att ändra den.
 - **Figurer** – stjärna, hjärta, polygon och andra färdiga former.
+- **Låda** – en låda med fingerskarvar: ange längd, bredd och höjd (ytter- eller innermått), ungefärlig fingerbredd, spel för lim och om den ska ha botten. Sidorna och botten läggs ut på materialet som en grupp, var och en med utskärning, hållflikar och dogbones, med den valda fräsens skärdata. Fingrarna går omlott så att varje hörn hör till en del.
 - **Bild** – gör en bild (foto, logga, skiss) till vektorer.
 - **3D** – en 3D-modell från STL som fräses i 3D.
 - **Importera** – SVG och DXF.
