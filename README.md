@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.63)
+﻿# CNC Studio – källkod (senaste: 0.9.64)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.64 – Fasning med V-fräs
+
+- **Bearbetningen Fasning (V-fräs):** V-fräsens spets följer formens kant. Du anger fasens bredd i djupfältet, som då heter *Fasbredd*, och djupet räknas ut från fräsens vinkel: bredd = djup × tan(vinkel/2). En 90°-fräs ger en 45°-fas som är lika djup som den är bred. Fasen kan inte vara bredare än halva fräsdiametern.
+- **Fasa övre kanten med V-fräs (körs först):** en kryssruta för utvändig kontur, invändig kontur och ficka. Du väljer V-fräs ur biblioteket (diameter, vinkel och skärdata för materialet hämtas därifrån) och fasbredd. Fasningen blir ett eget pass och ett eget program som körs **före** utskärningen, medan delen sitter fast. Sammanfattningen visar fasningen, och Jobb-panelen och riggbladet visar den som ett eget program.
+- Fasningen räknas inte som att banan skär in i andra delar. Den skär kanten med flit.
+- Logiken finns i `ChamferToolpaths` och `CamSecondPass.ChamferFor` (Core), med tre tester: djup för olika vinklar, att fasningen går före utskärningen med spetsen på kanten, och ett helt projekt med två program.
 
 ## 0.9.63 – Låda med fingerskarvar
 

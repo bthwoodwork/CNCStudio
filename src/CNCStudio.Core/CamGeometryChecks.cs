@@ -62,6 +62,8 @@ public static class CamGeometryChecks
             if (op.Kind is CamOperationKind.Pocket or CamOperationKind.Inside or CamOperationKind.Drill && LiesWithin(shape, other)) continue;
             // Facing cuts the top of everything under it on purpose (it runs first, before the parts are cut).
             if (op.Kind == CamOperationKind.Face) continue;
+            // A chamfer cuts the edge of its part on purpose; its waste side is the neighbour's cut-out band.
+            if (op.Kind == CamOperationKind.Chamfer) continue;
             // Quick reject: the tool band cannot reach the other part's bounding box.
             if (other.X > pMaxX + r || other.Y > pMaxY + r ||
                 other.X + other.Width < pMinX - r || other.Y + other.Height < pMinY - r) continue;

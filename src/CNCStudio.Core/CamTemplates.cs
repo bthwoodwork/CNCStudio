@@ -34,7 +34,7 @@ public sealed class CamTemplate
             {
                 CamOperationKind.Outside => "utvändig kontur", CamOperationKind.Inside => "invändig kontur", CamOperationKind.Pocket => "ficka",
                 CamOperationKind.Drill => "borrning", CamOperationKind.Face => "planfräsning", CamOperationKind.VCarve => "V-carving",
-                CamOperationKind.VCarvePlug => "inlay-hane", CamOperationKind.Carve3D => "3D-fräsning", _ => o.Kind.ToString()
+                CamOperationKind.VCarvePlug => "inlay-hane", CamOperationKind.Chamfer => "fasning", CamOperationKind.Carve3D => "3D-fräsning", _ => o.Kind.ToString()
             };
             string depth = ThroughMaterial ? "genom materialet" : $"{o.TotalDepth:0.##} mm djupt";
             return $"{kind}, {o.ToolName ?? $"Ø {o.ToolDiameter:0.###} mm"}, {depth}, {o.DepthPerPass:0.##} mm/pass, {o.FeedRate:0} mm/min";

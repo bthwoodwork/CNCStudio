@@ -1557,7 +1557,8 @@ public partial class MainWindow : Window
             _secondRpm = operation?.SecondToolEnabled == true ? operation.SecondSpindleRpm : null;
             SelectSecondTool(operation?.SecondToolName);
             CamInlayClearance.Text = F(operation?.Kind == CamOperationKind.VCarvePlug ? operation.InlayClearanceMm : 0.05);
-            CamDepth.Text = F(operation?.TotalDepth ?? _selected?.Model?.DepthMm ?? 6);
+            CamDepth.Text = F(operation?.Kind == CamOperationKind.Chamfer ? operation.ChamferWidthMm : operation?.TotalDepth ?? _selected?.Model?.DepthMm ?? 6);
+            FillChamferFields(operation);
             CamPass.Text = F(operation?.DepthPerPass ?? 2);
             CamTabs.IsChecked = operation?.UseTabs ?? true;
             var defaults = new CamOperation();
@@ -1596,8 +1597,16 @@ public partial class MainWindow : Window
         bool face = CamKind.SelectedIndex == (int)CamOperationKind.Face;
         bool carve3d = CamKind.SelectedIndex == (int)CamOperationKind.Carve3D;
         bool plug = CamKind.SelectedIndex == (int)CamOperationKind.VCarvePlug;
+        bool chamfer = CamKind.SelectedIndex == (int)CamOperationKind.Chamfer;
         bool vcarve = CamKind.SelectedIndex == (int)CamOperationKind.VCarve || plug;
-        if (VCarveAnglePanel is not null) VCarveAnglePanel.Visibility = vcarve ? Visibility.Visible : Visibility.Collapsed;
+        if (VCarveAnglePanel is not null) VCarveAnglePanel.Visibility = vcarve || chamfer ? Visibility.Visible : Visibility.Collapsed;
+        if (CamDepthLabel is not null) CamDepthLabel.Text = chamfer ? "Fasbredd (mm)" : "Totalt djup (mm)";
+        bool contourOrPocket = CamKind.SelectedIndex is (int)CamOperationKind.Outside or (int)CamOperationKind.Inside or (int)CamOperationKind.Pocket;
+        if (ChamferPanel is not null && CamChamferEnabled is not null && ChamferFields is not null)
+        {
+            ChamferPanel.Visibility = contourOrPocket ? Visibility.Visible : Visibility.Collapsed;
+            ChamferFields.Visibility = CamChamferEnabled.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        }
         if (InlayPlugPanel is not null) InlayPlugPanel.Visibility = plug ? Visibility.Visible : Visibility.Collapsed;
         if (SecondToolPanel is not null && CamSecondEnabled is not null && SecondToolFields is not null && CamSecondHint is not null)
         {
@@ -1613,9 +1622,9 @@ public partial class MainWindow : Window
         PocketSettingsPanel.Visibility = pocket || face || carve3d ? Visibility.Visible : Visibility.Collapsed;
         if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
         if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
-        CamTabs.Visibility = pocket || drill || face || vcarve || carve3d ? Visibility.Collapsed : Visibility.Visible;
-        CamDogbones.Visibility = drill || face || vcarve || carve3d ? Visibility.Collapsed : Visibility.Visible;
-        TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && !carve3d && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        CamTabs.Visibility = pocket || drill || face || vcarve || carve3d || chamfer ? Visibility.Collapsed : Visibility.Visible;
+        CamDogbones.Visibility = drill || face || vcarve || carve3d || chamfer ? Visibility.Collapsed : Visibility.Visible;
+        TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && !carve3d && !chamfer && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         // Drilling plunges straight down, facing plunges beside the material: ramping does not apply.
         if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill || face ? Visibility.Collapsed : Visibility.Visible;
         if (CamPassLabel is not null) CamPassLabel.Text = drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
@@ -1632,6 +1641,7 @@ public partial class MainWindow : Window
         bool pocket = kind == CamOperationKind.Pocket;
         bool face = kind == CamOperationKind.Face;
         bool vcarve = kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug;
+        bool chamfer = kind == CamOperationKind.Chamfer;
         double inlayStart = 0, inlayClearance = 0;
         bool second = (kind is CamOperationKind.Pocket or CamOperationKind.Carve3D || vcarve) && CamSecondEnabled?.IsChecked == true;
         if (kind == CamOperationKind.Carve3D && _selected.Model is { } model) depth = model.DepthMm;   // the model's depth decides
@@ -1641,11 +1651,11 @@ public partial class MainWindow : Window
         if (kind == CamOperationKind.VCarvePlug &&
             (CamInlayStart is null || CamInlayClearance is null || !Parse(CamInlayStart, out inlayStart) || !Parse(CamInlayClearance, out inlayClearance)))
             return null;
-        bool useTabs = !pocket && !face && !vcarve && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets, holes, facing or V-carving
+        bool useTabs = !pocket && !face && !vcarve && !chamfer && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets, holes, facing or V-carving
         double vAngle = new CamOperation().ToolAngleDeg;
         if (CamVAngle is not null && !Parse(CamVAngle, out vAngle))
         {
-            if (vcarve) return null;
+            if (vcarve || chamfer) return null;
             vAngle = new CamOperation().ToolAngleDeg;
         }
         var defaults = new CamOperation();
@@ -1685,14 +1695,17 @@ public partial class MainWindow : Window
         // The tool keeps its name and kind only while its diameter is unchanged; otherwise it is a custom cutter.
         var tool = SelectedTool;
         bool fromLibrary = tool is not null && Math.Abs(tool.Diameter - diameter) < 1e-9;
-        return new CamOperation { ShapeId = _selected.Id,
-            Kind = kind, ToolDiameter = diameter,
+        // Fasning: the depth field is the chamfer's width; the depth follows from the bit's angle.
+        double chamferWidth = chamfer ? depth : defaults.ChamferWidthMm;
+        if (chamfer) depth = Math.Round(ChamferToolpaths.Depth(chamferWidth, vAngle), 4);
+        var result = new CamOperation { ShapeId = _selected.Id,
+            Kind = kind, ToolDiameter = diameter, ChamferWidthMm = chamferWidth,
             TotalDepth = depth, DepthPerPass = step, UseTabs = useTabs,
             TabCount = tabCount, TabWidth = tabWidth, TabHeight = tabHeight,
             FeedRate = feed, PlungeRate = plunge, SpindleRpm = rpm, StepoverPercent = stepover,
             ToolName = fromLibrary ? tool!.Name : null,
             // V-carving always uses a V-bit (also a custom one typed in by diameter and angle).
-            ToolKind = vcarve ? ToolKind.VBit : fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
+            ToolKind = vcarve || chamfer ? ToolKind.VBit : fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
             ToolAngleDeg = vAngle, InlayStartDepthMm = inlayStart, InlayClearanceMm = inlayClearance,
             SecondToolEnabled = second, SecondToolDiameter = secondDia, SecondDepthPerPass = secondPass,
             SecondToolKind = SecondTool is { Kind: not ToolKind.VBit } stk && Math.Abs(stk.Diameter - secondDia) < 1e-9 ? stk.Kind : ToolKind.FlatEndMill,
@@ -1704,6 +1717,7 @@ public partial class MainWindow : Window
             FaceCenterReachesLimits = kind == CamOperationKind.Face && CamFaceCenterReachesLimits?.IsChecked == true,
             Dogbones = kind is CamOperationKind.Inside or CamOperationKind.Outside or CamOperationKind.Pocket && CamDogbones?.IsChecked == true,
             Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
+        return ReadChamfer(result) ? result : null;
     }
     private void UpdateCamSummary()
     {
@@ -1716,6 +1730,11 @@ public partial class MainWindow : Window
             CamOperationKind.Outside => "Utvändig kontur", CamOperationKind.Inside => "Invändig kontur",
             CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carving", CamOperationKind.VCarvePlug => "Inlay-hane", _ => "Ficka"
         };
+        if (error is null && op.Kind == CamOperationKind.Chamfer)
+        {
+            CamSummary.Text = $"Fasning · {F(op.ChamferWidthMm)} mm bred med {F(op.ToolAngleDeg)}° V-fräs Ø {F(op.ToolDiameter)} mm · spetsen längs kanten, {F(Math.Round(op.TotalDepth, 2))} mm djupt";
+            return;
+        }
         if (error is null && op.Kind == CamOperationKind.Carve3D)
         {
             CamSummary.Text = _selected?.Model is null ? "3D-fräsning kräver en 3D-modell – importera en med Rita → 3D-modell från STL…."
@@ -1759,7 +1778,7 @@ public partial class MainWindow : Window
                     : op.TotalDepth >= _document.MaterialThickness - 1e-6
                         ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"
                         : "används först vid genomskärning")) + (error is null ? SecondSuffix(op) : "") +
-            (error is null && op.Dogbones ? " · dogbones i innerhörnen" : "");
+            (error is null && op.Dogbones ? " · dogbones i innerhörnen" : "") + (error is null ? ChamferSuffix(op) : "");
     }
     private string SecondSuffix(CamOperation op) => !op.SecondToolEnabled ? "" : op.Kind == CamOperationKind.Pocket
         ? $" · + detaljfräs Ø {F(op.SecondToolDiameter)} mm efteråt (hörn och smala partier)"
