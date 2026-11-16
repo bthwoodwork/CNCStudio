@@ -29,6 +29,7 @@ public partial class MainWindow
         if (MachineControls is null) return;
         MachineControls.IsEnabled = connected;
         MachineControlsHint.Visibility = connected ? Visibility.Collapsed : Visibility.Visible;
+        if (!connected) _toolZReference = null;
         if (!connected) { DroX.Text = DroY.Text = DroZ.Text = "–"; MposX.Text = MposY.Text = MposZ.Text = ""; JogStatusText.Text = ""; }
     }
 
@@ -131,6 +132,7 @@ public partial class MainWindow
     {
         JogStatusText.Text = r.Message;
         if (r.StockTopMPosZ is not double z || z >= 0) return;
+        _toolZReference = z;                                 // probing measured the surface: the 3D view follows it
         RememberChange();
         _document.Motion.StockTopMachineZ = Math.Round(z, 3);
         RefreshMotionFields();
