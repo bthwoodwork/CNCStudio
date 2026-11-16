@@ -87,6 +87,6 @@ public partial class MainWindow
     {
         CamOperationKind.Outside => "Utskärning", CamOperationKind.Inside => "Invändig", CamOperationKind.Pocket => "Ficka",
         CamOperationKind.Drill => "Borrning", CamOperationKind.Face => "Planfräsning", CamOperationKind.VCarve => "V-carve",
-        CamOperationKind.VCarvePlug => "Inlay-hane", CamOperationKind.Carve3D => "3D", _ => k.ToString()
+        CamOperationKind.VCarvePlug => "Inlay-hane", CamOperationKind.Chamfer => "Fasning", CamOperationKind.Carve3D => "3D", _ => k.ToString()
     };
 }

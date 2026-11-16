@@ -129,12 +129,14 @@ Markera en form och öppna panelen **Fräsning** (F2):
 - **V-carving** – V-fräs, djupare där formen är bredare, skarpa hörn. För text och skyltar.
 - **Inlay-hane** – hanen i en V-carve inlay (se *Inlay*).
 - **3D-fräsning** – en STL-modell fräses i rader.
+- **Fasning** – V-fräsens spets följer formens kant och fasar den. Ange fasens bredd i stället för djup; djupet räknas ut från fräsens vinkel (90° ger lika djupt som brett).
 
 ## Fräs, djup och hastigheter
 
 - **Fräs** väljs ur verktygsbiblioteket – diameter, matning, nedmatning, djup per pass och varvtal fylls i. Ändra fritt.
 - **Totalt djup** och **djup per pass**. Vid genomskärning läggs **hållflikar** (antal, bredd, höjd) så att delen sitter kvar.
 - **Stegning** för ficka och planfräsning.
+- **Fasa övre kanten med V-fräs** (kontur och ficka) – ett eget program med V-fräsen längs kanten innan delen skärs ut, medan den sitter fast. Välj V-fräs ur biblioteket och fasbredd.
 - **Dogbones i innerhörn** (invändig och utvändig kontur, ficka) – ett runt urtag i varje skarpt hörn som fräsen inte når, så att en fyrkantig tapp eller del passar i det frästa. Rundade hörn och kurvor lämnas som de är.
 - **Andra fräs** – grovbearbetning med en stor fräs och finbearbetning eller detaljer med en mindre (ficka, V-carving och 3D).
 - **Avancerat:** rampad nedmatning (vinkel och matning) och fräsriktning (medfräsning eller motfräsning).

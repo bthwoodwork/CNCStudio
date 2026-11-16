@@ -24,6 +24,8 @@ internal static class VectorContourPreview
 
         var error = CamValidation.GetError(operation, materialThickness);
         if (error is not null) throw new ArgumentException(error);
+        if (operation.Kind == CamOperationKind.Chamfer)
+            return ChamferToolpaths.Generate(shape, operation);                  // the V-bit's tip along the edges
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness); // Clipper2, handles holes/islands
         if (operation.Kind is CamOperationKind.PocketRest or CamOperationKind.VCarveClear)

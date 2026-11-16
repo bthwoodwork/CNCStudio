@@ -53,6 +53,8 @@ public static class ContourToolpaths
     {
         var problem = CamValidation.GetError(operation, materialThickness);
         if (problem != null) throw new ArgumentException(problem);
+        if (operation.Kind == CamOperationKind.Chamfer)
+            return ChamferToolpaths.Generate(shape, operation);
         if (operation.Kind == CamOperationKind.Pocket)
             return PocketToolpaths.Generate(shape, operation, materialThickness);
         if (operation.Kind is CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish)

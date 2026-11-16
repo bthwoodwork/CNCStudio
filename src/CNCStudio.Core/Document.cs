@@ -46,7 +46,7 @@ public sealed class DesignShape
 /// <para>PocketRest and VCarveClear are never stored: they are the second tool's pass, made from a Pocket or V-carving
 /// that has a second tool (see <see cref="CamSecondPass"/>).</para>
 /// <para>Carve3D: a 3D model (STL) carved by raster passes; Carve3DFinish is its second tool's finishing pass.</para>
-public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve, VCarvePlug, PocketRest, VCarveClear, Carve3D, Carve3DFinish }
+public enum CamOperationKind { Outside, Inside, Pocket, Drill, Face, VCarve, VCarvePlug, PocketRest, VCarveClear, Carve3D, Carve3DFinish, Chamfer }
 
 public enum PlungeMode { Vertical, Ramp }
 
@@ -115,6 +115,18 @@ public sealed class CamOperation
     /// <summary>Inside/outside contour and pocket: a bone in every sharp corner the cutter cannot reach, so square parts fit (<see cref="Core.Dogbones"/>).</summary>
     public bool Dogbones { get; set; }
 
+    // ---- Fasning med V-fräs ----
+    /// <summary>Chamfer width at the top edge (Fasning, and the chamfer pass of a contour or pocket).</summary>
+    public double ChamferWidthMm { get; set; } = 1.5;
+    /// <summary>Outside/inside contour and pocket: chamfer the top edge with a V-bit first, while the part is still held.</summary>
+    public bool ChamferEnabled { get; set; }
+    public string? ChamferToolName { get; set; }
+    public double ChamferToolDiameter { get; set; } = 12.7;
+    public double ChamferAngleDeg { get; set; } = 90;
+    public double ChamferFeedRate { get; set; } = 1000;
+    public double ChamferPlungeRate { get; set; } = 300;
+    public double ChamferSpindleRpm { get; set; } = 18000;
+
     /// <summary>Pocket and facing: distance between neighbouring loops/rows, as % of the tool diameter.</summary>
     public double StepoverPercent { get; set; } = 40;
 
@@ -171,6 +183,16 @@ public static class CamValidation
         if (operation.Kind == CamOperationKind.Face && operation.UseTabs)
             return "Hållflikar används inte för planfräsning.";
         bool vcarve = operation.Kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug;
+        if (operation.Kind == CamOperationKind.Chamfer)
+        {
+            if (operation.ToolKind != ToolKind.VBit) return "Fasning kräver en V-fräs – välj en V-fräs i listan.";
+            if (ChamferToolpaths.Validate(operation.ChamferWidthMm, operation.ToolDiameter, operation.ToolAngleDeg) is string c) return c;
+        }
+        if (operation.ChamferEnabled && operation.Kind is CamOperationKind.Outside or CamOperationKind.Inside or CamOperationKind.Pocket)
+        {
+            if (ChamferToolpaths.Validate(operation.ChamferWidthMm, operation.ChamferToolDiameter, operation.ChamferAngleDeg) is string c) return "Fasningen: " + c;
+            if (ChamferToolpaths.Depth(operation.ChamferWidthMm, operation.ChamferAngleDeg) > materialThickness) return "Fasningen blir djupare än materialet.";
+        }
         if (vcarve && operation.UseTabs)
             return "Hållflikar används inte för V-carving.";
         if (vcarve && VCarveToolpaths.ValidateAngle(operation.ToolAngleDeg) is string angle)

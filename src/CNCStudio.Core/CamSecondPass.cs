@@ -25,10 +25,25 @@ public static class CamSecondPass
         foreach (var op in ops)
         {
             var second = For(op);
+            if (ChamferFor(op) is { } chamfer) yield return chamfer;                                  // the edge while the part is held
             if (second is not null && second.Kind == CamOperationKind.VCarveClear) yield return second;   // flat bottoms first
             yield return op;
             if (second is not null && second.Kind is CamOperationKind.PocketRest or CamOperationKind.Carve3DFinish) yield return second;   // details / finishing after
         }
+    }
+
+    /// <summary>The chamfer pass (V-bit along the top edge) of a contour or pocket, or null without one.</summary>
+    public static CamOperation? ChamferFor(CamOperation op)
+    {
+        if (!op.ChamferEnabled || op.Parent is not null || op.Kind is not (CamOperationKind.Outside or CamOperationKind.Inside or CamOperationKind.Pocket)) return null;
+        double depth = ChamferToolpaths.Depth(op.ChamferWidthMm, op.ChamferAngleDeg);
+        return new CamOperation
+        {
+            ShapeId = op.ShapeId, Kind = CamOperationKind.Chamfer, Parent = op,
+            ToolName = op.ChamferToolName, ToolKind = ToolKind.VBit, ToolDiameter = op.ChamferToolDiameter, ToolAngleDeg = op.ChamferAngleDeg,
+            ChamferWidthMm = op.ChamferWidthMm, TotalDepth = Math.Round(depth, 4), DepthPerPass = Math.Round(depth, 4), UseTabs = false,
+            FeedRate = op.ChamferFeedRate, PlungeRate = op.ChamferPlungeRate, SpindleRpm = op.ChamferSpindleRpm, Direction = op.Direction,
+        };
     }
 
     /// <summary>The second tool's pass of <paramref name="op"/>, or null without one.</summary>

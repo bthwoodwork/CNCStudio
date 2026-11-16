@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.63 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.64 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -639,7 +639,7 @@
               <StackPanel>
                 <TextBlock Text="Bearbetning" Style="{StaticResource FieldLabel}"/>
                 <ComboBox x:Name="CamKind" SelectedIndex="0" Margin="3,3,3,8" SelectionChanged="CamInput_Changed">
-                  <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/><ComboBoxItem Content="Borrning (Drill)" ToolTip="Hål med fräsens diameter i objektets mitt, rakt ned i steg"/><ComboBoxItem Content="Planfräsning (Face)" ToolTip="Fräser hela objektets yta plan, rad för rad, och går ut förbi kanterna. Körs först."/><ComboBoxItem Content="V-carving (V-fräs)" ToolTip="V-fräsen fräser formen med väggar längs konturen – djupare där formen är bredare, skarpa hörn. För text och skyltar."/><ComboBoxItem Content="Inlay-hane (V-fräs)" ToolTip="Hanen i en V-carve inlay: V-fräsen fräser runt formen så att den står kvar som en plugg. Skapas enklast med CAM → Skapa inlay."/><ComboBoxItem Content="(detaljpass)" Visibility="Collapsed"/><ComboBoxItem Content="(bottenpass)" Visibility="Collapsed"/><ComboBoxItem Content="3D-fräsning (STL)" ToolTip="Fräser en 3D-modell (Rita → 3D-modell från STL) i rader. Med andra fräs: grovfräsning först, sedan finfräsning (t.ex. kulfräs)."/>
+                  <ComboBoxItem Content="Utvändig kontur (Outside)"/><ComboBoxItem Content="Invändig kontur (Inside)"/><ComboBoxItem Content="Fickfräsning (Pocket)"/><ComboBoxItem Content="Borrning (Drill)" ToolTip="Hål med fräsens diameter i objektets mitt, rakt ned i steg"/><ComboBoxItem Content="Planfräsning (Face)" ToolTip="Fräser hela objektets yta plan, rad för rad, och går ut förbi kanterna. Körs först."/><ComboBoxItem Content="V-carving (V-fräs)" ToolTip="V-fräsen fräser formen med väggar längs konturen – djupare där formen är bredare, skarpa hörn. För text och skyltar."/><ComboBoxItem Content="Inlay-hane (V-fräs)" ToolTip="Hanen i en V-carve inlay: V-fräsen fräser runt formen så att den står kvar som en plugg. Skapas enklast med CAM → Skapa inlay."/><ComboBoxItem Content="(detaljpass)" Visibility="Collapsed"/><ComboBoxItem Content="(bottenpass)" Visibility="Collapsed"/><ComboBoxItem Content="3D-fräsning (STL)" ToolTip="Fräser en 3D-modell (Rita → 3D-modell från STL) i rader. Med andra fräs: grovfräsning först, sedan finfräsning (t.ex. kulfräs)."/><ComboBoxItem Content="(finfräsning)" Visibility="Collapsed"/><ComboBoxItem Content="Fasning (V-fräs)" ToolTip="V-fräsens spets följer formens kant och fasar den. Ange fasens bredd – djupet räknas ut från fräsens vinkel. För att fasa en del som också skärs ut: välj utskärningen och kryssa i Fasa övre kanten."/>
                 </ComboBox>
                 <TextBlock Text="Fräs" Style="{StaticResource FieldLabel}"/>
                 <DockPanel>
@@ -665,7 +665,7 @@
               <StackPanel>
                 <Grid>
                   <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                  <StackPanel><TextBlock Text="Totalt djup (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamDepth" Text="6" TextChanged="CamInput_Changed"/></StackPanel>
+                  <StackPanel><TextBlock x:Name="CamDepthLabel" Text="Totalt djup (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamDepth" Text="6" TextChanged="CamInput_Changed"/></StackPanel>
                   <StackPanel Grid.Column="1"><TextBlock x:Name="CamPassLabel" Text="Djup per pass (mm)" Style="{StaticResource FieldLabel}" TextTrimming="CharacterEllipsis"/><TextBox x:Name="CamPass" Text="2" TextChanged="CamInput_Changed"/></StackPanel>
                 </Grid>
                 <StackPanel x:Name="PocketSettingsPanel" Margin="0,6,0,0" Visibility="Collapsed">
@@ -691,6 +691,19 @@
                       <StackPanel Grid.Column="1"><TextBlock Text="Djup per pass (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamSecondPass" Text="2" TextChanged="CamInput_Changed"/></StackPanel>
                     </Grid>
                     <TextBlock x:Name="CamSecondHint" Text="" TextWrapping="Wrap" FontSize="10.5" Foreground="#8CA3BA" Margin="3,2,3,0"/>
+                  </StackPanel>
+                </StackPanel>
+                <StackPanel x:Name="ChamferPanel" Margin="0,8,0,0" Visibility="Collapsed">
+                  <CheckBox x:Name="CamChamferEnabled" Content="Fasa övre kanten med V-fräs (körs först)" Margin="4,2,4,4" Checked="CamInput_Changed" Unchecked="CamInput_Changed"
+                            ToolTip="Ett eget program med V-fräsen längs formens kant innan den skärs – medan delen sitter fast. Djupet räknas ut från fasbredden och fräsens vinkel."/>
+                  <StackPanel x:Name="ChamferFields">
+                    <ComboBox x:Name="CamChamferTool" Margin="3" DisplayMemberPath="DisplayName" SelectionChanged="CamChamferTool_Changed" ToolTip="V-fräsen för fasningen – diameter, vinkel och skärdata hämtas från biblioteket"/>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                      <StackPanel><TextBlock Text="Fasbredd (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamChamferWidth" Text="1.5" TextChanged="CamInput_Changed"/></StackPanel>
+                      <StackPanel Grid.Column="1"><TextBlock Text="Diameter" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamChamferDiameter" Text="12.7" TextChanged="CamInput_Changed"/></StackPanel>
+                      <StackPanel Grid.Column="2"><TextBlock Text="Vinkel °" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamChamferAngle" Text="90" TextChanged="CamInput_Changed"/></StackPanel>
+                    </Grid>
                   </StackPanel>
                 </StackPanel>
                 <CheckBox x:Name="CamDogbones" Content="Dogbones i innerhörn (för fogar)" Margin="4,10,4,0" Checked="CamInput_Changed" Unchecked="CamInput_Changed"
