@@ -45,6 +45,12 @@ Statusraden längst ned visar vad som händer och vad nästa steg är. Läs den 
 - Startsidan visar de senaste projekten i Projekt-mappen.
 - **Arkiv → Synkmapp (Google Drive)…** lägger projekt, verktyg, material, maskinprofiler och loggar i en mapp som synkas mellan datorer.
 
+## Autospara och osparade ändringar
+
+- Har projektet osparade ändringar sparas en kopia varje minut i en egen mapp på datorn (aldrig över projektfilen).
+- Om CNC Studio kraschar, strömmen går eller datorn stängs av med osparat arbete frågar programmet vid nästa start om projektet ska **återställas**. Det öppnas då med ändringarna – spara (Ctrl+S) för att behålla dem.
+- Vid **Stäng**, **Nytt** och **Öppna** frågar programmet om osparade ändringar ska sparas.
+
 ## Ångra
 
 **Ctrl+Z** ångrar och **Ctrl+Y** gör om – det gäller ritning, CAM-inställningar, materialets placering och fastspänningar.

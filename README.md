@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.58)
+﻿# CNC Studio – källkod (senaste: 0.9.59)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,14 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.59 – Autospara och återställning
+
+- **Autospara:** med osparade ändringar sparas en kopia av projektet varje minut i `%APPDATA%\CNCStudio\Autospar`. Den sparas bara på den här datorn, aldrig i synkmappen och aldrig över projektfilen. Kopian tas bort när projektet sparas eller när du väljer att inte spara.
+- **Återställning:** finns en kopia kvar vid start har förra sessionen slutat med osparat arbete, till exempel efter en krasch, ett strömavbrott eller en avstängning. Programmet visar då projektets namn, tiden och projektfilen och frågar om projektet ska återställas. Ett återställt projekt räknas fortfarande som osparat och sparas till sin gamla fil om mappen finns kvar.
+- **Osparade ändringar:** vid Stäng, Nytt och Öppna (även från startsidan och historiken) frågar programmet *Spara / Spara inte / Avbryt*. Tidigare försvann ändringarna utan fråga.
+- Varje ändring räknas, alltså allt som går att ångra, och dessutom ångra och gör om.
+- Logiken finns i `Autosave` (Core), med två tester.
 
 ## 0.9.58 – Dogbones i innerhörn
 

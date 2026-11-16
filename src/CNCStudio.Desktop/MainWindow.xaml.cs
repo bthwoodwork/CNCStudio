@@ -62,6 +62,7 @@ public partial class MainWindow : Window
     private readonly List<Guid> _selectionOrder = new();
     private void RememberChange()
     {
+        NoteChange();
         _undo.Push(JsonSerializer.Serialize(_document));
         if (_undo.Count > 60)
         {
@@ -90,6 +91,7 @@ public partial class MainWindow : Window
     private void Undo_Click(object sender, RoutedEventArgs e)
     {
         if (_undo.Count == 0) return;
+        NoteChange();
         _redo.Push(JsonSerializer.Serialize(_document));
         RestoreSnapshot(_undo.Pop());
         StatusText.Text = "Ångrat senaste ändringen.";
@@ -97,6 +99,7 @@ public partial class MainWindow : Window
     private void Redo_Click(object sender, RoutedEventArgs e)
     {
         if (_redo.Count == 0) return;
+        NoteChange();
         _undo.Push(JsonSerializer.Serialize(_document));
         RestoreSnapshot(_redo.Pop());
         StatusText.Text = "Gjort om senaste ändringen.";
@@ -229,7 +232,8 @@ public partial class MainWindow : Window
         ShowStorageStatus();
         RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); RefreshMaterialPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);
-        OpenFromCommandLine();
+        if (!OfferRestore()) OpenFromCommandLine();
+        StartAutosave();
     }
 
     /// <summary>
@@ -330,6 +334,7 @@ public partial class MainWindow : Window
                 "Ett program körs på maskinen. Stänger du nu avbryts sändningen mitt i jobbet (läget sparas och kan återupptas).\n\nStänga ändå?",
                 "Program körs", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK)
         { e.Cancel = true; return; }
+        if (!ConfirmDiscardChanges("stänger")) { e.Cancel = true; return; }
         StopRemote();                       // the phone page stops answering with the program
         SavePlacement();
         SaveDockLayout();
@@ -1466,7 +1471,7 @@ public partial class MainWindow : Window
     }
 
     private void New_Click(object sender, RoutedEventArgs e)
-    { _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = NewDocument(); _camPlanner.Clear(); View3DPanel?.ResetView(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); HideStartScreen(); StatusText.Text = "Nytt projekt."; }
+    { if (!ConfirmDiscardChanges("börjar ett nytt projekt")) return; _polyPoints.Clear(); _undo.Clear(); _redo.Clear(); _document = NewDocument(); _camPlanner.Clear(); View3DPanel?.ResetView(); _selected = null; _selection.Clear(); _selectionOrder.Clear(); _path = null; SyncMetadata(); Render(); FitToMaterial(); HideStartScreen(); MarkSaved(); StatusText.Text = "Nytt projekt."; }
     private void SyncMetadata()
     { NameBox.Text = _document.Name;
       bool has = _document.HasMaterial;
@@ -1498,7 +1503,7 @@ public partial class MainWindow : Window
                     MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             _path = path;
         }
-        try { DocumentStorage.Save(_path, _document); StatusText.Text = "Sparat: " + _path; }
+        try { DocumentStorage.Save(_path, _document); MarkSaved(); StatusText.Text = "Sparat: " + _path; }
         catch (Exception ex) { Error("Kunde inte spara: " + ex.Message); }
     }
     private void Open_Click(object sender, RoutedEventArgs e)
@@ -1511,7 +1516,8 @@ public partial class MainWindow : Window
     /// <summary>Opens a project file; true if it was opened (an error is shown otherwise).</summary>
     private bool OpenProject(string path)
     {
-        try { var document = DocumentStorage.Load(path); _document = document; _camPlanner.Clear(); View3DPanel?.ResetView(); _path = path; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); StatusText.Text = "Öppnat: " + _path; }
+        if (!ConfirmDiscardChanges("öppnar ett annat projekt")) return false;
+        try { var document = DocumentStorage.Load(path); _document = document; _camPlanner.Clear(); View3DPanel?.ResetView(); _path = path; _selected = null; _selection.Clear(); _selectionOrder.Clear(); _undo.Clear(); _redo.Clear(); _polyPoints.Clear(); SyncMetadata(); Render(); FitToMaterial(); MarkSaved(); StatusText.Text = "Öppnat: " + _path; }
         catch (Exception ex) { Error("Kunde inte öppna: " + ex.Message); return false; }
         HideStartScreen();
         return true;
