@@ -73,7 +73,7 @@ Mått och läge för den markerade formen ändras exakt under **Egenskaper → M
 - **Justera** och **Fördela** markerade former.
 - **Offset** – en ny kontur ett visst avstånd utanför eller innanför.
 - **Rutnät** – kopior i rader och kolumner.
-- **Packa** – lägger delarna tätt på materialet (nesting).
+- **Nesta** – lägger delarna tätt på materialet (nesting).
 - **Gruppera** (Ctrl+G) håller ihop former som en enhet.
 - **Kontrollera vektorer** hittar öppna konturer, dubbletter och korsande linjer som ger problem vid fräsning.
 
