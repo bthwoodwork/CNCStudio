@@ -44,7 +44,7 @@ public partial class MainWindow : Window
     // Stable grid/ruler visuals are rebuilt only when view coordinates change,
     // not each time an object is dragged or resized.
     private (double Zoom, double X, double Y, double W, double H, double MatW, double MatH)? _gridCache;
-    private (double Zoom, double X, double Y, double W, double H, double MatW, double MatH)? _rulerCache;
+    private (double Zoom, double X, double Y, double W, double H, double Mode, double MapX, double MapY)? _rulerCache;
     private bool _panning;
     private Point _panStart;
     private Point _panOrigin;
@@ -673,6 +673,7 @@ public partial class MainWindow : Window
     // Only the visible part of the stock is drawn to keep high-zoom rendering responsive.
     private void RefreshViewportDecorations()
     {
+        RefreshRulers();
         if (_machineView) RenderMachine();
         else
         {
@@ -778,11 +779,29 @@ public partial class MainWindow : Window
         return 10000;
     }
 
+    /// <summary>
+    /// The rulers along the top and left edge of the 2D view, over the whole visible area (not only the material).
+    /// Design: work coordinates – 0 at the material's zero point (X0 Y0 of the program), Y growing backwards as in
+    /// the G-code. Maskin: the table measured from the home corner, as the fields under Material på bordet.
+    /// A ruler value v maps to a canvas coordinate c by c = (v − b) / a (a = ±1).
+    /// </summary>
     private void RefreshRulers()
     {
         if (TopRuler is null || LeftRuler is null) return;
-        var key = (_zoom, DesignOffset.X, DesignOffset.Y, Viewport.ActualWidth,
-            Viewport.ActualHeight, DesignArea.W, DesignArea.H);
+        double ax, bx, ay, by;
+        if (_machineView)
+        {
+            double w = _document.Machine.WorkWidthMm, l = _document.Machine.WorkLengthMm;
+            (ax, bx) = OriginLeft ? (1.0, 0.0) : (-1.0, w);
+            (ay, by) = OriginFront ? (-1.0, l) : (1.0, 0.0);
+        }
+        else
+        {
+            var (wx0, wy0) = _document.HasMaterial ? _document.ToWork(0, 0) : (0, _document.Machine.WorkLengthMm);
+            (ax, bx) = (1.0, wx0);
+            (ay, by) = (-1.0, wy0);
+        }
+        var key = (_zoom, DesignOffset.X, DesignOffset.Y, Viewport.ActualWidth, Viewport.ActualHeight, _machineView ? 1.0 : 0.0, bx + 1000 * ax, by + 1000 * ay);
         if (_rulerCache.HasValue && _rulerCache.Value == key) return;
         _rulerCache = key;
         TopRuler.Children.Clear();
@@ -791,38 +810,39 @@ public partial class MainWindow : Window
 
         double labelStep = ChooseRulerLabelStep(_zoom);
         double tickStep = GridStep(_zoom);
-        double left = Math.Max(0, -DesignOffset.X / _zoom);
-        double right = Math.Min(DesignArea.W, (Viewport.ActualWidth - DesignOffset.X) / _zoom);
-        double top = Math.Max(0, -DesignOffset.Y / _zoom);
-        double bottom = Math.Min(DesignArea.H, (Viewport.ActualHeight - DesignOffset.Y) / _zoom);
-        if (left > right || top > bottom) return;
         var tickBrush = new SolidColorBrush(Color.FromRgb(158, 183, 209));
         var labelBrush = new SolidColorBrush(Color.FromRgb(224, 235, 247));
+        var zeroBrush = new SolidColorBrush(Color.FromRgb(0x6F, 0xB6, 0xFF));
 
-        for (double x = Math.Ceiling(left / tickStep) * tickStep; x <= right + .00001; x += tickStep)
+        // The visible canvas range, then the same range in ruler values.
+        double c0x = -DesignOffset.X / _zoom, c1x = (Viewport.ActualWidth - DesignOffset.X) / _zoom;
+        double c0y = -DesignOffset.Y / _zoom, c1y = (Viewport.ActualHeight - DesignOffset.Y) / _zoom;
+        double v0x = Math.Min(ax * c0x + bx, ax * c1x + bx), v1x = Math.Max(ax * c0x + bx, ax * c1x + bx);
+        double v0y = Math.Min(ay * c0y + by, ay * c1y + by), v1y = Math.Max(ay * c0y + by, ay * c1y + by);
+        if ((v1x - v0x) / tickStep > 4000 || (v1y - v0y) / tickStep > 4000) return;
+
+        for (double v = Math.Ceiling(v0x / tickStep) * tickStep; v <= v1x + .00001; v += tickStep)
         {
-            double pixel = DesignOffset.X + x * _zoom;
-            bool labeled = AtMultiple(x, labelStep);
-            var line = new Line { X1 = pixel, X2 = pixel, Y1 = labeled ? 13 : 21, Y2 = 29,
-                Stroke = tickBrush, StrokeThickness = 1, IsHitTestVisible = false };
-            TopRuler.Children.Add(line);
+            double pixel = DesignOffset.X + (v - bx) / ax * _zoom;
+            bool labeled = AtMultiple(v, labelStep), zero = Math.Abs(v) < 1e-6;
+            TopRuler.Children.Add(new Line { X1 = pixel, X2 = pixel, Y1 = zero ? 4 : labeled ? 13 : 21, Y2 = 29,
+                Stroke = zero ? zeroBrush : tickBrush, StrokeThickness = zero ? 2 : 1, IsHitTestVisible = false });
             if (!labeled || pixel < 36 || pixel > Viewport.ActualWidth - 24) continue;
-            var text = new TextBlock { Text = x.ToString("0.##", CultureInfo.CurrentCulture),
-                Foreground = labelBrush, FontSize = 10, IsHitTestVisible = false };
+            var text = new TextBlock { Text = (v == 0 ? 0 : v).ToString("0.##", CultureInfo.CurrentCulture),
+                Foreground = zero ? zeroBrush : labelBrush, FontSize = 10, FontWeight = zero ? FontWeights.Bold : FontWeights.Normal, IsHitTestVisible = false };
             Canvas.SetLeft(text, pixel + 3);
             Canvas.SetTop(text, 0);
             TopRuler.Children.Add(text);
         }
-        for (double y = Math.Ceiling(top / tickStep) * tickStep; y <= bottom + .00001; y += tickStep)
+        for (double v = Math.Ceiling(v0y / tickStep) * tickStep; v <= v1y + .00001; v += tickStep)
         {
-            double pixel = DesignOffset.Y + y * _zoom;
-            bool labeled = AtMultiple(y, labelStep);
-            var line = new Line { X1 = labeled ? 14 : 27, X2 = 37, Y1 = pixel, Y2 = pixel,
-                Stroke = tickBrush, StrokeThickness = 1, IsHitTestVisible = false };
-            LeftRuler.Children.Add(line);
+            double pixel = DesignOffset.Y + (v - by) / ay * _zoom;
+            bool labeled = AtMultiple(v, labelStep), zero = Math.Abs(v) < 1e-6;
+            LeftRuler.Children.Add(new Line { X1 = zero ? 4 : labeled ? 14 : 27, X2 = 37, Y1 = pixel, Y2 = pixel,
+                Stroke = zero ? zeroBrush : tickBrush, StrokeThickness = zero ? 2 : 1, IsHitTestVisible = false });
             if (!labeled || pixel < 30 || pixel > Viewport.ActualHeight - 16) continue;
-            var text = new TextBlock { Text = y.ToString("0.##", CultureInfo.CurrentCulture),
-                Foreground = labelBrush, FontSize = 10, IsHitTestVisible = false,
+            var text = new TextBlock { Text = (v == 0 ? 0 : v).ToString("0.##", CultureInfo.CurrentCulture),
+                Foreground = zero ? zeroBrush : labelBrush, FontSize = 10, FontWeight = zero ? FontWeights.Bold : FontWeights.Normal, IsHitTestVisible = false,
                 RenderTransform = new RotateTransform(-90) };
             Canvas.SetLeft(text, 3);
             Canvas.SetTop(text, pixel + 8);

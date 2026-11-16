@@ -79,7 +79,9 @@ Mått och läge för den markerade formen ändras exakt under **Egenskaper → M
 
 ## Navigera i vyn
 
-Hjulet zoomar, mittenknappen panorerar, **F** anpassar vyn till materialet. Linjalerna visar mm från nollpunkten.
+Hjulet zoomar, mittenknappen panorerar, **F** anpassar vyn till materialet.
+
+**Linjalerna** längs över- och vänsterkanten visar i Design arbetskoordinater: 0 (blå) är materialets nollpunkt, X0 Y0 i programmet, och Y växer bakåt som i G-coden. I Maskin mäter de bordet från hemhörnet – samma mått som under *Material på bordet*.
 
 # Material och placering
 
@@ -154,6 +156,8 @@ Maskinen har ingen verktygsväxlare, så varje fräs blir ett eget program, i r�
 **F4** visar materialet simulerat i 3D med banorna: blått skär, gult ned/upp, röd streckad snabbförflyttning. Under körning visas det som är kört i orange och fräsens position live.
 
 Höger musknapp roterar, hjulet zoomar, mittenknappen panorerar. *Anpassa vy* och *Hela bordet* zoomar om.
+
+**Linjaler** i 3D: längs materialets främre och vänstra kant (arbetskoordinater, 0 = nollpunkten) och längs bordets kanter (mm från hemhörnet). Kryssrutan *Linjaler* visar eller döljer dem.
 
 # Maskin: ansluta och nolla
 
