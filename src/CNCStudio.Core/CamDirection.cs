@@ -28,6 +28,11 @@ public static class CamDirection
         return p with { Centerline = result[0], Centerlines = result };
     }
 
+    /// <summary>Which side of the path the wall (the material that stays) is on, in machine coordinates; null if unknown.</summary>
+    public static bool? WallOnRight(IReadOnlyList<CamPoint> path, ContourPreview p, DesignShape shape, CamOperation op,
+        IReadOnlyList<IReadOnlyList<CamPoint>> outline) =>
+        p.IsPocket || p.IsVCarve ? PocketWallOnRight(path) : ContourWallOnRight(path, shape, op, outline);
+
     /// <summary>Signed area in machine coordinates (Y up): positive = counter-clockwise.</summary>
     public static double MachineArea(IReadOnlyList<CamPoint> path)
     {

@@ -112,6 +112,9 @@ public sealed class CamOperation
     /// </summary>
     public bool FaceCenterReachesLimits { get; set; }
 
+    /// <summary>Inside/outside contour and pocket: a bone in every sharp corner the cutter cannot reach, so square parts fit (<see cref="Core.Dogbones"/>).</summary>
+    public bool Dogbones { get; set; }
+
     /// <summary>Pocket and facing: distance between neighbouring loops/rows, as % of the tool diameter.</summary>
     public double StepoverPercent { get; set; } = 40;
 

@@ -1556,6 +1556,7 @@ public partial class MainWindow : Window
             CamFaceOverhang.Text = F(operation?.FaceOverhangMm ?? defaults.FaceOverhangMm);
             CamFaceDirection.SelectedIndex = operation?.FaceAlongY == true ? 1 : 0;
             CamFaceCenterReachesLimits.IsChecked = operation?.FaceCenterReachesLimits == true;
+            CamDogbones.IsChecked = operation?.Dogbones == true;
             CamPlungeMode.SelectedIndex = (int)(operation?.Plunge ?? defaults.Plunge);
             CamRampAngle.Text = F(operation?.RampAngleDeg ?? defaults.RampAngleDeg);
             CamRampFeed.Text = F(operation?.RampFeedPercent ?? defaults.RampFeedPercent);
@@ -1601,6 +1602,7 @@ public partial class MainWindow : Window
         if (FaceSettingsPanel is not null) FaceSettingsPanel.Visibility = face ? Visibility.Visible : Visibility.Collapsed;
         if (CamStepoverLabel is not null) CamStepoverLabel.Text = face ? "Stegning mellan raderna (% av fräsdiametern)" : "Stegning (% av fräsdiametern)";
         CamTabs.Visibility = pocket || drill || face || vcarve || carve3d ? Visibility.Collapsed : Visibility.Visible;
+        CamDogbones.Visibility = drill || face || vcarve || carve3d ? Visibility.Collapsed : Visibility.Visible;
         TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && !carve3d && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         // Drilling plunges straight down, facing plunges beside the material: ramping does not apply.
         if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill || face ? Visibility.Collapsed : Visibility.Visible;
@@ -1688,6 +1690,7 @@ public partial class MainWindow : Window
             FaceOverhangMm = CamFaceOverhang is not null && Parse(CamFaceOverhang, out var overhang) ? overhang : defaults.FaceOverhangMm,
             FaceAlongY = CamFaceDirection?.SelectedIndex == 1,
             FaceCenterReachesLimits = kind == CamOperationKind.Face && CamFaceCenterReachesLimits?.IsChecked == true,
+            Dogbones = kind is CamOperationKind.Inside or CamOperationKind.Outside or CamOperationKind.Pocket && CamDogbones?.IsChecked == true,
             Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
     }
     private void UpdateCamSummary()
@@ -1743,7 +1746,8 @@ public partial class MainWindow : Window
                 : "Hållflikar: " + (!op.UseTabs ? "Nej"
                     : op.TotalDepth >= _document.MaterialThickness - 1e-6
                         ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"
-                        : "används först vid genomskärning")) + (error is null ? SecondSuffix(op) : "");
+                        : "används först vid genomskärning")) + (error is null ? SecondSuffix(op) : "") +
+            (error is null && op.Dogbones ? " · dogbones i innerhörnen" : "");
     }
     private string SecondSuffix(CamOperation op) => !op.SecondToolEnabled ? "" : op.Kind == CamOperationKind.Pocket
         ? $" · + detaljfräs Ø {F(op.SecondToolDiameter)} mm efteråt (hörn och smala partier)"
