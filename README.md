@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.62)
+﻿# CNC Studio – källkod (senaste: 0.9.63)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,28 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.63 – Låda med fingerskarvar
+
+- **Rita → Låda med fingerskarvar…**, eller knappen **Låda** i verktygslisten. Du anger:
+  - längd, bredd och höjd, som yttermått eller innermått
+  - ungefärlig fingerbredd
+  - spel för lim (standard 0,1 mm)
+  - om lådan ska ha botten
+  - fräs för utskärningen
+- Fönstret visar vad det blir: ytter- och innermått, antal fingrar och deras bredd på varje fog, och antal delar. Fingrar smalare än fräsen godtas inte.
+- **Delarna:** fram- och baksida, två gavlar och botten läggs ut som en grupp på materialet. Var och en får:
+  - utskärning genom skivan
+  - fyra hållflikar
+  - **dogbones**, så att fingrarna går i botten av urtagen
+  - den valda fräsens skärdata för materialet
+
+  Ryms inte delarna på materialet läggs de ut ändå, och programmet föreslår *Nesta* eller ett större material.
+- **Fogarna:**
+  - Fingrarna fördelas mellan hörnen, en skivtjocklek in från varje hörn, i samma udda antal på båda delarna i en fog. Den ena delen behåller de jämna fingrarna och den andra de udda.
+  - Alla hörnkuber hör till fram- och baksidan. Därför blir det inga tunna lister vid hörnen.
+  - Urtagen är spelet bredare än fingrarna. Urtagens djup är projektets skivtjocklek.
+- Logiken finns i `BoxJoints` (Core), med fem tester. De kontrollerar fingerantal, mått, hörnens ägare, att fingrar och urtag motsvarar varandra längs hörnen och att det inte finns några smala lister.
 
 ## 0.9.62 – Riggblad
 
