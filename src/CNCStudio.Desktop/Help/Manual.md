@@ -128,6 +128,7 @@ Markera en form och öppna panelen **Fräsning** (F2):
 - **Fräs** väljs ur verktygsbiblioteket – diameter, matning, nedmatning, djup per pass och varvtal fylls i. Ändra fritt.
 - **Totalt djup** och **djup per pass**. Vid genomskärning läggs **hållflikar** (antal, bredd, höjd) så att delen sitter kvar.
 - **Stegning** för ficka och planfräsning.
+- **Dogbones i innerhörn** (invändig och utvändig kontur, ficka) – ett runt urtag i varje skarpt hörn som fräsen inte når, så att en fyrkantig tapp eller del passar i det frästa. Rundade hörn och kurvor lämnas som de är.
 - **Andra fräs** – grovbearbetning med en stor fräs och finbearbetning eller detaljer med en mindre (ficka, V-carving och 3D).
 - **Avancerat:** rampad nedmatning (vinkel och matning) och fräsriktning (medfräsning eller motfräsning).
 

@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.57)
+﻿# CNC Studio – källkod (senaste: 0.9.58)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,14 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.58 – Dogbones i innerhörn
+
+- **Fräsning → Dogbones i innerhörn (för fogar):** en kryssruta för invändig kontur, utvändig kontur och ficka. En rund fräs lämnar en radie i varje skarpt hörn, så en fyrkantig tapp eller del går inte ned. Med dogbones gör fräsbanan en kort tur rakt in i hörnet längs vinkelhalveringslinjen, precis tills fräsens kant når det skarpa hörnet, och tillbaka.
+  - **Vilka hörn:** hålets hörn vid invändig kontur och ficka, och delens innerhörn vid utvändig kontur. Hörnen räknas ut från vilken sida väggen ligger på, alltså materialet som står kvar.
+  - **Rundade hörn och kurvor** lämnas orörda. Bara riktiga hörn, med en riktningsändring på minst 25°, får ett urtag.
+  - Urtagen är en del av banan, så hållflikar, rampning, 3D-simulering, körtid och G-code följer med. Sammanfattningen visar *dogbones i innerhörnen*.
+- Logiken finns i `Dogbones` (Core), med fyra tester: rektangelhål med rätt räckvidd r·(√2 − 1), ingen ändring utan valet eller på en utvändig rektangel, fickans väggvarv och ingen ändring på en ellips.
 
 ## 0.9.57 – Fräsbyte i ett flöde
 

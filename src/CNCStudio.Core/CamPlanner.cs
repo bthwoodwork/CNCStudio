@@ -247,7 +247,7 @@ public sealed class CamPlanner
         if (known && !mayCompute) return null;
         CacheEntry entry;
         GenerationCount++;
-        try { entry = new CacheEntry(key, shape.X, shape.Y, CamDirection.Apply(_generator(shape, op, thickness), shape, op), null); }
+        try { entry = new CacheEntry(key, shape.X, shape.Y, Dogbones.Apply(CamDirection.Apply(_generator(shape, op, thickness), shape, op), shape, op), null); }
         catch (Exception ex) { entry = new CacheEntry(key, shape.X, shape.Y, null, ex.Message); } // fail closed
         _cache[CacheKey(op)] = entry;
         return entry;
@@ -378,7 +378,7 @@ public sealed class CamPlanner
         return string.Join("|", shape.Kind, R(shape.Width), R(shape.Height),
             shape.Contours?.Count ?? -1, ContourHash(shape),
             op.Kind, R(op.ToolDiameter), R(op.ToolAngleDeg), op.ToolKind, R(op.InlayStartDepthMm), R(op.InlayClearanceMm), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
-            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, R(thickness),
+            op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, op.Dogbones, R(thickness),
             op.SecondToolEnabled, R(op.SecondToolDiameter), op.SecondToolKind,
             shape.Model is { } model ? model.Hash + "/" + R(model.DepthMm) + "/" + model.Quarter : "",
             op.Parent is null ? "" : "parent:" + Fingerprint(shape, op.Parent, thickness));
