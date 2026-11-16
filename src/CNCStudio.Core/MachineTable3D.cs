@@ -62,6 +62,21 @@ public static class MachineTable3D
         return lines;
     }
 
+    /// <summary>
+    /// The 2D machine view's grid: lines every <paramref name="step"/> mm counted from the table's back-left
+    /// corner (the 2D canvas origin), split into 100 mm, 50 mm and the rest – drawn strong, medium and faint.
+    /// </summary>
+    public static (List<(double X0, double Y0, double X1, double Y1)> Major, List<(double X0, double Y0, double X1, double Y1)> Medium, List<(double X0, double Y0, double X1, double Y1)> Minor)
+        TableGrid(Area a, double step = 10)
+    {
+        var major = new List<(double, double, double, double)>(); var medium = new List<(double, double, double, double)>(); var minor = new List<(double, double, double, double)>();
+        static bool At(double v, double m) => Math.Abs(v / m - Math.Round(v / m)) < 1e-6;
+        List<(double, double, double, double)> Bucket(double d) => At(d, 100) ? major : At(d, 50) ? medium : minor;
+        for (double d = step; d < a.Width - 1e-6; d += step) Bucket(d).Add((a.Left + d, a.Front, a.Left + d, a.Back));
+        for (double d = step; d < a.Length - 1e-6; d += step) Bucket(d).Add((a.Left, a.Back - d, a.Right, a.Back - d));
+        return (major, medium, minor);
+    }
+
     /// <summary>100 mm on a normal table, 50 mm on a small one.</summary>
     public static double GridStep(Area a) => Math.Min(a.Width, a.Length) < 400 ? 50 : 100;
 }

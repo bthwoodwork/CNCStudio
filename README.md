@@ -271,6 +271,7 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - **Dra materialet med vänster musknapp** i 3D-vyn: markören blir ett flyttkors över materialet, och materialet, banorna och nollpunkten följer musen över bordet. Positionen visas medan du drar.
 - När du släpper uppdateras projektet som i 2D: ett ångrasteg, och 2D, Maskin och fräsningen följer med. Vyn står kvar där draget slutade.
 - Materialet hålls inom arbetsområdet. Höger musknapp roterar och mittenknappen panorerar som förut.
+- **Samma rutnät på bordet som i 2D:** 10 mm svaga, 50 mm mellan och 100 mm tydliga linjer, räknat från bordets bakre vänstra hörn som i 2D-vyerna (tidigare bara 100 mm från hemhörnet).
 
 ## 0.9.45 – Flytta materialet på bordet
 

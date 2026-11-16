@@ -426,10 +426,17 @@ public partial class View3DPanel : UserControl
             Center = new Point3D(a.Left + a.Width / 2, a.Front + a.Length / 2, z - 3),
             Length = a.Width, Width = a.Length, Height = 6, Fill = new SolidColorBrush(TableTop)
         });
-        var grid = new Point3DCollection();
-        foreach (var (x0, y0, x1, y1) in MachineTable3D.GridLines(a, doc.Machine.HomeCorner))
-        { grid.Add(new Point3D(x0, y0, z + 0.05)); grid.Add(new Point3D(x1, y1, z + 0.05)); }
-        _table.Children.Add(new LinesVisual3D { Color = TableGrid, Thickness = 1, Points = grid });
+        // The same grid as the 2D views: 10 mm faint, 50 mm medium, 100 mm strong, from the table's back-left corner.
+        var (major, medium, minor) = MachineTable3D.TableGrid(a);
+        void AddGrid(List<(double X0, double Y0, double X1, double Y1)> lines, byte alpha, double thickness, double lift)
+        {
+            var points = new Point3DCollection();
+            foreach (var (x0, y0, x1, y1) in lines) { points.Add(new Point3D(x0, y0, z + lift)); points.Add(new Point3D(x1, y1, z + lift)); }
+            _table.Children.Add(new LinesVisual3D { Color = Color.FromArgb(alpha, 0x7F, 0xA3, 0xC6), Thickness = thickness, Points = points });
+        }
+        AddGrid(minor, 40, 0.6, 0.03);
+        AddGrid(medium, 90, 0.9, 0.05);
+        AddGrid(major, 150, 1.2, 0.07);
         _table.Children.Add(new LinesVisual3D
         {
             Color = TableEdge, Thickness = 1.5, Points = new Point3DCollection
@@ -445,7 +452,7 @@ public partial class View3DPanel : UserControl
             Text = "HEM", Position = new Point3D(hx, hy, z + 18), Foreground = new SolidColorBrush(Home), Background = Brushes.Transparent,
             FontWeight = FontWeights.Bold, FontSize = 13
         });
-        InfoText.Text = $"Maskinbord {F(a.Width)} × {F(a.Length)} mm, rutor {F(MachineTable3D.GridStep(a))} mm från hemhörnet.";
+        InfoText.Text = $"Maskinbord {F(a.Width)} × {F(a.Length)} mm, rutor 10/50/100 mm som i 2D.";
     }
 
     // ---- Live tool position ----
