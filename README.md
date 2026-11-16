@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.43)
+﻿# CNC Studio – källkod (senaste: 0.9.44)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,12 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.44 – Maskinbordet och materialet i 2D-vyn
+
+- **Maskinbordet syns kvar i Design** när projektet har material: bordet med 10/50/100 mm-rutor ritas runt materialet, och materialet ligger där det är placerat på bordet (som i Maskin och 3D-vyn).
+- **Materialet är en solid skiva** i en varm träton med ljus kant, utan bordets rutnät, så att det inte går att förväxla med bordet.
+- Utan material är arbetsytan fortfarande hela bordet med ritrutnätet.
 
 ## 0.9.43 – Smal verktygslist och kortare fräsningspanel
 
