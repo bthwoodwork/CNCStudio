@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.47)
+﻿# CNC Studio – källkod (senaste: 0.9.48)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,11 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.48 – Lugnare materialflytt i 3D-vyn
+
+- **Materialet hoppar inte längre när du släpper.** Under dragningen står bordet still på skärmen och materialet följer musen. Bilden under dragningen är exakt den som visas efter släppet, eftersom kameran och bordet flyttas tillsammans redan medan du drar i stället för först när du släpper.
+- Musrörelserna under dragningen går inte vidare till vyns egen kamerastyrning, och en pågående zoomanimering stoppas när dragningen börjar.
 
 ## 0.9.47 – Projektet sparas alltid som .cncstudio.json
 
