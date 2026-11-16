@@ -71,7 +71,7 @@ public partial class MainWindow
             // Red edge when the material no longer fits the work area (toolpaths are blocked then).
             Stroke = MachineSetupValidation.StockProblem(_document) is null ? CanvasTheme.StockEdge : CanvasTheme.Critical,
             StrokeThickness = (MachineSetupValidation.StockProblem(_document) is null ? 1.2 : 2.5) / _zoom,
-            Cursor = Cursors.SizeAll, Tag = "stock", ToolTip = "Dra materialet eller ange X/Y i egenskaper" };
+            Tag = "stock", ToolTip = "Materialet flyttas i Design: klicka på det och dra, eller ange X/Y under Material på bordet." };
         Canvas.SetLeft(stock, _document.Stock.X); Canvas.SetTop(stock, _document.Stock.Y);
         if (_document.HasMaterial) MachineCanvas.Children.Add(stock);          // no material: an empty table
 
@@ -290,14 +290,7 @@ public partial class MainWindow
             _selectedFixture = f; RefreshFixtureFields();
             if (!f.Locked) { _movingFixture = true; _machineDragOriginal = new Point(f.X, f.Y); MachineCanvas.CaptureMouse(); }
         }
-        // Anything drawn on the material (shapes, toolpaths, the zero marker) still grabs the material.
-        else if ((source is string tag && tag == "stock") || (_document.HasMaterial && !_fixtureDrawing &&
-            new Rect(_document.Stock.X, _document.Stock.Y, _document.MaterialWidth, _document.MaterialHeight).Contains(p)))
-        {
-            _movingStock = true; _machineDragOriginal = new Point(_document.Stock.X, _document.Stock.Y);
-            MachineCanvas.CaptureMouse(); _selectedFixture = null;
-            RefreshFixtureFields();
-        }
+        // The material is placed in Design only (click it, then drag, or Material på bordet): here it stays put.
         else _machineDragStart = null;
         RenderMachine(); e.Handled = true;
     }

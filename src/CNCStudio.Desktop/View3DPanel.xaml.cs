@@ -44,6 +44,8 @@ public partial class View3DPanel : UserControl
     public event Action<double, double>? StockMoved;
     /// <summary>A left click: true on the material (select it), false elsewhere (deselect it).</summary>
     public event Action<bool>? StockClicked;
+    /// <summary>Whether the material may be selected and dragged here (Design only, not in the Maskin workspace).</summary>
+    public bool CanMoveStock { get; set; } = true;
     private bool _stockSelected;
     private StockAnchor _anchor;
     private readonly ModelVisual3D _selectionMark = new();
@@ -95,6 +97,7 @@ public partial class View3DPanel : UserControl
 
     private void Scene_LeftDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (!CanMoveStock) return;
         var pos = e.GetPosition(Scene.Viewport);
         bool over = OverMaterial(pos);
         if (!over || !_stockSelected)
@@ -115,7 +118,7 @@ public partial class View3DPanel : UserControl
         var pos = e.GetPosition(Scene.Viewport);
         if (_dragFrom is not Point3D from || _doc is not { } d)
         {
-            Scene.Cursor = OverMaterial(pos) ? (_stockSelected ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Hand) : null;
+            Scene.Cursor = CanMoveStock && OverMaterial(pos) ? (_stockSelected ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Hand) : null;
             return;
         }
         e.Handled = true;

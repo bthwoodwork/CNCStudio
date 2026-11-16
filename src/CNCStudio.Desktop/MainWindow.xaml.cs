@@ -354,6 +354,8 @@ public partial class MainWindow : Window
         if (cam) ws = Workspace.Design;
         _workspace = ws;
         SetMachineView(ws == Workspace.Machine);
+        View3DPanel.CanMoveStock = ws != Workspace.Machine;
+        if (ws == Workspace.Machine) SetStockSelected(false);
         switch (ws)
         {
             case Workspace.Design:
@@ -384,6 +386,7 @@ public partial class MainWindow : Window
         // The properties panel shows what belongs to the workspace.
         bool machine = _workspace == Workspace.Machine;
         DesignSections.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;
+        StockPlacementExpander.Visibility = machine ? Visibility.Collapsed : Visibility.Visible;   // the material is moved in Design only
         MachineSections.Visibility = machine ? Visibility.Visible : Visibility.Collapsed;
         if (Anchorable("Properties") is { } properties) properties.Title = machine ? "Maskinbord" : "Egenskaper";
         DesignTab.Tag = _workspace == Workspace.Design ? "Active" : null;
