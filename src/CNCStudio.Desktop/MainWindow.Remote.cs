@@ -63,7 +63,8 @@ public partial class MainWindow : IRemoteMachine
             runner is not null ? _jobName : _jobLines is not null ? _jobName + " (laddat)" : null,
             runner is not null && runner.TotalLines > 0 ? (double)runner.AckedLines / runner.TotalLines : null,
             JobProgressText.Text, st?.Overrides ?? new double[] { 100, 100, 100 },
-            _spindleOn, _floodOn, _locations.Locations.Select(l => l.Name).ToList(), speed, false, JogStatusText.Text);
+            _spindleOn, _floodOn, _locations.Locations.Select(l => l.Name).ToList(), speed, false, JogStatusText.Text,
+            _noticeId, _noticeText, NoticeKindName);
     }
 
     private async Task<string?> RemoteCommand(string action, IReadOnlyDictionary<string, string> args)

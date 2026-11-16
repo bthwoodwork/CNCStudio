@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.60)
+﻿# CNC Studio – källkod (senaste: 0.9.61)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,20 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.61 – Avisering
+
+- **Fyra händelser aviseras:** programmet är klart (också varje program i ett jobb med flera fräsar), programmet väntar vid en egen paus (M0), körningen stoppas av ett fel och maskinen får larm.
+- **På datorn:**
+  - Ett Windows-ljud per sorts händelse.
+  - Knappen i aktivitetsfältet blinkar tills fönstret tas fram, om CNC Studio inte redan är i förgrunden.
+  - Ljudet stängs av under **Maskin → Ljud vid klart, paus och larm**. Valet sparas.
+- **På mobilsidan** (Styr från mobilen):
+  - En banderoll med texten: grön för klart, gul för väntar, röd för stopp och larm. *OK* stänger den.
+  - Vibration och ett pip. Pipet kräver att du har tryckt en gång på sidan, som webbläsarna kräver.
+  - Varje avisering visas en gång, även om sidan laddas om.
+- **Din egen paus aviseras inte:** paus och stopp som CNC Studio själv skickar, från knapp, mobil, gamepad eller tangent, räknas inte som programmets M0.
+- `RemoteStatus` har fått `NoticeId`, `Notice` och `NoticeKind`.
 
 ## 0.9.60 – CAM-mallar
 

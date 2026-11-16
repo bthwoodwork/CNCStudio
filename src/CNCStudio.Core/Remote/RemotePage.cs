@@ -37,6 +37,9 @@ button.sel { background:var(--blue); }
 .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .small button { min-height:44px; padding:8px 4px; font-size:14px; }
 #pinbox { display:none; }
+.notice { display:none; position:sticky; top:0; z-index:5; border-radius:12px; padding:12px 14px; margin:0 0 10px; font-weight:600; }
+.notice.done { background:#2e7a4a; } .notice.pause { background:#9a6a12; } .notice.alarm, .notice.stopped { background:#b3362b; }
+.notice button { min-height:36px; padding:6px 14px; margin-left:10px; background:rgba(0,0,0,.25); }
 input { font:600 24px ui-monospace, monospace; width:100%; padding:10px; border-radius:10px; border:1px solid var(--line); background:#10202e; color:var(--ink); letter-spacing:.3em; text-align:center; }
 </style>
 </head>
@@ -49,6 +52,7 @@ input { font:600 24px ui-monospace, monospace; width:100%; padding:10px; border-
   <button class="go" style="width:100%;margin-top:8px" onclick="savePin()">OK</button>
 </div>
 
+<div id="notice" class="notice"><div class="row"><span id="noticetext"></span><button onclick="seenNotice()">OK</button></div></div>
 <div id="main">
   <button class="stop" onclick="cmd('stop')">STOPP</button>
   <div class="card">
@@ -147,8 +151,28 @@ async function poll() {
       (s.locations || []).forEach(n => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => cmd('location', { name: n }); $('locs').appendChild(b); });
     }
     if (s.message && !$('msg').textContent) msg(s.message);
+    if (s.noticeId && s.noticeId > seen && s.notice) showNotice(s);
   } catch (e) { $('state').textContent = 'Ingen kontakt'; }
 }
+let seen = 0; try { seen = +(localStorage.getItem('cncseen') || 0); } catch (e) {}
+let audio = null;
+document.addEventListener('click', () => { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {} }, { once: false });
+function beep(kind) {
+  try {
+    if (!audio) return;
+    const tones = kind === 'done' ? [660, 880] : kind === 'pause' ? [520, 520] : [880, 440, 880, 440];
+    tones.forEach((hz, i) => { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = hz; g.gain.value = 0.25;
+      o.connect(g); g.connect(audio.destination); const t = audio.currentTime + i * 0.22; o.start(t); o.stop(t + 0.18); });
+  } catch (e) {}
+}
+function showNotice(s) {
+  const n = $('notice'); n.className = 'notice ' + (s.noticeKind || 'done'); n.style.display = 'block';
+  $('noticetext').textContent = s.notice; n.dataset.id = s.noticeId;
+  try { navigator.vibrate && navigator.vibrate(s.noticeKind === 'done' ? [200, 100, 200] : [400, 150, 400, 150, 400]); } catch (e) {}
+  beep(s.noticeKind);
+  seen = s.noticeId; try { localStorage.setItem('cncseen', seen); } catch (e) {}
+}
+function seenNotice() { $('notice').style.display = 'none'; }
 needPin(!pin);
 setInterval(poll, 500); poll();
 </script>

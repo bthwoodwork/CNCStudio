@@ -148,6 +148,11 @@ public partial class MainWindow
         UpdateJobButtons();
         JobProgressText.Text = result.Message;
         StatusText.Text = result.Message;
+        if (result.Outcome == JobOutcome.Failed) Notify(NoticeKind.Stopped, "Körningen stoppades: " + result.Message);
+        else if (result.Outcome == JobOutcome.Finished)
+            Notify(NoticeKind.Done, _loadedJob is { Count: > 1 } j && j.Number < j.Count
+                ? $"Program {j.Number} av {j.Count} klart – dags för fräsbyte."
+                : "Programmet är klart.");
         if (result.Outcome == JobOutcome.Failed)
         {
             RefreshRecoveryBanner();
@@ -196,7 +201,7 @@ public partial class MainWindow
         if (Grbl is not GrblClient g) return;
         // Hold (feed hold or the program's M0 pause) → resume with ~; otherwise feed hold.
         if (g.LastStatus?.State == "Hold") g.SendRealtime(GrblProtocol.CycleStartResume);
-        else g.SendRealtime(GrblProtocol.FeedHold);
+        else { _userPaused = true; g.SendRealtime(GrblProtocol.FeedHold); }
     }
 
     private async void StopJob_Click(object sender, RoutedEventArgs e)

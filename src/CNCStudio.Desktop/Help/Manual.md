@@ -263,6 +263,15 @@ Medan programmet kör kan du ändra **matning** och **spindel** (−10/−1/100/
 
 Styrs fräsen för hand pausar programmet med M0 där spindeln ska startas eller ställas om – starta fräsen och tryck Fortsätt.
 
+## Avisering
+
+När programmet är **klart**, **väntar** vid en paus i programmet (M0, t.ex. för att starta fräsen), **stoppas** av ett fel eller maskinen får **larm**:
+
+- datorn spelar ett ljud (olika för klart, väntar och larm) och knappen i aktivitetsfältet blinkar om CNC Studio inte är i förgrunden,
+- mobilsidan (Styr från mobilen) visar en färgad banderoll, vibrerar och piper. Tryck en gång någonstans på sidan efter att den öppnats, annars får den inte pipa.
+
+Ljudet på datorn stängs av under **Maskin → Ljud vid klart, paus och larm**. Din egen Paus eller Stopp aviseras inte.
+
 ## Starta från rad
 
 **Starta från rad…** börjar programmet längre fram, till exempel efter en del som redan är gjord. Välj rad, skriv radnumret eller hoppa till en del. Mitt i en fräsning börjar det på närmaste säkra punkt före raden, och fönstret visar hur maskinen kör in: Z upp, XY dit, spindeln på, ned och vidare.

@@ -18,6 +18,7 @@ public partial class MainWindow
     {
         StockRulerMenuItem.IsChecked = StockRulerOn;
         TableRulerMenuItem.IsChecked = TableRulerOn;
+        NotifySoundMenuItem.IsChecked = NotifySoundOn;
         View3DPanel.SetRulers(StockRulerOn, TableRulerOn);
         View3DPanel.RulersChanged += (stock, table) => SetRulers(stock, table);
         ApplyRulerVisibility();
