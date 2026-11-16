@@ -12,11 +12,15 @@ using System.Threading.Tasks;
 
 namespace CNCStudio.Core.Remote;
 
-/// <summary>What the phone sees: the machine's state, position and the running program.</summary>
+/// <summary>
+/// What the phone sees: the machine's state, position and the running program – and the latest notice (program done,
+/// waiting at M0, stopped, alarm) with a number that grows, so the phone can tell a new one from one it has shown.
+/// </summary>
 public sealed record RemoteStatus(
     bool Connected, string State, double[]? WorkPos, double[]? MachinePos, bool Homed,
     string? Job, double? JobProgress, string? JobMessage, double[]? Overrides,
-    bool SpindleOn, bool FloodOn, IReadOnlyList<string> Locations, string JogSpeed, bool StartAllowed, string Message);
+    bool SpindleOn, bool FloodOn, IReadOnlyList<string> Locations, string JogSpeed, bool StartAllowed, string Message,
+    long NoticeId = 0, string? Notice = null, string? NoticeKind = null);
 
 /// <summary>The machine side: implemented by the Desktop (on its UI thread). A command returns null when done, or why not.</summary>
 public interface IRemoteMachine

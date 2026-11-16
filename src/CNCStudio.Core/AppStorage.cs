@@ -25,6 +25,9 @@ public sealed class AppSettings
 
     /// <summary>The table's (work area's) rulers (Maskin's 2D rulers, the table ruler in 3D). Null = on.</summary>
     public bool? ShowTableRuler { get; set; }
+
+    /// <summary>Sound when a program is done, waits at M0, is stopped or the machine raises an alarm. Null = on.</summary>
+    public bool? NotifySound { get; set; }
 }
 
 /// <summary>A window's size and place on the screen, in WPF units (1/96 inch).</summary>

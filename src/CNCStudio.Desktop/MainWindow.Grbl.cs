@@ -68,11 +68,16 @@ public partial class MainWindow
             // An alarm or a reset (welcome) means the position may be lost: hide the tool until homed again.
             if (line.Kind is GrblLineKind.Alarm or GrblLineKind.Welcome)
                 Dispatcher.BeginInvoke(() => { _homedThisSession = false; if (_machineView) RenderMachine(refreshCam: false); });
-            if (line.Kind is GrblLineKind.Alarm) Dispatcher.BeginInvoke(() => LogAlarm(line));
+            if (line.Kind is GrblLineKind.Alarm) Dispatcher.BeginInvoke(() =>
+            {
+                LogAlarm(line);
+                string what = line.Code is int c && GrblSettings.Alarms.TryGetValue(c, out var m) ? m : "okänt larm";
+                Notify(NoticeKind.Alarm, $"LARM {line.Code}: {what}");
+            });
             if (line.Kind is GrblLineKind.Message or GrblLineKind.Welcome)
                 Dispatcher.BeginInvoke(() => ShowResetState(client));
         };
-        client.Sent += text => Log("→ " + text);
+        client.Sent += text => { Log("→ " + text); if (text == "!") _userPaused = true; };   // our own feed hold (Paus, Stopp, phone, gamepad) is not an M0
         client.StatusChanged += s => Dispatcher.BeginInvoke(() => ShowStatus(s));
         try
         {
@@ -322,6 +327,7 @@ public partial class MainWindow
         // Home → Idle means a homing cycle finished (also when $H was sent from the console).
         if (_lastLiveState == "Home" && s.State == "Idle" && !_homedThisSession)
         { _homedThisSession = true; if (_machineView) RenderMachine(refreshCam: false); }
+        NoticeHold(_lastLiveState, s.State);
         _lastLiveState = s.State;
         LiveStateText.Text = s.SubState is null ? s.State : $"{s.State}:{s.SubState}";
         LiveStateText.Foreground = s.State switch
