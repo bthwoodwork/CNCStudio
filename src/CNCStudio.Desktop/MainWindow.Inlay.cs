@@ -32,11 +32,12 @@ public partial class MainWindow
         string dir = _path is not null && Path.GetDirectoryName(_path) is string d && Directory.Exists(d) ? d : ProjectsFolder();
         var dialog = new SaveFileDialog
         {
-            Title = "Spara hanens projekt", Filter = "CNC Studio JSON|*.cncstudio.json",
-            FileName = SafeFileName(plugDoc.Name) + ".cncstudio.json", InitialDirectory = dir,
+            Title = "Spara hanens projekt", Filter = "CNC Studio-projekt (*.cncstudio.json)|*.cncstudio.json", AddExtension = false,
+            FileName = SafeFileName(plugDoc.Name) + ProjectCatalog.Extension, InitialDirectory = dir,
         };
         if (dialog.ShowDialog(this) != true) return;
-        try { DocumentStorage.Save(dialog.FileName, plugDoc); }
+        string plugPath = ProjectCatalog.WithExtension(dialog.FileName);
+        try { DocumentStorage.Save(plugPath, plugDoc); }
         catch (Exception ex) { Error("Hanens projekt kunde inte sparas: " + ex.Message); return; }
 
         RememberChange();
@@ -52,10 +53,10 @@ public partial class MainWindow
         Render();
 
         string F(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-        StatusText.Text = $"Inlay: honan ({F(plan.PocketDepthMm)} mm V-carving) är satt här, hanen sparad som {Path.GetFileName(dialog.FileName)}.";
+        StatusText.Text = $"Inlay: honan ({F(plan.PocketDepthMm)} mm V-carving) är satt här, hanen sparad som {Path.GetFileName(plugPath)}.";
         var answer = AppDialog.Choose(this,
             $"Honan: V-carving {F(plan.PocketDepthMm)} mm djupt på {what} i det här projektet (spara det).\n\n" +
-            $"Hanen: sparad som eget projekt, speglad, på en skiva {F(plugDoc.MaterialWidth)} × {F(plugDoc.MaterialHeight)} × {F(plugDoc.MaterialThickness)} mm:\n{dialog.FileName}\n\n" +
+            $"Hanen: sparad som eget projekt, speglad, på en skiva {F(plugDoc.MaterialWidth)} × {F(plugDoc.MaterialHeight)} × {F(plugDoc.MaterialThickness)} mm:\n{plugPath}\n\n" +
             "SÅ GÖR DU:\n" +
             "1. Fräs honan i den här skivan.\n" +
             "2. Öppna hanens projekt, spänn fast hanens skiva, nolla X/Y och Z på den och fräs hanen.\n" +
@@ -69,6 +70,6 @@ public partial class MainWindow
             MessageBoxButton.YesNoCancel, MessageBoxImage.Question, MessageBoxResult.Yes);
         if (save == MessageBoxResult.Cancel) return;
         if (save == MessageBoxResult.Yes) { Save_Click(this, new RoutedEventArgs()); if (_path is null) return; }
-        OpenProject(dialog.FileName);
+        OpenProject(plugPath);
     }
 }

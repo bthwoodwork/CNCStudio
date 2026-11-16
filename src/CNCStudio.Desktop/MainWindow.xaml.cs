@@ -1443,13 +1443,24 @@ public partial class MainWindow : Window
         _document.Name = NameBox.Text; _document.MaterialWidth = w; _document.MaterialHeight = h; _document.MaterialThickness = t;
         // Saving the project only needs a valid profile; material outside the work area is shown in CAM instead.
         if ((MachineSetupValidation.ValidateProfile(_document.Machine) ?? MachineSetupValidation.FixtureValues(_document)) is string setupError) { Error(setupError); return; }
-        if (_path is null) { var dialog = new SaveFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json", FileName = SafeFileName(_document.Name) + ".cncstudio.json", InitialDirectory = ProjectsFolder() }; if (dialog.ShowDialog(this) != true) return; _path = dialog.FileName; }
+        if (_path is null)
+        {
+            var dialog = new SaveFileDialog { Filter = "CNC Studio-projekt (*.cncstudio.json)|*.cncstudio.json", AddExtension = false,
+                FileName = SafeFileName(_document.Name) + ProjectCatalog.Extension, InitialDirectory = ProjectsFolder(), Title = "Spara projekt" };
+            if (dialog.ShowDialog(this) != true) return;
+            // The name may be typed without the extension (or as .json): always save as .cncstudio.json.
+            var path = ProjectCatalog.WithExtension(dialog.FileName);
+            if (path != dialog.FileName && File.Exists(path) && MessageBox.Show(this,
+                    $"{System.IO.Path.GetFileName(path)} finns redan. Vill du ersätta den?", "Spara projekt",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+            _path = path;
+        }
         try { DocumentStorage.Save(_path, _document); StatusText.Text = "Sparat: " + _path; }
         catch (Exception ex) { Error("Kunde inte spara: " + ex.Message); }
     }
     private void Open_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Filter = "CNC Studio JSON|*.cncstudio.json|JSON|*.json", InitialDirectory = ProjectsFolder() };
+        var dialog = new OpenFileDialog { Filter = "CNC Studio-projekt|*.cncstudio.json;*.json|Alla filer|*.*", InitialDirectory = ProjectsFolder() };
         if (dialog.ShowDialog(this) != true) return;
         OpenProject(dialog.FileName);
     }

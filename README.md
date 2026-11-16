@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.46)
+﻿# CNC Studio – källkod (senaste: 0.9.47)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.47 – Projektet sparas alltid som .cncstudio.json
+
+- **Du behöver inte skriva ändelsen:** skriver du bara `Bricka` (eller `Bricka.json`) i Spara-dialogen sparas projektet som `Bricka.cncstudio.json`. Tidigare kunde filen bli `Bricka.json`, och då syntes den inte bland projekten på startsidan eller i Öppna.
+- Finns en fil med det namnet redan frågar programmet innan den ersätts.
+- **Öppna** visar nu även vanliga `.json`-filer, så att projekt som redan sparats med fel ändelse går att öppna. Spara dem sedan med *Spara som* för att få rätt ändelse.
+- Samma sak gäller hanens projekt när en inlay görs.
 
 ## 0.9.46 – Flytta materialet i 3D-vyn
 

@@ -13,6 +13,18 @@ public static class ProjectCatalog
 {
     public const string Extension = ".cncstudio.json";
 
+    /// <summary>
+    /// The path with the project extension, whatever was typed in the save dialog: "Bricka", "Bricka.json" and
+    /// "Bricka.cncstudio.json" all become "Bricka.cncstudio.json" – so the project shows on the start screen and in Öppna.
+    /// A name with dots of its own ("Hylla v1.2") keeps them.
+    /// </summary>
+    public static string WithExtension(string path)
+    {
+        if (path.EndsWith(Extension, StringComparison.OrdinalIgnoreCase)) return path;
+        if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) path = path[..^".json".Length];
+        return path + Extension;
+    }
+
     public static IReadOnlyList<ProjectFileInfo> Recent(string projectsFolder, int max)
     {
         if (!Directory.Exists(projectsFolder) || max <= 0) return Array.Empty<ProjectFileInfo>();
