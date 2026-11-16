@@ -169,15 +169,10 @@ public partial class MainWindow
                 _jobLines = null; UpdateJobButtons();
                 if (_machineView) RenderMachine(refreshCam: false);
                 Update3DJob();
-                JobInfoText.Text = $"Program {done.Number} av {done.Count} klart. Nästa: program {next} – {tool}. Byt fräs och klicka Nolla Z – programmet laddas då automatiskt.";
-                AppDialog.Show(this,
-                    $"Program {done.Number} av {done.Count} är klart.{stop}\n\n" +
-                    $"NÄSTA: program {next} – {tool}\n" +
-                    $"1. Byt till {tool}.\n" +
-                    "2. Jogga ned till materialytan och klicka Nolla Z (X och Y ändras inte).\n" +
-                    "   Programmet laddas då automatiskt och kontrolleras mot den nya Z-nollan.\n" +
-                    "3. Klicka Starta." + DueText(due),
-                    "Program klart", MessageBoxButton.OK, MessageBoxImage.Information);
+                JobInfoText.Text = $"Program {done.Number} av {done.Count} klart. Nästa: program {next} – {tool}. Fräsbyte… (Maskin-menyn) leder genom bytet; Nolla Z eller probning laddar programmet.";
+                if (DueText(due) is { Length: > 0 } dueText)
+                    AppDialog.Show(this, $"Program {done.Number} av {done.Count} är klart." + dueText, "Program klart", MessageBoxButton.OK, MessageBoxImage.Information);
+                OpenToolChange(done.Number, next, done.Count, tool);
             }
             else
             {
