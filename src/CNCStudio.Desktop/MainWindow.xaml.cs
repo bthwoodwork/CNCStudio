@@ -192,7 +192,7 @@ public partial class MainWindow : Window
     private void Xor_Click(object sender, RoutedEventArgs e) => BooleanApply(BooleanAction.Xor);
 
 
-    public MainWindow() { InitializeComponent(); View3DPanel.StockMoved += MoveStockFrom3D; View3DPanel.StockClicked += StockClickedIn3D; RestorePlacement(); Render(); }
+    public MainWindow() { InitializeComponent(); View3DPanel.StockMoved += MoveStockFrom3D; View3DPanel.StockClicked += StockClickedIn3D; InitRulers(); RestorePlacement(); Render(); }
 
     /// <summary>The size and place the window had when it was last closed on this computer (if it still fits on the screens).</summary>
     private void RestorePlacement()

@@ -81,7 +81,7 @@ Mått och läge för den markerade formen ändras exakt under **Egenskaper → M
 
 Hjulet zoomar, mittenknappen panorerar, **F** anpassar vyn till materialet.
 
-**Linjalerna** längs över- och vänsterkanten visar i Design arbetskoordinater: 0 (blå) är materialets nollpunkt, X0 Y0 i programmet, och Y växer bakåt som i G-coden. I Maskin mäter de bordet från hemhörnet – samma mått som under *Material på bordet*.
+**Linjalerna** längs över- och vänsterkanten visar i Design arbetskoordinater: 0 (blå) är materialets nollpunkt, X0 Y0 i programmet, och Y växer bakåt som i G-coden. I Maskin mäter de bordet från hemhörnet – samma mått som under *Material på bordet*. **Visa → Linjal: material** och **Visa → Linjal: bord (arbetsytan)** tänder och släcker dem var för sig.
 
 # Material och placering
 
@@ -157,7 +157,7 @@ Maskinen har ingen verktygsväxlare, så varje fräs blir ett eget program, i r�
 
 Höger musknapp roterar, hjulet zoomar, mittenknappen panorerar. *Anpassa vy* och *Hela bordet* zoomar om.
 
-**Linjaler** i 3D: längs materialets främre och vänstra kant (arbetskoordinater, 0 = nollpunkten) och längs bordets kanter (mm från hemhörnet). Kryssrutan *Linjaler* visar eller döljer dem.
+**Linjaler** i 3D: längs materialets främre och vänstra kant (arbetskoordinater, 0 = nollpunkten) och längs bordets kanter (mm från hemhörnet). Kryssrutorna *Linjal: material* och *Linjal: bord* tänder och släcker dem var för sig – samma val som i Visa-menyn, och de gäller även 2D.
 
 # Maskin: ansluta och nolla
 

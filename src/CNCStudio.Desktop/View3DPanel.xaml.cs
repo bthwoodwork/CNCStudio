@@ -561,6 +561,26 @@ public partial class View3DPanel : UserControl
 
     // ---- Rulers ----
 
+    /// <summary>A ruler box was ticked here: (material, table). The main window keeps the setting and the 2D rulers in step.</summary>
+    public event Action<bool, bool>? RulersChanged;
+    private bool _settingRulers;
+
+    /// <summary>Shows or hides the material's and the table's rulers (from the setting or the Visa menu).</summary>
+    public void SetRulers(bool stock, bool table)
+    {
+        _settingRulers = true;
+        ShowStockRulerBox.IsChecked = stock; ShowTableRulerBox.IsChecked = table;
+        _settingRulers = false;
+        Layer_Changed(this, new RoutedEventArgs());
+    }
+
+    private void Ruler_Changed(object sender, RoutedEventArgs e)
+    {
+        Layer_Changed(sender, e);
+        if (!_settingRulers && ShowStockRulerBox is not null && ShowTableRulerBox is not null)
+            RulersChanged?.Invoke(ShowStockRulerBox.IsChecked == true, ShowTableRulerBox.IsChecked == true);
+    }
+
     private static readonly Color TableRulerColor = Color.FromRgb(0x9E, 0xB7, 0xD1), StockRulerColor = Color.FromRgb(0xE0, 0xB8, 0x84),
         RulerZero = Color.FromRgb(0x6F, 0xB6, 0xFF);
 
@@ -662,8 +682,8 @@ public partial class View3DPanel : UserControl
         SetVisible(_rapids, ShowRapids.IsChecked == true);
         SetVisible(_fixtures, ShowFixtures.IsChecked == true);
         SetVisible(_table, ShowTable?.IsChecked == true);
-        SetVisible(_tableRuler, ShowRulers?.IsChecked == true && ShowTable?.IsChecked == true);
-        SetVisible(_stockRuler, ShowRulers?.IsChecked == true);
+        SetVisible(_tableRuler, ShowTableRulerBox?.IsChecked == true && ShowTable?.IsChecked == true);
+        SetVisible(_stockRuler, ShowStockRulerBox?.IsChecked == true);
         // See-through material must be drawn after the paths, or it hides them in the depth buffer.
         if (StockMode.SelectedIndex == 1 && Scene.Children.Contains(_stock)) { Scene.Children.Remove(_stock); Scene.Children.Add(_stock); }
     }
