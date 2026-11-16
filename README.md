@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.52)
+﻿# CNC Studio – källkod (senaste: 0.9.53)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,20 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.53 – Manual i Hjälp-menyn
+
+- **Hjälp → Manual…** (Shift+F1) öppnar en användarmanual på svenska. Den har en innehållsförteckning till vänster och sökning i hela texten (Ctrl+F, rutan under texten).
+- Manualen följer arbetsgången:
+  - kom igång (ny maskin, första test, demomaskinen)
+  - projekt och filer
+  - rita
+  - material och placering på bordet, med fastspänningar
+  - fräsning: bearbetningar, fräsar, jobb och CAM-kontroll, inlay, flera fräsar, 3D-vyn
+  - maskin: ansluta, nolla, jogga, proba, planhet, platser
+  - köra program: ladda, kontrollera, starta/paus/stopp, starta från rad, återuppta, G-code-editorn
+  - makron, mobilen, maskinens verktyg, biblioteken, felsökning och tangentbordsgenvägar
+- Texten finns i `src/CNCStudio.Desktop/Help/Manual.md` och byggs in i programmet. Uppdatera den när något ändras.
 
 ## 0.9.52 – G-code-editor
 

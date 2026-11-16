@@ -413,6 +413,15 @@ public partial class MainWindow : Window
         _logViewer.Show();
     }
 
+    private ManualWindow? _manual;
+    /// <summary>Hjälp → Manual… (Shift+F1): one manual window; a second click brings it to the front.</summary>
+    private void Manual_Click(object sender, RoutedEventArgs e)
+    {
+        if (_manual is { IsLoaded: true }) { _manual.Activate(); return; }
+        _manual = new ManualWindow { Owner = this };
+        _manual.Closed += (_, _) => _manual = null;
+        _manual.Show();
+    }
     private void About_Click(object sender, RoutedEventArgs e)
         => AppDialog.Show(this, AppTitle + "\n\n2D-CAD, DXF/SVG-import, kontur- och fickfräsning med automatisk CAM-kontroll, 3D-vy, G-code för GRBL 1.1 och maskinstyrning (jogg, nollning, inställningar, konsol).\n\nInte testad mot riktig maskin ännu.", "Om CNC Studio", MessageBoxButton.OK, MessageBoxImage.Information);
 
@@ -426,6 +435,7 @@ public partial class MainWindow : Window
             return;
         }
         // Workspace shortcuts work everywhere, also while typing in a field.
+        if (e.Key == Key.F1 && Keyboard.Modifiers == ModifierKeys.Shift) { Manual_Click(this, new RoutedEventArgs()); e.Handled = true; return; }
         if (e.Key == Key.F1) { SetWorkspace(Workspace.Design); e.Handled = true; return; }
         if (e.Key == Key.F2) { SetWorkspace(Workspace.Cam); e.Handled = true; return; }
         if (e.Key == Key.F3) { SetWorkspace(Workspace.Machine); e.Handled = true; return; }
