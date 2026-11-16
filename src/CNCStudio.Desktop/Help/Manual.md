@@ -33,7 +33,7 @@ Utan maskin kan du öva med porten **DEMO (simulerad maskin)** – den beter sig
 
 ## Fönster och paneler
 
-Panelerna kan dras, dockas, flytas ut och döljas som i Visual Studio. **Visa**-menyn tar fram en dold panel, och **Visa → Återställ fönsterlayout** lägger tillbaka allt som från början.
+Panelerna kan dras, dockas, flytas ut och döljas. **Visa**-menyn tar fram en dold panel, och **Visa → Återställ fönsterlayout** lägger tillbaka allt som från början.
 
 Statusraden längst ned visar vad som händer och vad nästa steg är. Läs den när du är osäker.
 
@@ -151,7 +151,7 @@ Maskinen har ingen verktygsväxlare, så varje fräs blir ett eget program, i r�
 
 ## 3D-vyn
 
-**F4** visar materialet simulerat i 3D (som i Easel) med banorna (som i gSender): blått skär, gult ned/upp, röd streckad snabbförflyttning. Under körning visas det som är kört i orange och fräsens position live.
+**F4** visar materialet simulerat i 3D med banorna: blått skär, gult ned/upp, röd streckad snabbförflyttning. Under körning visas det som är kört i orange och fräsens position live.
 
 Höger musknapp roterar, hjulet zoomar, mittenknappen panorerar. *Anpassa vy* och *Hela bordet* zoomar om.
 
@@ -209,7 +209,7 @@ Under probningen blir *Stäng* en STOPP-knapp.
 Under **Program**:
 
 - **Ladda från projektet** – skapar och kontrollerar G-code från projektet (samma kontroller som export). Med flera fräsar laddas program 1, och nästa laddas när du nollat Z med nästa fräs.
-- **Öppna G-code-fil…** – kör ett program från Fusion 360, VCarve, Easel eller ett annat CAM-program. Filen kontrolleras för GRBL (kommandon GRBL inte har stoppas) och du ser utbredning, djup, matning och tid innan den laddas.
+- **Öppna G-code-fil…** – kör ett program från ett annat CAM-program. Filen kontrolleras för GRBL (kommandon GRBL inte har stoppas) och du ser utbredning, djup, matning och tid innan den laddas.
 - **G-code-editor…** – se *G-code-editorn*.
 - **Senast körda** – dubbelklicka för att öppna och ladda samma program igen.
 

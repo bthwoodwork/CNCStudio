@@ -51,7 +51,7 @@ public sealed class KeyBindingEntry
 }
 
 /// <summary>
-/// Jogga med tangentbordet (like gSender's and UGS's keyboard jogging): one key per direction, held for
+/// Jogga med tangentbordet: one key per direction, held for
 /// continuous jog, plus keys for speed, zeroing, go to zero, homing, stop, pause and resume – every key
 /// chosen by the user (Inställningar\tangentbord.json, shared like the other settings). The keys only act
 /// in the Maskin workspace (unless turned off) and never while typing in a field.
@@ -63,7 +63,7 @@ public sealed class KeyboardShortcuts
     public bool OnlyInMachineWorkspace { get; set; } = true;
     public List<KeyBindingEntry> Bindings { get; set; } = new();
 
-    /// <summary>Arrows for X/Y, Page Up/Down for Z (as in gSender), 1–3 for the speeds, Esc stops.</summary>
+    /// <summary>Arrows for X/Y, Page Up/Down for Z, 1–3 for the speeds, Esc stops.</summary>
     public static KeyboardShortcuts Defaults()
     {
         var k = new KeyboardShortcuts();

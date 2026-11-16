@@ -6,7 +6,7 @@ using Clipper2Lib;
 namespace CNCStudio.Core;
 
 /// <summary>
-/// Grov- och finbearbetning med två fräsar (as in Easel's roughing + detail, and VCarve's flat clearance tool).
+/// Grov- och finbearbetning med två fräsar.
 /// An operation with a second tool becomes two passes – each its own program, as every tool is:
 /// <list type="bullet">
 /// <item>Pocket: the main (big) cutter clears the pocket; the second (smaller) cutter then cuts only the rest –

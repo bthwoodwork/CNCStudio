@@ -21,7 +21,7 @@ public sealed record ExternalProgram(string Name, IReadOnlyList<string> Lines, I
 }
 
 /// <summary>
-/// Kör G-code från andra program (Fusion 360, VCarve, Easel export …): the file is read and checked before it can
+/// Kör G-code från andra CAM-program: the file is read and checked before it can
 /// be loaded. Comments, blank lines and % go; every line is checked for what GRBL 1.1 understands – commands it
 /// does not have (M6 tool change, G41/G42 cutter compensation, G81–G89 canned cycles, A/B/C axes, …) stop the file
 /// with the line and the reason, and so do settings writes and the other commands macros may not send. The rest

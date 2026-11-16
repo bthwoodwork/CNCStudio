@@ -97,7 +97,7 @@ public sealed class AppStorage
     public string LocalFolder => _local;
     public string SettingsFile => Path.Combine(_local, "settings.json");
     /// <summary>Where the panels are docked, floating or hidden on this computer (the screens differ between computers).</summary>
-    /// <summary>The saved panel layout; the number changes when the default layout does (0.9.43: tool rail, Design + Fräsning + Jobb, Maskin as gSender).</summary>
+    /// <summary>The saved panel layout; the number changes when the default layout does (0.9.43: tool rail, Design + Fräsning + Jobb, new Maskin layout).</summary>
     public string DockLayoutPath => Path.Combine(_local, "fönsterlayout-5.xml");
 
     /// <summary>The sync folder if one is chosen AND reachable now (Drive may not be running).</summary>

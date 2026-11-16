@@ -1,6 +1,6 @@
 namespace CNCStudio.Core.Tests;
 
-/// <summary>Maskinlogg: jobs, alarms, running time and maintenance per machine (like gSender's Your Machine).</summary>
+/// <summary>Maskinlogg: jobs, alarms, running time and maintenance per machine.</summary>
 public class MachineLogTests
 {
     private static string Temp() => Path.Combine(Path.GetTempPath(), "cncstudio-log-" + Guid.NewGuid().ToString("N"), "x.json");

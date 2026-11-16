@@ -31,7 +31,7 @@ public sealed class TextSource
 }
 
 /// <summary>
-/// Text med typsnitt (like Easel's text tool): the letters' outlines (from the font, made by the Desktop) become a
+/// Text med typsnitt: the letters' outlines (from the font, made by the Desktop) become a
 /// vector shape that can be pocketed or cut out like an imported SVG. Overlapping letters (script fonts, accents)
 /// are joined into one region, holes (o, a, e …) are kept, and the outline is scaled so the whole text is the
 /// height asked for.

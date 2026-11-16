@@ -15,9 +15,9 @@ public enum OutlineShape
 }
 
 /// <summary>
-/// Rita konturen (gSender's job outline): before a run, the tool goes round the outer edge of what the program
+/// Rita konturen: before a run, the tool goes round the outer edge of what the program
 /// cuts – high above the material – so you can see it fits the stock and clears the clamps. Only cutting moves
-/// count (rapids in the air do not, as gSender's "rapidless" outline). Z is first lifted near the top in machine
+/// count (rapids in the air do not). Z is first lifted near the top in machine
 /// coordinates (the same height as Gå till X0 Y0), the outline is followed at the given feed, and the tool comes
 /// back to where it started. Nothing goes down.
 /// </summary>

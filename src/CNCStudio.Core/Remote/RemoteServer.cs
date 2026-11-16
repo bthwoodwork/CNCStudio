@@ -26,7 +26,7 @@ public interface IRemoteMachine
 }
 
 /// <summary>
-/// Styr maskinen från mobilen (as UGS's pendant): a small web server on the computer that runs CNC Studio. A phone
+/// Styr maskinen från mobilen: a small web server on the computer that runs CNC Studio. A phone
 /// on the same network opens the address and gets a page with jog, stop, pause/resume, zero, homing, overrides and
 /// saved places. Every request needs the PIN shown on the computer; after five wrong PINs the server waits a minute.
 /// Only commands in <see cref="Actions"/> are accepted – nothing that changes settings or sends free G-code.

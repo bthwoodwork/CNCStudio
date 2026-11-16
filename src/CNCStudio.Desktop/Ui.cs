@@ -21,8 +21,7 @@ public static class Ui
     public static void SetIcon(DependencyObject d, string? value) => d.SetValue(IconProperty, value);
 
     /// <summary>
-    /// <c>local:Ui.Rail="True"</c>: the icon above a short label, centred – for the narrow tool rail (like gSender's
-    /// left edge). The button's text is also its tooltip when it has none.
+    /// <c>local:Ui.Rail="True"</c>: the icon above a short label, centred – for the narrow tool rail. The button's text is also its tooltip when it has none.
     /// </summary>
     public static readonly DependencyProperty RailProperty =
         DependencyProperty.RegisterAttached("Rail", typeof(bool), typeof(Ui), new PropertyMetadata(false, OnIcon));

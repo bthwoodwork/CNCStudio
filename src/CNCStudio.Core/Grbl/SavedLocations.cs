@@ -20,7 +20,7 @@ public sealed class SavedLocation
 }
 
 /// <summary>
-/// Sparade platser (as in gSender and UGS): per machine, in Inställningar\Maskiner\Platser\&lt;id&gt;.json beside its
+/// Sparade platser: per machine, in Inställningar\Maskiner\Platser\&lt;id&gt;.json beside its
 /// profile – machine coordinates belong to the machine, not to a project. Going there always lifts Z first in
 /// machine coordinates (G53, as Gå till X0 Y0), then X/Y, then Z if the place has one. Needs homing: machine
 /// coordinates mean nothing before it.

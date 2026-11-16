@@ -18,7 +18,7 @@ public sealed class TraceOptions
 }
 
 /// <summary>
-/// Bild till vektor (as Easel's and UGS's image trace): a picture – a logo, a drawing, a silhouette – becomes outlines
+/// Bild till vektor: a picture – a logo, a drawing, a silhouette – becomes outlines
 /// that can be pocketed, V-carved or cut out. The image is made black and white at a threshold; each row's runs of
 /// "ink" are joined into regions (holes kept), the pixel steps are smoothed away and specks dropped.
 /// The Desktop reads the file and gives the grey values; this is the tracing itself.

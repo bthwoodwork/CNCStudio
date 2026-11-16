@@ -40,7 +40,7 @@ public sealed class ToolDefinition
     /// <summary>What the cutter is made of, e.g. "Hårdmetall" or "HSS".</summary>
     public string CutterMaterial { get; set; } = "";
 
-    // ---- Geometry beyond the cutting diameter, as in Fusion's tool library (mm; null = not measured) ----
+    // ---- Geometry beyond the cutting diameter (mm; null = not measured) ----
 
     /// <summary>Shank diameter – what the collet grips.</summary>
     public double? ShankDiameter { get; set; }

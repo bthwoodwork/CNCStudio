@@ -7,7 +7,7 @@ using CNCStudio.Core;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Maskin → Planfräsa offerskivan… (like gSender's Wasteboard Surfacing): the area, the cutter and the depth
+/// Maskin → Planfräsa offerskivan…: the area, the cutter and the depth
 /// in one form. Skapa projekt turns it into an ordinary project (<see cref="WasteboardSurfacing"/>), so the
 /// same CAM checks, G-code verification and run apply as for every other project.
 /// </summary>

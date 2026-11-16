@@ -9,7 +9,7 @@ public sealed record AccessoryCommand(string? Line, byte? Realtime, string? Refu
 }
 
 /// <summary>
-/// Spindel och kylning (as gSender's and UGS's spindle/coolant buttons), by the GRBL 1.1 rules:
+/// Spindel och kylning, by the GRBL 1.1 rules:
 /// <list type="bullet">
 /// <item>Idle: the spindle is started with M3 S… and stopped with M5 (lines – only between programs).</item>
 /// <item>Hold: the spindle can only be stopped/started with the real-time toggle 0x9E; it starts again by itself on Fortsätt.</item>

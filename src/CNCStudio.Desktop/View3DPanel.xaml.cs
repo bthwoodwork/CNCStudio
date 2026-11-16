@@ -10,7 +10,7 @@ namespace CNCStudio.Desktop;
 
 /// <summary>
 /// 3D view in work coordinates (X right, Y towards the back, Z up; origin at the material's
-/// front-left top corner): simulated material (Easel style) and toolpaths (gSender style).
+/// front-left top corner): simulated material and toolpaths.
 /// The material simulation runs in the background and only when the CAM report changes.
 /// </summary>
 public partial class View3DPanel : UserControl

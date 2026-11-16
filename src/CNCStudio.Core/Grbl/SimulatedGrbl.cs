@@ -35,7 +35,7 @@ public sealed class SimulatedGrbl : IGrblTransport
     private const int PlannerSize = 15;
     private static readonly string[] AxisNames = { "X", "Y", "Z" };
 
-    /// <summary>Typical X-Carve 750 values for a demo. Not Inventables' official factory settings.</summary>
+    /// <summary>Typical X-Carve 750 values for a demo, not official factory settings.</summary>
     public static IReadOnlyDictionary<int, double> DefaultSettings { get; } = new SortedDictionary<int, double>
     {
         [0] = 10, [1] = 255, [2] = 0, [3] = 0, [4] = 0, [5] = 0, [6] = 0, [10] = 1, [11] = 0.02, [12] = 0.01,

@@ -6,7 +6,7 @@ using Clipper2Lib;
 namespace CNCStudio.Core;
 
 /// <summary>
-/// V-carving (as in Easel Pro, VCarve and UGS): a V-bit carves the shape with walls that follow the outline
+/// V-carving: a V-bit carves the shape with walls that follow the outline
 /// exactly – sharp corners stay sharp and narrow parts get shallow, wide parts deep.
 /// <para>
 /// Method (offset V-carving): the region is inset in small steps d; the loop at inset d is cut at depth

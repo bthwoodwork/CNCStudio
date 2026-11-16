@@ -62,7 +62,7 @@ public class SquaringTests
     public void The_correction_is_the_gantry_length_times_the_angle_not_the_diagonal_error()
     {
         var r = SquaringCheck.Compute(Measure(0.3, +1, +1));
-        // gSender would advise moving the rail by the diagonal's error – here far less than what is needed.
+        // Moving the rail by the diagonal's error would be far less than what is needed.
         Assert.True(Math.Abs(r.GantryOffsetMm) > 3 * Math.Abs(r.DiagonalError));
     }
 

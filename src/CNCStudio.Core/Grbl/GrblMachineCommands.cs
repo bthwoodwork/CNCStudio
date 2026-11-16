@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace CNCStudio.Core.Grbl;
 
-/// <summary>A jog preset: step distances and speed (like gSender's Precise / Normal / Rapid).</summary>
+/// <summary>A jog preset: step distances and speed.</summary>
 public sealed record JogPreset(string Name, double StepXY, double StepZ, double FeedRate);
 
 /// <summary>
@@ -77,7 +77,7 @@ public static class GrblMachineCommands
 
     /// <summary>
     /// The move for one jog: a step moves <paramref name="stepXY"/> on each X/Y axis that moves (a diagonal step
-    /// goes the step in X and in Y, as in gSender), or <paramref name="stepZ"/> in Z. A continuous jog's short
+    /// goes the step in X and in Y), or <paramref name="stepZ"/> in Z. A continuous jog's short
     /// segments are as long along a diagonal as straight, so stopping when the button is released is as quick.
     /// </summary>
     public static (double Dx, double Dy, double Dz) JogMove((int X, int Y, int Z) d, double stepXY, double stepZ, double feed, bool step)

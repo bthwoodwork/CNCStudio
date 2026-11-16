@@ -348,7 +348,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void SetWorkspace(Workspace ws)
     {
-        // Two workspaces, like gSender + design tools: Design (drawing AND how each shape is cut) and Maskin.
+        // Two workspaces: Design (drawing AND how each shape is cut) and Maskin.
         // "CAM" is no longer a workspace of its own: it opens Design with Fräsning in front.
         bool cam = ws == Workspace.Cam;
         if (cam) ws = Workspace.Design;
@@ -367,7 +367,7 @@ public partial class MainWindow : Window
                 break;
             case Workspace.Machine:
                 SetPanelVisible("Tools", false); SetPanelVisible("Cam", false); SetPanelVisible("CamJob", false);
-                // Like gSender: the machine control on the right, program, run and the tool tabs under the view.
+                // The machine control on the right, program, run and the tool tabs under the view.
                 // Makron first, so "Probning och mer" is the tab in front in their shared pane.
                 SetPanelVisible("Properties", false);  // material, fixtures and Z: Probning och mer → Material och fastspänningar…
                 SetPanelVisible("Macros", true); SetPanelVisible("MachineExtras", true);

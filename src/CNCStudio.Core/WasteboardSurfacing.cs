@@ -2,7 +2,7 @@
 
 namespace CNCStudio.Core;
 
-/// <summary>What the wasteboard surfacing tool asks for (like gSender's Wasteboard Surfacing).</summary>
+/// <summary>What the wasteboard surfacing tool asks for.</summary>
 public sealed record SurfacingSettings
 {
     /// <summary>The area to surface, X × Y in mm. Null = as large as the machine allows (see <see cref="WasteboardSurfacing.MaxArea"/>).</summary>

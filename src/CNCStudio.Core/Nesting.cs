@@ -18,7 +18,7 @@ public sealed class NestOptions
 public sealed record NestResult(int Placed, IReadOnlyList<string> NotPlaced, double UsedLengthMm);
 
 /// <summary>
-/// Nesting (as in Easel and UGS): the parts are packed tightly on the material by their real shape, not just their
+/// Nesting: the parts are packed tightly on the material by their real shape, not just their
 /// boxes – largest first, each put as far to the back-left as it goes (and turned when allowed), then pushed up and
 /// left as far as it slides. A group is one part. Text that is turned is no longer editable as text (its shape stays).
 /// </summary>

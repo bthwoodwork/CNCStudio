@@ -7,7 +7,7 @@ using CNCStudio.Core;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Maskinlogg och underhåll (like gSender's "Your Machine"): running time and job statistics, maintenance
+/// Maskinlogg och underhåll: running time and job statistics, maintenance
 /// that comes due with running time, the latest jobs and alarms, and the connection details – for one machine.
 /// Maintenance changes are saved at once.
 /// </summary>

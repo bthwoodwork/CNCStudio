@@ -20,7 +20,7 @@ public sealed class FigureOptions
     public double CornerMm { get; set; } = 8;
 }
 
-/// <summary>Figurbank (as in Easel): ready shapes that become vector shapes of the size asked for.</summary>
+/// <summary>Figurbank: ready shapes that become vector shapes of the size asked for.</summary>
 public static class Figures
 {
     public static string Name(FigureKind k) => k switch
