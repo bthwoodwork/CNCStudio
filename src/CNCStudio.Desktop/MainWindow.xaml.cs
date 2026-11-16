@@ -228,7 +228,7 @@ public partial class MainWindow : Window
         InitDocking();   // the saved panel layout, before the workspace decides which panels are shown
         RefreshMacroList();
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
-        FitToMaterial(); InitGrblUi(); InitGamepad(); InitSettingsBackup(); RefreshLocations();
+        FitToMaterial(); InitGrblUi(); InitGamepad(); InitSettingsBackup(); RefreshLocations(); RefreshCamTemplates();
         ShowStorageStatus();
         RefreshMachineSummary(); RefreshMotionFields(); RefreshToolPicker(); RefreshMaterialPicker(); SyncWorkZero();
         SetWorkspace(Workspace.Design);
@@ -1536,6 +1536,15 @@ public partial class MainWindow : Window
                 : _selection.Count > 1 ? $"Markerat: {_selection.Count} objekt – inställningarna gäller {CamPlanner.Label(_document, _selected)}"
                 : $"Markerat: {CamPlanner.Label(_document, _selected)} · {_selected.Width:0.###} × {_selected.Height:0.###} mm";
             var operation = _selected is null ? null : _document.CamOperations.FirstOrDefault(o => o.ShapeId == _selected.Id);
+            FillCamFields(operation);
+            UpdateCamPanels();
+        }
+        finally { _loadingCam = false; }
+        UpdateCamSummary();
+    }
+    /// <summary>The Fräsning fields from an operation (null = the defaults for the selected shape).</summary>
+    private void FillCamFields(CamOperation? operation)
+    {
             CamKind.SelectedIndex = operation is null ? (_selected?.Model is not null ? (int)CamOperationKind.Carve3D : 0) : (int)operation.Kind;
             CamDiameter.Text = F(operation?.ToolDiameter ?? 3.175);
             CamVAngle.Text = F(operation?.ToolAngleDeg ?? new CamOperation().ToolAngleDeg);
@@ -1568,11 +1577,8 @@ public partial class MainWindow : Window
             CamRampFeed.Text = F(operation?.RampFeedPercent ?? defaults.RampFeedPercent);
             CamDirectionPicker.SelectedIndex = (int)(operation?.Direction ?? defaults.Direction);
             SelectTool(operation?.ToolName);
-            UpdateCamPanels();
-        }
-        finally { _loadingCam = false; }
-        UpdateCamSummary();
     }
+
     private void CamInput_Changed(object sender, RoutedEventArgs e)
     {
         UpdateCamPanels();

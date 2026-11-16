@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.59)
+﻿# CNC Studio – källkod (senaste: 0.9.60)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.60 – CAM-mallar
+
+- **Mallar överst i Fräsning:**
+  - **Använd mall …:** välj en mall, så fylls inställningarna i och sparas på den markerade formen med ett klick.
+  - **Spara som mall…:** sparar inställningarna som visas, med ett föreslaget namn. Finns en mall med samma namn frågar programmet innan den ersätts.
+  - **⋯:** tar bort en mall.
+- **Genomskärning:** sparas en mall med djupet lika med hela materialet blir den en genomskärning. Djupet blir då materialets tjocklek när mallen används. Ingen mall fräser djupare än materialet.
+- **Lagring:** mallarna sparas i `Inställningar\cam-mallar.json` och följer med via synkmappen. Tre exempel finns från början: *Utskärning 6 mm, 4 flikar*, *V-carve 60°, 3 mm* och *Ficka 6 mm, 40 %*.
+- Fältens ifyllnad är utbruten till `FillCamFields`. Logiken finns i `CamTemplates` (Core), med tre tester.
 
 ## 0.9.59 – Autospara och återställning
 
