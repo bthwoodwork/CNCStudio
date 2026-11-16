@@ -16,6 +16,8 @@ public partial class MainWindow
 {
     /// <summary>The G-code file the loaded program came from; null for a project's program.</summary>
     private string? _loadedExternalPath;
+    /// <summary>The loaded program came from outside the project (a file or the G-code editor), not from its CAM.</summary>
+    private bool _loadedExternal;
 
     private void OpenGCode_Click(object sender, RoutedEventArgs e)
     {
@@ -36,8 +38,19 @@ public partial class MainWindow
         string text;
         try { text = File.ReadAllText(path); }
         catch (Exception ex) { Error("Filen kunde inte läsas: " + ex.Message); return false; }
-        double rapid = new[] { _document.Machine.MaxRateX, _document.Machine.MaxRateY }.Where(v => v is > 0).Select(v => v!.Value).DefaultIfEmpty(3000).Min();
-        var program = ExternalGCode.Analyze(text, Path.GetFileName(path), rapid);
+        return LoadExternalText(text, Path.GetFileName(path), path);
+    }
+
+    private double RapidRate => new[] { _document.Machine.MaxRateX, _document.Machine.MaxRateY }.Where(v => v is > 0).Select(v => v!.Value).DefaultIfEmpty(3000).Min();
+
+    /// <summary>
+    /// Checks and (after the user has seen the facts) loads G-code text as the program to run – from a file or
+    /// from the G-code editor. <paramref name="path"/> is the file it is saved in, or null for unsaved text.
+    /// </summary>
+    private bool LoadExternalText(string text, string name, string? path)
+    {
+        if (_runner is not null || _macroRunner is not null) { Error("Ett program eller makro körs – vänta tills det är klart."); return false; }
+        var program = ExternalGCode.Analyze(text, name, RapidRate);
         if (!program.Ok)
         {
             AppDialog.Show(this, $"\"{program.Name}\" kan inte köras med GRBL:\n\n" +
@@ -61,7 +74,7 @@ public partial class MainWindow
         _jobLines = program.Lines;
         _jobName = program.Name;
         _loadedJob = null; _loadedStockTop = null; _nextProgramNumber = null;
-        _loadedExternalPath = path;
+        _loadedExternalPath = path; _loadedExternal = true;
         JobInfoText.Text = $"{program.Name}: {program.Lines.Count} rader från fil. {RunTimeEstimator.Format(info.EstimatedMinutes)} ungefär. " +
             $"Utbredning {info.MaxX - info.MinX:0.#} × {info.MaxY - info.MinY:0.#} mm, djupast Z {info.MinZ:0.##}." +
             (program.Warnings.Count > 0 ? $" {program.Warnings.Count} saker att kontrollera (visades när filen öppnades)." : "");
@@ -69,7 +82,20 @@ public partial class MainWindow
         UpdateJobButtons();
         if (_machineView) RenderMachine(refreshCam: false);
         _jobToolWork = null; Update3DJob();
-        StatusText.Text = $"G-code laddad: {path}";
+        StatusText.Text = path is null ? $"G-code laddad från editorn: {name}" : $"G-code laddad: {path}";
         return true;
+    }
+
+    /// <summary>Arkiv / Program → G-code-editor…: opens the loaded file, or an empty editor.</summary>
+    private void GCodeEditor_Click(object sender, RoutedEventArgs e)
+    {
+        var path = _loadedExternalPath is string p && File.Exists(p) ? p : null;
+        var editor = new GCodeEditorWindow(path, (text, name, file) =>
+        {
+            if (!LoadExternalText(text, name, file)) return false;
+            SetWorkspace(Workspace.Machine);
+            return true;
+        }, RapidRate) { Owner = this };
+        editor.Show();
     }
 }

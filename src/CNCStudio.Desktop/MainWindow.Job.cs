@@ -50,7 +50,7 @@ public partial class MainWindow
         }
         var result = job.Result;
         _jobLines = result.Lines;
-        _loadedExternalPath = null;
+        _loadedExternalPath = null; _loadedExternal = false;
         _jobName = job.Count > 1 ? $"{_document.Name} – program {job.Number} av {job.Count} ({job.ToolLabel})" : _document.Name;
         JobInfoText.Text = (note is null ? "" : note + "\n") + $"{_jobName}: {result.Lines.Count} rader." +
             (job.Count > 1 ? $" Fräs: {job.ToolLabel}. Z-nollan ska vara satt med den." : $" {RunTimeText()}") +
