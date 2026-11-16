@@ -140,6 +140,16 @@ Markera en form och öppna panelen **Fräsning** (F2):
 
 Klicka **Spara CAM**. Banan räknas ut direkt och visas som grön streckad linje (fräscentrum) med gula hållflikar.
 
+## CAM-mallar
+
+Överst i Fräsning finns **mallar** – sparade inställningar med ett namn, t.ex. *V-carve 60°, 3 mm* eller *Utskärning 6 mm, 4 flikar*:
+
+- **Använd mall …**: välj en mall, så fylls inställningarna i och sparas på den markerade formen direkt.
+- **Spara som mall…**: sparar inställningarna som visas. Är djupet hela materialet blir mallen en genomskärning – den skär genom vilket material den än används på.
+- **⋯**: ta bort en mall.
+
+Mallarna följer med via synkmappen, som verktygsbiblioteket. Tre exempel finns från början.
+
 ## Jobbet – alla operationer
 
 Panelen **Jobb** (nedanför ritytan) visar alla operationer i körordning, grupperade per fräs, med CAM-kontrollen:

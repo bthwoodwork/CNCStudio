@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.59 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.60 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -622,6 +622,15 @@
             </Border>
 
             <StackPanel x:Name="CamSettingsPanel">
+            <!-- Templates: saved settings, used with one click -->
+            <Border Style="{StaticResource CamCard}">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="⋯" Click="CamTemplateMenu_Click" Padding="8,3" ToolTip="Ta bort en mall"/>
+                <Button DockPanel.Dock="Right" Content="Spara som mall…" Click="SaveCamTemplate_Click" Padding="8,3" ToolTip="Spara inställningarna nedan som en mall med ett namn"/>
+                <ComboBox x:Name="CamTemplatePicker" Margin="3" SelectionChanged="CamTemplate_Changed"
+                          ToolTip="Välj en mall: inställningarna fylls i och sparas på den markerade formen direkt"/>
+              </DockPanel>
+            </Border>
             <!-- 1. What and with what -->
             <Border Style="{StaticResource CamCard}">
               <StackPanel>

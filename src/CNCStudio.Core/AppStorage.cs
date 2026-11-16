@@ -81,6 +81,7 @@ public sealed class AppStorage
         Path.Combine(SettingsFolderName, "maskinprofil.json"),
         Path.Combine(SettingsFolderName, "probplatta.json"),
         Path.Combine(SettingsFolderName, "makron.json"),
+        Path.Combine(SettingsFolderName, "cam-mallar.json"),
     };
 
     private readonly string _local;
@@ -207,6 +208,7 @@ public sealed class AppStorage
 
     /// <summary>The macros (Inställningar\makron.json) – shared like the libraries.</summary>
     public string MacroLibraryPath => Path.Combine(DataFolder, SettingsFolderName, "makron.json");
+    public string CamTemplatesPath => Path.Combine(DataFolder, SettingsFolderName, "cam-mallar.json");
 
     /// <summary>The gamepad setup (Inställningar\gamepad.json) – shared like the other settings.</summary>
     public string GamepadProfilePath => Path.Combine(DataFolder, SettingsFolderName, "gamepad.json");
