@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.49)
+﻿# CNC Studio – källkod (senaste: 0.9.50)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,12 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.50 – Materialet flyttas bara i Design
+
+- **I Maskin står materialet still:** det går inte att dra i Maskin-vyn, och inte heller i 3D-vyn när du är i Maskin. *Material på bordet* visas bara i Design.
+- **Flytta materialet i Design:** klicka på det och dra, i 2D eller 3D, eller ange X/Y för en punkt under *Material på bordet*.
+- När körbanorna hamnar utanför maskinens arbetsområde tar *Gå till materialplacering* dig till Design, med materialet markerat och X-fältet i fokus.
 
 ## 0.9.49 – Markera materialet och välj positionspunkt
 

@@ -115,4 +115,12 @@ public partial class MainWindow
         SetStockSelected(onMaterial);
         Render();
     }
+
+    /// <summary>From a CAM problem: to Design with the material selected and its placement open.</summary>
+    private void GoToStockPlacement()
+    {
+        SetWorkspace(Workspace.Design);
+        SetStockSelected(true); Render();
+        FocusField(StockXBox, null, "Ändra X/Y och tryck Enter – eller dra det markerade materialet.");
+    }
 }
