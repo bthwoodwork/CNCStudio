@@ -220,7 +220,7 @@
   </Button>
   <Button Content="Offset" local:Ui.Icon="&#xE740;" local:Ui.Rail="True" Click="Offset_Click" ToolTip="Ny kontur utanför (+) eller innanför (−) formen"/>
   <Button Content="Rutnät" local:Ui.Icon="&#xE80A;" local:Ui.Rail="True" Click="GridCopies_Click" ToolTip="Kopior i rutnät: kolumner × rader med mellanrum; CAM följer med"/>
-  <Button Content="Packa" local:Ui.Icon="&#xE7B8;" local:Ui.Rail="True" Click="Nest_Click" ToolTip="Packa delarna tätt på materialet (nesting)"/>
+  <Button Content="Nesta" local:Ui.Icon="&#xE7B8;" local:Ui.Rail="True" Click="Nest_Click" ToolTip="Nesta delarna tätt på materialet (nesting)"/>
   <Border Height="1" Background="#3C5167" Margin="6,6"/>
   <Button Content="Duplicera" local:Ui.Icon="&#xE8C8;" local:Ui.Rail="True" Click="Duplicate_Click" ToolTip="Duplicera (Ctrl+D)"/>
   <Button Content="Ta bort" local:Ui.Icon="&#xE74D;" local:Ui.Rail="True" Click="Delete_Click" ToolTip="Ta bort (Delete)"/>
