@@ -19,6 +19,12 @@ public sealed class AppSettings
 
     /// <summary>The flat, dark look (Theme.xaml). Null = on; false = Windows' own controls, as before 0.9.19.</summary>
     public bool? ModernLook { get; set; }
+
+    /// <summary>The material's rulers (Design's 2D rulers, the material ruler in 3D). Null = on.</summary>
+    public bool? ShowStockRuler { get; set; }
+
+    /// <summary>The table's (work area's) rulers (Maskin's 2D rulers, the table ruler in 3D). Null = on.</summary>
+    public bool? ShowTableRuler { get; set; }
 }
 
 /// <summary>A window's size and place on the screen, in WPF units (1/96 inch).</summary>

@@ -24,6 +24,7 @@ public partial class MainWindow
         MachineCanvas.Visibility = machine ? Visibility.Visible : Visibility.Collapsed;
         _rulerCache = null;      // the rulers measure the table here, the material's work coordinates in Design
         if (RulerCornerText is not null) RulerCornerText.Text = machine ? "bord" : "mm";
+        ApplyRulerVisibility();
         SetFixtureDrawing(false);
         Render();
         Dispatcher.BeginInvoke(new Action(FitToMaterial), System.Windows.Threading.DispatcherPriority.Loaded);

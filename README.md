@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.55)
+﻿# CNC Studio – källkod (senaste: 0.9.56)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.56 – Linjalerna tänds och släcks var för sig
+
+- **Linjal: material** och **Linjal: bord (arbetsytan)** finns i Visa-menyn och som två kryssrutor i 3D-panelen. Kryssrutorna ersätter den gemensamma *Linjaler*, och menyn och kryssrutorna följer varandra.
+  - **Material:** Design-vyns linjaler i 2D (arbetskoordinater) och linjalen längs materialet i 3D.
+  - **Bord:** Maskin-vyns linjaler i 2D (mm från hemhörnet) och linjalen längs bordet i 3D.
+- Valen sparas per dator (`ShowStockRuler`, `ShowTableRuler` i inställningarna) och gäller från nästa start också.
 
 ## 0.9.55 – Linjaler i 2D och 3D
 
