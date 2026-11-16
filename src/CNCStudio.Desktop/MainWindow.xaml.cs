@@ -192,7 +192,7 @@ public partial class MainWindow : Window
     private void Xor_Click(object sender, RoutedEventArgs e) => BooleanApply(BooleanAction.Xor);
 
 
-    public MainWindow() { InitializeComponent(); View3DPanel.StockMoved += MoveStockFrom3D; RestorePlacement(); Render(); }
+    public MainWindow() { InitializeComponent(); View3DPanel.StockMoved += MoveStockFrom3D; View3DPanel.StockClicked += StockClickedIn3D; RestorePlacement(); Render(); }
 
     /// <summary>The size and place the window had when it was last closed on this computer (if it still fits on the screens).</summary>
     private void RestorePlacement()
@@ -296,6 +296,7 @@ public partial class MainWindow : Window
     }
     private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.ChangedButton == MouseButton.Left && !_machineView && _stockSelected && ReferenceEquals(e.OriginalSource, Viewport)) { SetStockSelected(false); Render(); }
         if (e.ChangedButton != MouseButton.Middle) return;
         _panning = true;
         _panStart = e.GetPosition(Viewport);
@@ -635,7 +636,7 @@ public partial class MainWindow : Window
     {
         SetToolButtonState(SelectToolButton, _tool == Tool.Select);
         // Crosshair while a drawing tool is armed, so it is clear the next drag draws.
-        if (DesignCanvas is not null) DesignCanvas.Cursor = _tool == Tool.Select ? null : Cursors.Cross;
+        UpdateStockCursor();
         SetToolButtonState(RectangleToolButton, _tool == Tool.Rectangle);
         SetToolButtonState(EllipseToolButton, _tool == Tool.Ellipse);
         SetToolButtonState(PolylineToolButton, _tool == Tool.Polyline);
@@ -821,6 +822,7 @@ public partial class MainWindow : Window
         // Events can fire while the window is still being built (a checkbox's IsChecked in the XAML):
         // nothing is drawn until every part exists.
         if (!IsInitialized || SelectedLabel is null) return;
+        if (_stockSelected && (_selection.Count > 0 || !_document.HasMaterial || _machineView)) SetStockSelected(false);
         // Toolpaths are not recalculated while a shape is being moved, resized or drawn;
         // the review runs again (from cache where possible) when the gesture ends.
         bool geometryGesture = _moving || _resizing || _drawing;
@@ -840,10 +842,7 @@ public partial class MainWindow : Window
             AddDesignTable();
             DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
                 Fill = CanvasTheme.DesignStock, Stroke = CanvasTheme.DesignStockEdge, StrokeThickness = 1.4 / _zoom, IsHitTestVisible = false });
-            // The material's edge is a handle: drag it to move the material on the table (shapes follow it).
-            DesignCanvas.Children.Add(new Rectangle { Width = _document.MaterialWidth, Height = _document.MaterialHeight,
-                Stroke = Brushes.Transparent, StrokeThickness = 10 / _zoom, Tag = "stock", Cursor = Cursors.SizeAll,
-                ToolTip = "Dra i kanten för att flytta materialet på maskinbordet" });
+            if (_stockSelected) AddStockSelection();
         }
         else
         {
@@ -1046,6 +1045,11 @@ public partial class MainWindow : Window
         }
         _selected = _document.Shapes.FirstOrDefault(_selection.Contains);
         _marqueeActive = false;
+        // A plain click (no window) on the material selects the material.
+        bool click = bounds.Width <= 3 / _zoom && bounds.Height <= 3 / _zoom;
+        bool onMaterial = _document.HasMaterial && _marqueeStart.X >= 0 && _marqueeStart.Y >= 0 &&
+            _marqueeStart.X <= _document.MaterialWidth && _marqueeStart.Y <= _document.MaterialHeight;
+        SetStockSelected(click && onMaterial && _selection.Count == 0 && !_marqueeAdd);
     }
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
@@ -1078,7 +1082,11 @@ public partial class MainWindow : Window
     {
         var p = e.GetPosition(DesignCanvas);
         var sourceTag = (e.OriginalSource as FrameworkElement)?.Tag;
-        if (sourceTag is "stock" && _tool == Tool.Select && !_machineView)
+        // The material: a click selects it, and once selected a drag on it (not on a shape) moves it on the table.
+        bool onStock = _document.HasMaterial && !_machineView && _tool == Tool.Select && sourceTag is not DesignShape && sourceTag is not ResizeHandle
+            && p.X >= 0 && p.Y >= 0 && p.X <= _document.MaterialWidth && p.Y <= _document.MaterialHeight;
+        if (sourceTag is DesignShape or ResizeHandle && _stockSelected) SetStockSelected(false);
+        if (onStock && _stockSelected && Keyboard.Modifiers == ModifierKeys.None)
         {
             _stockDragStart = e.GetPosition(Viewport);
             _stockDragOriginal = new Point(_document.Stock.X, _document.Stock.Y);

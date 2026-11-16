@@ -42,6 +42,35 @@ public partial class View3DPanel : UserControl
 
     /// <summary>The material was dragged to a new place on the table: the new <see cref="CncDocument.Stock"/> X/Y.</summary>
     public event Action<double, double>? StockMoved;
+    /// <summary>A left click: true on the material (select it), false elsewhere (deselect it).</summary>
+    public event Action<bool>? StockClicked;
+    private bool _stockSelected;
+    private StockAnchor _anchor;
+    private readonly ModelVisual3D _selectionMark = new();
+
+    /// <summary>The material selected (in 2D or here): a frame round its top and the point X/Y is given for.</summary>
+    public void SetStockSelection(bool selected, StockAnchor anchor)
+    {
+        _stockSelected = selected; _anchor = anchor;
+        BuildSelectionMark();
+    }
+
+    private void BuildSelectionMark()
+    {
+        _selectionMark.Children.Clear();
+        if (_stockSelected && _stockW > 0)
+        {
+            double w = _stockW, l = _stockL, z = 0.4;
+            var c = Color.FromRgb(0x3D, 0xD6, 0xF5);
+            _selectionMark.Children.Add(new LinesVisual3D { Color = c, Thickness = 2.5, Points = new Point3DCollection
+            {
+                new(0, 0, z), new(w, 0, z), new(w, 0, z), new(w, l, z), new(w, l, z), new(0, l, z), new(0, l, z), new(0, 0, z)
+            } });
+            var (ax, ay) = _anchor.OnMaterial(w, l);
+            _selectionMark.Children.Add(new SphereVisual3D { Center = new Point3D(ax, l - ay, z + 1), Radius = Math.Max(2, Math.Min(w, l) / 40), Fill = new SolidColorBrush(c) });
+        }
+        SetVisible(_selectionMark, _stockSelected && _stockW > 0);
+    }
     private CncDocument? _doc;
     private Point3D? _dragFrom;
     private Vector3D _dragDelta;
@@ -67,7 +96,15 @@ public partial class View3DPanel : UserControl
     private void Scene_LeftDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         var pos = e.GetPosition(Scene.Viewport);
-        if (Scene.Camera is not ProjectionCamera camera || !OverMaterial(pos) || TopPlanePoint(pos) is not Point3D start) return;
+        bool over = OverMaterial(pos);
+        if (!over || !_stockSelected)
+        {
+            // First click selects the material (or deselects it outside); dragging needs it selected.
+            StockClicked?.Invoke(over);
+            if (over) e.Handled = true;
+            return;
+        }
+        if (Scene.Camera is not ProjectionCamera camera || TopPlanePoint(pos) is not Point3D start) return;
         camera.BeginAnimation(ProjectionCamera.PositionProperty, null);      // no zoom animation left running
         _dragFrom = start; _dragDelta = new Vector3D(); _dragCamera = camera.Position;
         Scene.CaptureMouse(); e.Handled = true;
@@ -78,7 +115,7 @@ public partial class View3DPanel : UserControl
         var pos = e.GetPosition(Scene.Viewport);
         if (_dragFrom is not Point3D from || _doc is not { } d)
         {
-            Scene.Cursor = OverMaterial(pos) ? System.Windows.Input.Cursors.SizeAll : null;
+            Scene.Cursor = OverMaterial(pos) ? (_stockSelected ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Hand) : null;
             return;
         }
         e.Handled = true;
@@ -137,6 +174,7 @@ public partial class View3DPanel : UserControl
         BuildFixtures(doc);
         BuildZero(doc);
         BuildTable(doc);
+        BuildSelectionMark();
         Layer_Changed(this, new RoutedEventArgs());
         if (!_fitted) { SetCamera(w, l, t); _fitted = true; }
         _ = SimulateAsync(doc, report, w, l, t);
@@ -192,7 +230,7 @@ public partial class View3DPanel : UserControl
         _simulation?.Cancel();
         _stock.Content = null; _fixtures.Children.Clear(); _zero.Children.Clear();
         _cuts.Points = new Point3DCollection(); _plunges.Points = new Point3DCollection(); _rapids.Points = new Point3DCollection();
-        _stockW = _stockL = 0;
+        _stockW = _stockL = 0; BuildSelectionMark();
         BuildTable(doc);
         Layer_Changed(this, new RoutedEventArgs());
         var a = MachineTable3D.For(doc);

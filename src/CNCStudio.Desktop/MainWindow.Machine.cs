@@ -129,21 +129,6 @@ public partial class MainWindow
         MachineCanvas.Children.Add(label);
     }
 
-    private void SaveMachineSetup_Click(object sender, RoutedEventArgs e)
-    {
-        if (!Parse(StockXBox, out var tx) || !Parse(StockYBox, out var ty))
-        { Error("Ange giltiga materialkoordinater (X och Y i mm).", StockXBox); return; }
-        var (x, y) = FromTable(tx, ty, _document.MaterialWidth, _document.MaterialHeight);
-        var oldStock = _document.Stock;
-        _document.Stock = new StockPlacement { X = x, Y = y };
-        var error = MachineSetupValidation.StockProblem(_document);
-        _document.Stock = oldStock;
-        if (error is not null) { Error(error); return; }
-        RememberChange(); _document.Stock = new StockPlacement { X = x, Y = y };
-        _selectedFixture = null; Render(); FitToMaterial();
-        StatusText.Text = "Materialplacering sparad i projektet (ej GRBL-kalibrerad).";
-    }
-
     private async void MachineSettings_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new MachineSettingsWindow(_document.Machine, d =>
