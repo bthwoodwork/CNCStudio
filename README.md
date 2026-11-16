@@ -270,6 +270,7 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 
 - **Lås materialet** under *Material på bordet*: låst material kan markeras men inte dras, varken i 2D eller i 3D, och X/Y-fälten är gråa. Låset sparas med projektet och går att ångra.
 - **Rättat:** ”Cannot add null to the collection” när 3D-vyn roterades efter att materialet hade flyttats. Bordets transform nollställdes till `null` efter dragningen i stället för till identitet, och det klarar inte Helix när den letar rotationspunkt.
+- **Maskinloggen i rätt ordning:** ett skickat kommando (`→`) loggas nu före maskinens svar (`←`). Tidigare kunde svaret, till exempel hela `$$`-listan, hamna ovanför kommandot som gav det, särskilt med den simulerade maskinen. Det gjorde loggen svår att läsa.
 
 ## 0.9.50 – Materialet flyttas bara i Design
 

@@ -163,7 +163,6 @@ public sealed class GrblClient : IDisposable
     public void SendRealtime(byte command, bool log = true)
     {
         if (!_transport.IsOpen) throw new InvalidOperationException("Inte ansluten.");
-        _transport.WriteByte(command);
         if (log) Sent?.Invoke(command switch
         {
             GrblProtocol.SoftReset => "[Ctrl-X mjuk återställning]",
@@ -174,6 +173,7 @@ public sealed class GrblClient : IDisposable
             GrblProtocol.CoolantMistToggle => "[0xA1 dimma på/av]",
             _ => ((char)command).ToString()
         });
+        _transport.WriteByte(command);        // after the log line, so a reply never shows above it
         if (command == GrblProtocol.SoftReset) FailPending("GRBL återställdes (Ctrl-X).");
     }
 
@@ -192,8 +192,10 @@ public sealed class GrblClient : IDisposable
         {
             var pending = new PendingCommand();
             lock (_sync) _pending = pending;
-            _transport.Write(line.Trim() + "\n");
+            // Logged before writing: a fast controller (or the simulated one) can answer during Write,
+            // and the log must show the command before its reply.
             Sent?.Invoke(line.Trim());
+            _transport.Write(line.Trim() + "\n");
             var finished = await Task.WhenAny(pending.Done.Task, Task.Delay(limit, ct));
             if (finished != pending.Done.Task)
             {
