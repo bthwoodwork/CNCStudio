@@ -46,14 +46,14 @@ public partial class View3DPanel : UserControl
     public event Action<bool>? StockClicked;
     /// <summary>Whether the material may be selected and dragged here (Design only, not in the Maskin workspace).</summary>
     public bool CanMoveStock { get; set; } = true;
-    private bool _stockSelected;
+    private bool _stockSelected, _stockLocked;
     private StockAnchor _anchor;
     private readonly ModelVisual3D _selectionMark = new();
 
     /// <summary>The material selected (in 2D or here): a frame round its top and the point X/Y is given for.</summary>
-    public void SetStockSelection(bool selected, StockAnchor anchor)
+    public void SetStockSelection(bool selected, StockAnchor anchor, bool locked)
     {
-        _stockSelected = selected; _anchor = anchor;
+        _stockSelected = selected; _anchor = anchor; _stockLocked = locked;
         BuildSelectionMark();
     }
 
@@ -107,6 +107,7 @@ public partial class View3DPanel : UserControl
             if (over) e.Handled = true;
             return;
         }
+        if (_stockLocked) { InfoText.Text = "Materialet är låst – lås upp det under Material på bordet för att flytta det."; e.Handled = true; return; }
         if (Scene.Camera is not ProjectionCamera camera || TopPlanePoint(pos) is not Point3D start) return;
         camera.BeginAnimation(ProjectionCamera.PositionProperty, null);      // no zoom animation left running
         _dragFrom = start; _dragDelta = new Vector3D(); _dragCamera = camera.Position;
@@ -118,7 +119,7 @@ public partial class View3DPanel : UserControl
         var pos = e.GetPosition(Scene.Viewport);
         if (_dragFrom is not Point3D from || _doc is not { } d)
         {
-            Scene.Cursor = CanMoveStock && OverMaterial(pos) ? (_stockSelected ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Hand) : null;
+            Scene.Cursor = CanMoveStock && OverMaterial(pos) ? (_stockSelected ? (_stockLocked ? System.Windows.Input.Cursors.No : System.Windows.Input.Cursors.SizeAll) : System.Windows.Input.Cursors.Hand) : null;
             return;
         }
         e.Handled = true;
@@ -141,7 +142,7 @@ public partial class View3DPanel : UserControl
         if (_dragFrom is null) return;
         _dragFrom = null;
         Scene.ReleaseMouseCapture(); e.Handled = true;
-        foreach (var v in TableFixed) v.Transform = null;
+        foreach (var v in TableFixed) v.Transform = Transform3D.Identity;
         if (_doc is not { } d || _dragDelta.Length < 0.001)
         {
             if (Scene.Camera is ProjectionCamera camera) camera.Position = _dragCamera;

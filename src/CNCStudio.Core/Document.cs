@@ -376,6 +376,8 @@ public sealed class StockPlacement
 {
     public double X { get; set; } = 50;
     public double Y { get; set; } = 50;
+    /// <summary>Locked: the material cannot be dragged or given a new position until unlocked (saved with the project).</summary>
+    public bool Locked { get; set; }
 }
 
 public sealed class FixtureBlock

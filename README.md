@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.50)
+﻿# CNC Studio – källkod (senaste: 0.9.51)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,12 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.51 – Lås materialet, och rättat fel i 3D-vyn
+
+- **Lås materialet** under *Material på bordet*: låst material kan markeras men inte dras, varken i 2D eller i 3D, och X/Y-fälten är gråa. Låset sparas med projektet och går att ångra.
+- **Rättat:** ”Cannot add null to the collection” när 3D-vyn roterades efter att materialet hade flyttats. Bordets transform nollställdes till `null` efter dragningen i stället för till identitet, och det klarar inte Helix när den letar rotationspunkt.
+- **Maskinloggen i rätt ordning:** ett skickat kommando (`→`) loggas nu före maskinens svar (`←`). Tidigare kunde svaret, till exempel hela `$$`-listan, hamna ovanför kommandot som gav det, särskilt med den simulerade maskinen. Det gjorde loggen svår att läsa.
 
 ## 0.9.50 – Materialet flyttas bara i Design
 
