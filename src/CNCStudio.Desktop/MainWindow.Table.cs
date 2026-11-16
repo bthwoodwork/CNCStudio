@@ -137,9 +137,20 @@ public partial class MainWindow
         if (!_homedThisSession || Grbl is null || st?.MPos is not { Length: >= 3 } mpos || st.State == "Alarm") { View3DPanel.ShowTool(null); return; }
         var (x, y, _, _) = ToolOnTable(mpos);
         var (vx, vy) = MachineTable3D.FromTable(MachineTable3D.For(_document), x, y);
-        double? z = st.WPos is { Length: >= 3 } w ? w[2] : _lastWco is { Length: >= 3 } wco ? mpos[2] - wco[2] : null;
+        // Height like X and Y: from where the machine really is (MPos), against a fixed reference for the material's
+        // top. Zeroing does not move the tool – it does not move the machine either. The reference is taken once from
+        // the work zero the machine has, and only probing (which measures the surface) moves it.
+        if (_toolZReference is null)
+        {
+            double? workZ = st.WPos is { Length: >= 3 } w ? w[2] : _lastWco is { Length: >= 3 } wco ? mpos[2] - wco[2] : null;
+            if (workZ is double wz) _toolZReference = mpos[2] - wz;
+        }
+        double? z = _toolZReference is double r ? mpos[2] - r : null;
         View3DPanel.ShowTool(new View3DPanel.ToolPosition(vx, vy, z));
     }
+
+    /// <summary>MPos Z drawn as the material's top in the 3D view (null until known; reset when disconnected).</summary>
+    private double? _toolZReference;
 
     /// <summary>Moves the marker on each status report – no redraw of the view.</summary>
     private void UpdateToolMarker()
