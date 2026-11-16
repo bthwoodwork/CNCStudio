@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace CNCStudio.Core;
 
 /// <summary>
-/// Drilling (as in Easel): the tool plunges straight down at the centre of the shape. The hole gets the
+/// Drilling: the tool plunges straight down at the centre of the shape. The hole gets the
 /// tool's diameter. Each pass depth is one peck: the tool goes down by "Djup per pass", lifts out of the
 /// hole to clear the chips, and goes back down. GRBL 1.1 has no canned drilling cycles (G81/G83), so
 /// the motion planner writes plain G0/G1 moves.

@@ -5,7 +5,7 @@ using System.Linq;
 namespace CNCStudio.Core;
 
 /// <summary>
-/// 3D-fräsning från STL (as Easel Pro's 3D carving): raster passes along X over the model's height map, the tool's
+/// 3D-fräsning från STL: raster passes along X over the model's height map, the tool's
 /// tip always at the height where its flat or round end just touches the surface (no gouging). Material outside the
 /// shape counts as untouched, so the tool never cuts outside it (its edge gets the tool's radius).
 /// <list type="bullet">

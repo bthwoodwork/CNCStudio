@@ -9,7 +9,7 @@ namespace CNCStudio.Desktop;
 
 /// <summary>
 /// Gamepad settings: lockout and second-action buttons, an action and a second action per button, which
-/// stick moves which axis, invert, deadzone and jog speeds. Pressed buttons light up live, like in gSender,
+/// stick moves which axis, invert, deadzone and jog speeds. Pressed buttons light up live,
 /// so it is easy to see which is which.
 /// </summary>
 public sealed class GamepadWindow : Window

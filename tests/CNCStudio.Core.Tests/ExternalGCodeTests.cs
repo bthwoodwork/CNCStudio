@@ -6,8 +6,8 @@ namespace CNCStudio.Core.Tests;
 /// <summary>G-code from other programs: arcs, what GRBL cannot run, the file facts, and Z against the machine.</summary>
 public class ExternalGCodeTests
 {
-    // Like a Fusion 360 grbl post: header comments, %, G2 arcs with I/J, spindle, a lift and a return.
-    private const string Fusion = """
+    // Like a typical GRBL post-processor output: header comments, %, G2 arcs with I/J, spindle, a lift and a return.
+    private const string CamOutput = """
         %
         (1001)
         (T1  D=6 CR=0 - ZMIN=-3 - flat end mill)
@@ -32,7 +32,7 @@ public class ExternalGCodeTests
     [Fact]
     public void A_typical_file_is_accepted_with_its_facts()
     {
-        var p = ExternalGCode.Analyze(Fusion, "skylt.nc");
+        var p = ExternalGCode.Analyze(CamOutput, "skylt.nc");
         Assert.True(p.Ok, string.Join("\n", p.Problems));
         Assert.DoesNotContain(p.Lines, l => l.StartsWith("(") || l == "%");
         var i = p.Info!;
@@ -120,7 +120,7 @@ public class ExternalGCodeTests
         // Zero X/Y inside the table and Z 40 mm below the switch, as on a real setup.
         foreach (var l in new[] { "G53 G0 X-300 Y-300", "G53 G0 Z-40", "G10 L20 P0 X0 Y0 Z0" })
             Assert.True((await client.SendLineAsync(l, timeout: TimeSpan.FromSeconds(30))).IsOk, l);
-        var p = ExternalGCode.Analyze(Fusion, "skylt.nc");
+        var p = ExternalGCode.Analyze(CamOutput, "skylt.nc");
         var settings = await client.ReadSettingsAsync();
         var g54 = (await client.ReadParametersAsync())["G54"];
         Assert.Null(JobEnvelope.Check(GCodePath.Parse(p.Lines), g54, settings, "x"));

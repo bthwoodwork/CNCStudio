@@ -47,13 +47,13 @@ public sealed record SquaringResult(SquaringInput Input, double AngleErrorDeg, d
 }
 
 /// <summary>
-/// XY squaring (like gSender's tool): the machine moves along X and then along Y, three points are marked
+/// XY squaring: the machine moves along X and then along Y, three points are marked
 /// and the three distances between them measured. The law of cosines gives the angle between the axes.
 /// <para>
-/// Unlike gSender, the advice is how far one end of the gantry has to move – the gantry's length × the
+/// The advice is how far one end of the gantry has to move – the gantry's length × the
 /// angle error – and which end and which way, from the sign of the error and the directions moved.
-/// (gSender advises moving the rail by the diagonal's error, which with a 300 × 300 triangle is only
-/// just over a quarter of what is needed on a 750 mm gantry, and always in the same direction.) Steps/mm are
+/// (Moving the rail by the diagonal's error would, with a 300 × 300 triangle, be only just over a quarter of
+/// what is needed on a 750 mm gantry.) Steps/mm are
 /// not written from here: a ruler over a few hundred mm is too coarse for that; Kalibrera steg/mm is
 /// the tool for it.
 /// </para>
@@ -61,7 +61,7 @@ public sealed record SquaringResult(SquaringInput Input, double AngleErrorDeg, d
 /// </summary>
 public static class SquaringCheck
 {
-    /// <summary>Below this the machine counts as square (gSender's limit too).</summary>
+    /// <summary>Below this the machine counts as square.</summary>
     public const double SquareDeg = 0.1;
     /// <summary>Up to this much at the end of the gantry counts as slightly off.</summary>
     public const double SlightOffsetMm = 2;

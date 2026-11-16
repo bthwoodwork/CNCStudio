@@ -7,7 +7,7 @@ using Microsoft.Win32;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Program → Öppna G-code-fil…: a program from another CAM (Fusion 360, VCarve, Easel …) is read, checked for
+/// Program → Öppna G-code-fil…: a program from another CAM program is read, checked for
 /// GRBL (ExternalGCode), its facts shown, and loaded like a project's program. Starta then checks X/Y/Z against
 /// the machine with the zero that is set, as for every program; Kontrollkör ($C), pause, stop, resume and the
 /// machine log work the same.
@@ -56,7 +56,7 @@ public partial class MainWindow
             AppDialog.Show(this, $"\"{program.Name}\" kan inte köras med GRBL:\n\n" +
                 string.Join("\n", program.Problems.Take(12).Select(p => "• " + p)) +
                 (program.Problems.Count > 12 ? $"\n• … och {program.Problems.Count - 12} till." : "") +
-                "\n\nVälj en GRBL-postprocessor i CAM-programmet (i Fusion 360: \"Grbl\") och spara filen igen.",
+                "\n\nVälj en GRBL-postprocessor i CAM-programmet och spara filen igen.",
                 "Öppna G-code", MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }

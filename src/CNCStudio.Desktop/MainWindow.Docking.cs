@@ -7,7 +7,7 @@ using CNCStudio.Core;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Docking as in Visual Studio (AvalonDock): the drawing area is the document in the middle, and Ritverktyg,
+/// Docking (AvalonDock): the drawing area is the document in the middle, and Ritverktyg,
 /// Egenskaper, Maskinstyrning, Program and Smart CAM are panels that can be dragged by their title bar, docked on any
 /// side, put together as tabs or left floating. The workspaces (Design, CAM, Maskin) still decide which
 /// panels are shown; a panel that is hidden comes back where the user last had it. The layout is saved per

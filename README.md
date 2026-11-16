@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.53)
+﻿# CNC Studio – källkod (senaste: 0.9.54)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -16,7 +16,7 @@ Baserad på 0.5.5.1 med bevarat GUI, ritning, import, maskinvy och prestandaänd
 
 Detta är INTE en fullständig kollisionskontroll. Det finns inga beräknade G0-förflyttningar, Z-rörelser, hållargeometrier, fastspänningsplan i olika höjder, kontroll av verklig materialplacering eller GRBL-kommunikation. Markerade konflikter är konservativa möjliga XY-konflikter. Avsaknad av konflikt är inte ett säkerhetsgodkännande. Maskinprofilen måste kalibreras mot GRBL innan riktiga program får köras. Ingen körbar G-code exporteras.
 
-## Test i Visual Studio
+## Testa i utvecklingsmiljön
 
 1. Välj `CNCStudio.Desktop` som startprojekt.
 2. Skapa en rektangel och en CAM-operation (utvändig kontur, Ø3,175 mm).
@@ -162,7 +162,7 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - **Oberoende kontroll:** `GCodeVerifier` läser programmet rad för rad och kontrollerar bland annat att Z lyfts först, att ingen snabbförflyttning sker i materialet, att spindeln är på (eller att det finns en M0-paus) före skär, att F är satt före G1, Z-gränserna, avslutet, att raderna är ASCII och högst 70 tecken, och att bara tillåtna koder används. Vid fel skapas ingen fil.
 - Maxhastigheterna `$110`–`$112` läses in från maskinen och ger en varning om matningen är högre.
 
-**Tester:** 199 tester. Programmet är inte kört på en riktig maskin än – kontrollera filen i gSender och kör gärna i luften första gången.
+**Tester:** 199 tester. Programmet är inte kört på en riktig maskin än – kontrollera filen och kör gärna i luften första gången.
 
 ## 0.7 – Fickfräsning
 
@@ -266,6 +266,12 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
 
+## 0.9.54 – Inga hänvisningar till andra program
+
+- Alla hänvisningar till andra CNC- och CAM-program är borttagna ur källkoden, kommentarerna, gränssnittets texter, manualen och README. Det gäller jämförelser av typen "som i …" och namn på program som G-code kan komma ifrån. Funktionerna är CNC Studios egna och beskrivs nu bara för vad de gör.
+- Texter som nämnde andra program säger nu *ett annat CAM-program*. Gäller bland annat Öppna G-code-fil, G-code-editorn och felmeddelandet om postprocessor.
+- Kvar finns bara tekniska namn: tekniken V-carving (`VCarve` i koden), komponenterna som programmet bygger på (AvalonDock, HelixToolkit, Clipper2) och GRBL med sin dokumentation.
+
 ## 0.9.53 – Manual i Hjälp-menyn
 
 - **Hjälp → Manual…** (Shift+F1) öppnar en användarmanual på svenska. Den har en innehållsförteckning till vänster och sökning i hela texten (Ctrl+F, rutan under texten).
@@ -282,7 +288,7 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 
 ## 0.9.52 – G-code-editor
 
-**Arkiv → G-code-editor…**, eller knappen *G-code-editor…* under Program i Maskin, öppnar ett eget fönster för G-code från Fusion, VCarve eller CNC Studio. Från knappen öppnas den laddade filen direkt.
+**Arkiv → G-code-editor…**, eller knappen *G-code-editor…* under Program i Maskin, öppnar ett eget fönster för G-code från andra CAM-program eller CNC Studio. Från knappen öppnas den laddade filen direkt.
 
 - **Redigera som text** med radnummer i statusraden och Ctrl+S / Ctrl+O. Ändringarna kontrolleras på samma sätt som *Öppna G-code-fil*: kommandon GRBL inte har, för långa rader och liknande visas direkt, tillsammans med utbredning, djup, matning och beräknad tid.
 - **Spegla** vänster–höger eller fram–bak, och **rotera** 90° moturs, 90° medurs eller 180°. Det görs kring banans mitt, så att banan stannar på samma ställe, eller kring X0 Y0.
@@ -345,7 +351,7 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 
 ## 0.9.43 – Smal verktygslist och kortare fräsningspanel
 
-- **Rita** är nu en **smal list** längs vänsterkanten, som i gSender: en ikon med kort text under, och hela namnet i verktygstipset. Ritytan får mer plats.
+- **Rita** är nu en **smal list** längs vänsterkanten: en ikon med kort text under, och hela namnet i verktygstipset. Ritytan får mer plats.
   - Knapparna i listan är: Markera, Rektangel, Ellips, Linje, Text, Figurer, Bild, 3D, Importera, Snap │ Kombinera ▾, Justera ▾, Offset, Rutnät, Packa │ Duplicera och Ta bort.
   - **Kombinera ▾** öppnar en meny med Förena, Subtrahera, Skärning, XOR och Kontrollera vektorer.
   - **Justera ▾** öppnar en meny med de sex justeringarna och Fördela i sidled och höjdled.
@@ -364,7 +370,7 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 
 ## 0.9.41 – Design-ytan: rita och fräsning på samma ställe
 
-- **Två arbetsytor** i stället för tre, som gSender plus designverktyg: **Design** (F1) och **Maskin** (F3). CAM är inte längre en egen arbetsyta.
+- **Två arbetsytor** i stället för tre: **Design** (F1) och **Maskin** (F3). CAM är inte längre en egen arbetsyta.
 - I **Design** sitter, till höger och under varandra:
   - **Egenskaper** överst: den markerade formens plats och storlek, samt projekt och material.
   - **Fräsning** direkt under (tidigare Smart CAM): hur den markerade formen ska fräsas (kontur, ficka, V-carving, inlay, 3D …), fräs ur biblioteket, djup, matning och andra fräs. Längst ned finns hela projektets jobblista per fräs med kontrollen.
@@ -372,9 +378,9 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 - **F2** öppnar Design med Fräsning i fokus. Knappar och meddelanden som tidigare ledde till "CAM" leder hit.
 - Den sparade fönsterlayouten byter namn (`fönsterlayout-3.xml`), så alla får den nya standardlayouten en gång. Därefter sparas dina egna ändringar som vanligt.
 
-## 0.9.40 – Maskin-ytan byggd som gSender
+## 0.9.40 – Ny uppställning av Maskin-ytan
 
-Första steget mot "CNC Studio = gSender + designverktyg" (se Miro: *CNC Studio – flödet*, version 3). Arbetsytan **Maskin** (F3) är uppställd som gSender:
+Första steget mot en enklare uppställning med maskinstyrning och designverktyg i samma program (se Miro: *CNC Studio – flödet*, version 3). Arbetsytan **Maskin** (F3) är uppställd så här:
 
 - **Mitten:** maskinvyn eller 3D-vyn, stor.
 - **Till höger, Maskinstyrning:**
@@ -383,7 +389,7 @@ Första steget mot "CNC Studio = gSender + designverktyg" (se Miro: *CNC Studio 
   - **Nolla X + Y** (▾: vid materialet) och **Gå till X0 Y0**.
   - Joggkorset med Z, och under det steg, Z-steg och hastighet med **Precis / Normal / Snabb**.
 - **Under vyn, tre paneler bredvid varandra:**
-  - **Program:** ladda från projektet eller öppna G-code (Fusion …), kontrollkör, rita konturen, starta från rad, senast körda och avbrutet jobb.
+  - **Program:** ladda från projektet eller öppna G-code från andra CAM-program, kontrollkör, rita konturen, starta från rad, senast körda och avbrutet jobb.
   - **Körning:** stora **Starta / Paus / Stopp**, förlopp, överstyrning av matning, snabbgång och spindel, samt spindel, kylning och dimma.
   - **Probning och mer** (flik): probning, planhet, platser, sätt värde, arbetsområde, material och fastspänningar, gamepad och tangenter, konsol, maskininfo och brytartest. **Makron** finns som flik bredvid.
 - Egenskapspanelen döljs i Maskin. Material, fastspänningar och Z-höjder öppnas med *Material och fastspänningar…*.
@@ -511,7 +517,7 @@ Första steget mot "CNC Studio = gSender + designverktyg" (se Miro: *CNC Studio 
 
 ## 0.9.30 – Starta från rad
 
-- **Starta från rad…** i Program-panelen, som i gSender och Easel. Visar programmets rader. Välj rad genom att klicka, skriva radnumret eller **hoppa till en del**. Programmets egna kommentarer blir delarna, till exempel en operation eller ett pass.
+- **Starta från rad…** i Program-panelen. Visar programmets rader. Välj rad genom att klicka, skriva radnumret eller **hoppa till en del**. Programmets egna kommentarer blir delarna, till exempel en operation eller ett pass.
 - Ligger raden mitt i en fräsning börjar programmet på **närmaste säkra punkt före** den, med samma logik som *Återuppta* efter ett avbrott. Det kan vara en förflyttning på säker höjd, början av ett djuppass, eller nedmatning i ett spår som redan är fräst. Fönstret visar var det börjar och hur maskinen kör in.
 - **Inkörningen:**
   1. Lägena sätts.
@@ -581,21 +587,21 @@ Första steget mot "CNC Studio = gSender + designverktyg" (se Miro: *CNC Studio 
 
 ## 0.9.23 – Jogga med tangentbordet
 
-- **Jogga med tangenterna** (som i gSender och UGS): ← → för X, ↑ ↓ för Y, Page Up/Page Down för Z. Ett kort tryck tar ett steg; håller du tangenten inne längre än 250 ms joggar maskinen tills du släpper (jog cancel 0x85). **Esc** stoppar joggen, **1/2/3** väljer Precis/Normal/Snabb.
+- **Jogga med tangenterna**: ← → för X, ↑ ↓ för Y, Page Up/Page Down för Z. Ett kort tryck tar ett steg; håller du tangenten inne längre än 250 ms joggar maskinen tills du släpper (jog cancel 0x85). **Esc** stoppar joggen, **1/2/3** väljer Precis/Normal/Snabb.
 - **Egna kortkommandon:** Maskin → *Tangentbord…* eller *⌨ Tangenter…* i JOGG-panelen. Klicka på en åtgärd och tryck den nya tangenten, gärna med Ctrl/Shift/Alt. Förutom joggen (även diagonalt) finns hastighet, Nolla X + Y, Nolla Z, Gå till X0 Y0, Homing, Paus och Fortsätt. Samma tangent för två åtgärder, eller tangenter programmet redan använder (F1–F4, Ctrl+S, Ctrl+Z …), godtas inte.
 - Säkert: tangenterna verkar bara i arbetsytan Maskin (kan stängas av), aldrig när du skriver i ett fält, inte medan ett program eller makro körs (utom Stopp, Paus och Fortsätt), och joggen stoppar om fönstret tappar fokus.
 - Sparas i `Inställningar\tangentbord.json` och följer med till andra datorer som övriga inställningar.
 
 ## 0.9.22 – Rita konturen i luften
 
-- **Program → Rita konturen…** (som gSenders *Outline*): fräsen lyfts till säker höjd (maskinkoordinater, som Gå till) och åker runt det laddade programmets yttre gräns – i luften, utan att gå ned – och sedan tillbaka dit den stod. Då ser du att jobbet ryms på materialet och går fri från fastspänningarna innan du startar.
+- **Program → Rita konturen…**: fräsen lyfts till säker höjd (maskinkoordinater, som Gå till) och åker runt det laddade programmets yttre gräns – i luften, utan att gå ned – och sedan tillbaka dit den stod. Då ser du att jobbet ryms på materialet och går fri från fastspänningarna innan du startar.
 - Välj **Yttre form** (konvext hölje runt alla fräsrörelser, som ett gummiband) eller **Rektangel** (programmets yttre rektangel). Snabbförflyttningar räknas inte.
 - Hastigheten är joggens mm/min (begränsad till maskinens max). Kräver homing; samma kontroll som Starta görs först – konturen måste rymmas i maskinen med den nolla som är satt.
 - Körs som ett makro: **Stopp** i Program-panelen avbryter. Datorn hålls vaken under tiden.
 - Logiken finns i `JobOutline` (Core) med tester, bland annat en körning på den simulerade maskinen.
 
 ## 0.9.21 – Håller datorn vaken
-Om Windows går i viloläge mitt i ett jobb avbryts sändningen, och om datorn somnar medan maskinen är ansluten bryts USB-anslutningen. CNC Studio sköter nu viloläget, som gSender gör.
+Om Windows går i viloläge mitt i ett jobb avbryts sändningen, och om datorn somnar medan maskinen är ansluten bryts USB-anslutningen. CNC Studio sköter nu viloläget.
 - **Ansluten:** datorn får inte gå i viloläge, men skärmen får släckas.
 - **Program eller makro körs:** både datorn och skärmen hålls vakna, så att du kan följa körningen.
 - **Frånkopplad eller klar:** Windows får sova som vanligt igen.
@@ -605,7 +611,7 @@ Om Windows går i viloläge mitt i ett jobb avbryts sändningen, och om datorn s
 **Tester:** 567 tester. Kompilerad utan fel och varningar.
 
 ## 0.9.20 – Kör G-code från andra program
-Program från Fusion 360, VCarve, Easel och andra CAM-program kan nu köras i CNC Studio, som i gSender, UGS och Easel.
+Program från andra CAM-program kan nu köras i CNC Studio.
 - **Program → Öppna G-code-fil…** öppnar .nc-, .gcode-, .ngc-, .tap-, .cnc-, .gc- och .txt-filer.
 - **Filen granskas för GRBL innan den laddas** (`ExternalGCode`). Kommentarer, tomma rader och `%` tas bort. Det som GRBL 1.1 inte kan köra stoppar filen, med radnummer och förklaring:
   - M6 (verktygsbyte). Spara ett program per fräs i CAM-programmet.
@@ -614,7 +620,7 @@ Program från Fusion 360, VCarve, Easel och andra CAM-program kan nu köras i CN
   - G43 (som inte är G43.1), A-, B- och C-axlar, programnummer (O) och okända G- och M-koder.
   - Inställningsändringar och annat som inte heller får finnas i makron, samt för långa rader.
   - Rutan föreslår GRBL-postprocessorn i CAM-programmet.
-- **Fakta om filen innan den laddas** (som gSenders *file insight*):
+- **Fakta om filen innan den laddas**:
   - antal rader och om filen har bågar eller är i tum
   - utbredning i X och Y, djupaste och högsta Z
   - matning, varvtal och om filen startar spindeln
@@ -624,7 +630,7 @@ Program från Fusion 360, VCarve, Easel och andra CAM-program kan nu köras i CN
 - **Bågar (G2/G3) läses nu** (`GCodePath`), med I/J, R och hela cirklar, i tum och mm. De delas i bitar på högst 1 mm, och bågens yttersta punkter tas alltid med, så att utbredningen och kontrollerna stämmer. Demomaskinen kan också köra bågar och följer GRBL:s mjuka gränser längs bågen, så att filer kan provas på den.
 - **Kontrollen före start omfattar nu Z** (`JobEnvelope`). Med den Z-nolla som är satt (G54 Z + G92 Z + verktygslängd) får programmet inte gå upp i Z-brytaren eller under −$132. Rutan säger hur långt utanför det går och att Z-nollan ska kontrolleras. Det gäller även projektens program.
 
-**Tester:** 563 tester. En fil i Fusion-stil (bågar, spindel, lyft) körs till slut på den simulerade maskinen efter kontrollerna. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
+**Tester:** 563 tester. En typisk CAM-fil (bågar, spindel, lyft) körs till slut på den simulerade maskinen efter kontrollerna. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.19 – Nytt utseende
 Lappen "Snygga till GUI, ser lite ut som ett 90-tals windows-program". 90-talskänslan kom från Windows egna standardkontroller, som låg kvar i det mörka gränssnittet: knappar med grå gradient och 3D-kant, vita inmatningsfält med svart text, ljusgrå rullgardinsmenyer och Windows kryssrutor, rullningslister och verktygstips.
@@ -643,7 +649,7 @@ Lappen "Snygga till GUI, ser lite ut som ett 90-tals windows-program". 90-talsk�
 **Tester:** 549 tester. Kompilerad utan fel och varningar, men **inte körd i Windows ännu**. Utseendet har ingen sett än. Ser något fel ut, ta en skärmbild och stäng av *Visa → Nytt utseende* så länge.
 
 ## 0.9.18 – Maskininformation
-Motsvarar gSenders *Machine Information*. Du öppnar den med **Maskin → Maskininformation…** eller med knappen **Maskininfo…** i Maskinstyrning. Det är ett vanligt fönster som kan ligga öppet bredvid arbetet, och med **Alltid överst** stannar det framför huvudfönstret.
+Du öppnar den med **Maskin → Maskininformation…** eller med knappen **Maskininfo…** i Maskinstyrning. Det är ett vanligt fönster som kan ligga öppet bredvid arbetet, och med **Alltid överst** stannar det framför huvudfönstret.
 - **Överst:** maskin, firmware och läge (Idle, Run, Alarm …).
 - **Lägen (ur `$G`)** i klartext: rörelse, koordinatsystem, plan, enheter, avståndsläge, matningsläge, spindel, kylning, verktyg, senaste matning och varvtal.
   - **Gult** markerar ett läge som CNC Studios program inte räknar med: tum (G20), relativt (G91), ett annat koordinatsystem än G54, inverterad tid (G93) eller ett annat plan än XY.
@@ -681,7 +687,7 @@ Egna kodbitar som körs med ett klick. Panelen **Makron** ligger som flik bredvi
 
 ## 0.9.16 – Diagonal jogg
 - **Joggkrysset har diagonaler** i de fyra hörnen: ↖ ↗ ↙ ↘.
-  - **Klick:** ett steg i både X och Y, till exempel 5 mm åt höger och 5 mm bakåt. Det blir `$J=G91 G21 X5 Y5 F…`, som i gSender.
+  - **Klick:** ett steg i både X och Y, till exempel 5 mm åt höger och 5 mm bakåt. Det blir `$J=G91 G21 X5 Y5 F…`.
   - **Håll inne:** kontinuerlig jogg snett, som de raka knapparna. Varje kort jogg-steg är lika långt som rakt, så att fräsen stannar lika fort när knappen släpps.
   - Gränskontrollen räknar med båda axlarna. En diagonal som skulle gå förbi en gräns på någon av axlarna stoppas, och statusraden säger varför.
 - Gamepadens spak joggade redan diagonalt.
@@ -691,7 +697,7 @@ Egna kodbitar som körs med ett klick. Panelen **Makron** ligger som flik bredvi
 
 ## 0.9.15 – Anslutning, maskinstyrning och program var för sig
 Lappen "Dela upp maskinkontroll och maskinstart". Maskinen ansluts en gång, men styrs hela tiden, och programmen hör inte hemma i styrningen.
-- **Anslutningen ligger i verktygsraden längst till vänster**, som i gSender: en statusbricka (EJ ANSLUTEN / ANSLUTEN / DEMOMASKIN, med detaljer i tooltip), maskinväljaren med ☰, porten med ⟳ och **Anslut**. *Första test mot maskinen* finns kvar i Maskin-menyn.
+- **Anslutningen ligger i verktygsraden längst till vänster**: en statusbricka (EJ ANSLUTEN / ANSLUTEN / DEMOMASKIN, med detaljer i tooltip), maskinväljaren med ☰, porten med ⟳ och **Anslut**. *Första test mot maskinen* finns kvar i Maskin-menyn.
 - **Maskinstyrning** (tidigare Maskinkontroll) innehåller bara det man gör med maskinen: läge och koordinatsystem, GRBL-konsol, brytartest, Återställ, koordinaterna, nollning, homing, probning och jogg.
 - **Program** är en ny dockbar panel, som standard under Maskinstyrning:
   - *Avbrutet jobb* (återuppta eller glöm)
@@ -704,7 +710,7 @@ Lappen "Dela upp maskinkontroll och maskinstart". Maskinen ansluts en gång, men
 **Tester:** 499 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
 ## 0.9.14 – Maskinlogg och underhåll
-Motsvarar gSenders *Your Machine*. Varje maskin har nu en egen logg. Du öppnar den med **Maskin → Maskinlogg och underhåll…** eller med knappen **Logg och underhåll…** på maskinens rad i Maskiner.
+Varje maskin har nu en egen logg. Du öppnar den med **Maskin → Maskinlogg och underhåll…** eller med knappen **Logg och underhåll…** på maskinens rad i Maskiner.
 - **Loggas automatiskt** på den anslutna maskinen:
   - **Varje körning:** start, slut, programnamn, rader körda av totalt, och om den blev klar, stoppades eller avbröts (med meddelandet), samt om den var återupptagen.
   - **Varje larm (ALARM:n):** kod, förklaring och vilket program som körde.
@@ -755,7 +761,7 @@ Rättning efter första körningen av planfräsningen. X och Y var aldrig nollad
 **Tester:** 478 tester. Kompilerad utan fel och varningar.
 
 ## 0.9.10 – Planfräsa offerskivan
-Verktyget motsvarar gSenders *Wasteboard Surfacing* och finns under **Maskin → Planfräsa offerskivan…**. Alla inställningar görs i ett formulär:
+Verktyget finns under **Maskin → Planfräsa offerskivan…**. Alla inställningar görs i ett formulär:
 - **Fräs:** välj en fräs ur verktygsbiblioteket. Planfräsar visas först, sedan de bredaste. Diameter, matning, nedmatning och varvtal fylls i från fräsen. Ställ in stegning (standard 60 %) och om raderna ska gå längs X eller Y.
 - **Yta:** bredd × djup och offerskivans tjocklek. **Hela bordet** fyller i den största ytan som går att planfräsa: maskinens arbetsområde minus det som krävs för att raderna ska gå ut så långt att hela fräsen lämnar ytan, plus marginalen till gränslägena. Ytan kan ligga **centrerad på bordet** eller på ett avstånd **från hemhörnet**, som under Materialplacering. En yta för nära kanten flyttas in.
 - **Djup:** totalt djup och djup per pass (standard 0,5 mm), högst 5 mm. Offerskivan ska göras plan, inte bytas.
@@ -768,7 +774,7 @@ Verktyget motsvarar gSenders *Wasteboard Surfacing* och finns under **Maskin →
 
 **Tester:** 474 tester. Kompilerad utan fel och varningar, men inte körd i Windows ännu.
 
-## 0.9.9 – Dockning som i Visual Studio
+## 0.9.9 – Dockbara paneler
 Panelerna dockas nu med **AvalonDock** (Dirkster.AvalonDock 4.74.1, fri komponent för WPF, med det mörka temat VS2013).
 - **Ritytan** med 2D- och 3D-vyn ligger i mitten och kan inte lossas.
 - **Ritverktyg, Egenskaper, Maskinkontroll och Smart CAM** är paneler som går att flytta:
@@ -810,15 +816,15 @@ Panelerna dockas nu med **AvalonDock** (Dirkster.AvalonDock 4.74.1, fri komponen
 **Tester:** 461 tester. Kompilerad utan fel, men 3D-vyn är inte körd i Windows ännu.
 
 ## 0.9.6 – Kontrollera vinkel (XY-squaring)
-Kontrollerar att X och Y är vinkelräta, som gSenders squaring-verktyg men med ett bättre råd. Verktyget finns under **Maskin → Maskiner…**, knappen *Kontrollera vinkel…* på maskinens rad. Det går bara på den anslutna maskinen och när maskinen är Idle.
+Kontrollerar att X och Y är vinkelräta. Verktyget finns under **Maskin → Maskiner…**, knappen *Kontrollera vinkel…* på maskinens rad. Det går bara på den anslutna maskinen och när maskinen är Idle.
 1. **Triangeln:** sträckor i X och Y (standard 80 % av arbetsområdet, minst 50 mm), hastighet och avståndet mellan Y-skenorna, det vill säga gantryts längd (standard X-arbetsområdet, men mät gärna). Riktningarna väljs automatiskt så att triangeln får plats från där fräsen står: åt höger och bakåt om det går, annars åt andra hållet på den axel som inte får plats. De går att ändra.
 2. **Märk och flytta:** märk punkt 1 under spetsen och klicka *Flytta X*. Märk punkt 2 och klicka *Flytta Y*. Märk punkt 3. Flyttarna är `$J=`-jogg. Hela triangeln kontrolleras mot maskinens gränser före första flytten. En skiss visar triangeln och var fräsen står. *Tillbaka till punkt 1* går samma väg tillbaka, Y först.
 3. **Mät** 1–2, 2–3 och diagonalen 1–3 och klicka *Räkna ut*. Programmet visar:
    - vinkelfelet (cosinussatsen) och diagonalens avvikelse från √(a² + b²).
-   - **vilken ände av gantryt som ska flyttas, hur mycket och åt vilket håll:** gantryts längd × tan(vinkelfelet), till exempel *Gantryts högra ände ligger 3,9 mm för långt bak – flytta högra änden 3,9 mm framåt, eller vänstra änden 3,9 mm bakåt*. gSender ger rådet att flytta skenan lika mycket som diagonalen är fel. Med en 300 × 300-triangel på en 750 mm lång gantry är det bara drygt en fjärdedel av det som behövs, och rådet gäller alltid samma håll.
+   - **vilken ände av gantryt som ska flyttas, hur mycket och åt vilket håll:** gantryts längd × tan(vinkelfelet), till exempel *Gantryts högra ände ligger 3,9 mm för långt bak – flytta högra änden 3,9 mm framåt, eller vänstra änden 3,9 mm bakåt*. Att flytta skenan lika mycket som diagonalen är fel räcker inte: med en 300 × 300-triangel på en 750 mm lång gantry är det bara drygt en fjärdedel av det som behövs.
    - **mätosäkerheten:** hur stort vinkelfel ±0,5 mm på varje mått skulle kunna ge. Är felet mindre än så får du rådet att göra triangeln större eller mäta noggrannare innan du justerar.
    - om X- eller Y-sidan avviker mer än 0,3 % från flytten, ett tips om att kontrollera steg/mm med *Kalibrera steg/mm*. Inget skrivs till maskinen, eftersom ett måttband över några hundra millimeter är för grovt för steg/mm.
-   - Gränserna är desamma som i gSender: under 0,1° är maskinen vinkelrät. Upp till 2 mm vid gantryts ände räknas som *lite sned*, mer än så som *behöver justeras*.
+   - Gränserna: under 0,1° är maskinen vinkelrät. Upp till 2 mm vid gantryts ände räknas som *lite sned*, mer än så som *behöver justeras*.
 - **Resultaten sparas per maskin** i `Inställningar\Maskiner\Vinkelkontroll\<id>.json`, så att kontrollen efter en justering kan jämföras med den förra. Fönstret visar de senaste kontrollerna, och efter *Räkna ut* visas förra resultatet bredvid det nya. Tas maskinen bort följer historiken med.
 - Riktningarna följer programmets konvention från Första test: X+ åt höger och Y+ bort från dig.
 
@@ -837,7 +843,7 @@ Från anteckningarna på Miro-tavlan.
   - **Spara fräsen** sparar fräsen i biblioteket direkt, och fönstret stängs inte. Det går därför att lägga in flera fräsar i rad. *Ny fräs*, *Kopiera*, *Ta bort* och ändringar av kategorier sparas också direkt. **Stäng** stänger fönstret. Har du ändrat i en fräs utan att spara frågar programmet först (*Spara fräsen*, *Släng ändringarna* eller *Avbryt*). Samma fråga kommer när du byter till en annan fräs i listan. *Ångra ändringar* visar fräsen som den är sparad.
   - **Verktygsnummer** (T-nummer, t.ex. numret på asken), med knappen *Nästa lediga*. Numret visas före namnet i listan och i CAM-panelens fräsväljare. Två fräsar kan inte ha samma nummer. Numret skrivs aldrig i G-code, eftersom maskinen saknar verktygsväxlare.
   - **Inköp:** *Inköpt från*, *Artikelnummer* och *Länk*, med en knapp som öppnar länken i webbläsaren.
-  - **Mått som i Fusions verktygsbibliotek:** skaftdiameter, total längd, skärlängd och utstick under spännhylsan. För V-fräsar finns också spetsdiameter. Dessutom skärmaterial (hårdmetall, HSS …). Alla fält är frivilliga. Är skärlängden längre än utsticket visas en varning, men fräsen kan sparas ändå.
+  - **Fler mått:** skaftdiameter, total längd, skärlängd och utstick under spännhylsan. För V-fräsar finns också spetsdiameter. Dessutom skärmaterial (hårdmetall, HSS …). Alla fält är frivilliga. Är skärlängden längre än utsticket visas en varning, men fräsen kan sparas ändå.
   - **Kategorier:** *Ny…*, *Byt namn…* (alla fräsar i kategorin följer med) och *Ta bort…* (en kategori med fräsar kräver att du väljer vart fräsarna ska). Ordningen sparas, och listan och fräsväljaren i CAM visar kategorierna i den ordningen. En tom kategori syns i listan över kategorier när du väljer kategori för en fräs.
   - Gamla bibliotek öppnas som förut, med de nya fälten tomma.
 
@@ -901,7 +907,7 @@ Från anteckningarna på Miro-tavlan.
 **Tester:** 391 tester.
 
 ## 0.8.9 – Gamepad
-- **Styr maskinen med en gamepad.** Xbox-kompatibla kontroller läses via XInput, utan extra program. Upplägget liknar gSender:
+- **Styr maskinen med en gamepad.** Xbox-kompatibla kontroller läses via XInput, utan extra program. Upplägget:
   - **Spärrknapp** (standard **LB**) måste hållas in för att något ska hända. Undantaget är **STOPP** (standard **Back**), som alltid fungerar. STOPP avbryter joggen, och under ett program pausar den programmet.
   - **Spakarna joggar steglöst.** Ju längre spaken förs, desto fortare går det, upp till max X/Y respektive Z. Vänster spak styr X/Y och höger spak upp/ned styr Z, och diagonalt fungerar. Joggen sker i korta $J=-steg, och ett joggavbrott (0x85) skickas så fort spaken släpps, spärren släpps eller kontrollen kopplas från. Mjuka gränser och maskinens arbetsområde gäller som vid vanlig jogg.
   - **Knappar som standard:** styrkorset joggar X/Y ett steg, Y/A joggar Z+/Z− ett steg, X nollar X+Y, B nollar Z, vänsterspakens tryck byter Precis/Normal/Snabb, Start är Fortsätt och Back är STOPP.
@@ -923,7 +929,7 @@ Förbättringarna kommer från ett program som har fungerat på maskinen (Kapsyl
 
 - **Ett program per verktyg.** Maskinen har ingen verktygsväxlare, så verktyg blandas aldrig i ett program. Om projektet använder flera verktyg (samma namn, diameter och typ = samma verktyg) blir det ett numrerat program per verktyg, i körordning med fickor och innerkonturer först. Varje program planeras och kontrolleras för sig och börjar med *PROGRAM n AV m* och *BYT VERKTYG … och NOLLA Z*. Exporten sparar alla filer (`<namn> 1 av 3 - 6 mm rak fräs.nc` …). *Ladda program* låter dig välja vilket program som ska köras och föreslår nästa i ordningen. T/M6 används aldrig. Spara-dialogen öppnas i projektets mapp, eller i Projekt-mappen om projektet inte är sparat. Tidsuppskattningen räknar med en manuell paus per program.
 
-- **Borrning (som i Easel).** Den nya bearbetningen *Borrning (Drill)* går rakt ned i objektets mitt och ger ett hål med fräsens diameter. Fräsen borrar i steg om *Djup per steg* och lyfter ur hålet mellan stegen så att spånen kommer ut. Sedan går den snabbt ned till strax ovanför det redan borrade djupet (inställningen *Snabbt ned i redan fräst spår*) och borrar vidare med nedmatningshastigheten. Bara G0/G1 används, eftersom GRBL 1.1 saknar borrcykler (G81/G83). Ett objekt som inte är en cirkel med fräsens diameter ger en varning. Hålen ritas som cirkel med kryss och borras före ytterkonturer. Hållflikar och ramp gäller inte för borrning.
+- **Borrning.** Den nya bearbetningen *Borrning (Drill)* går rakt ned i objektets mitt och ger ett hål med fräsens diameter. Fräsen borrar i steg om *Djup per steg* och lyfter ur hålet mellan stegen så att spånen kommer ut. Sedan går den snabbt ned till strax ovanför det redan borrade djupet (inställningen *Snabbt ned i redan fräst spår*) och borrar vidare med nedmatningshastigheten. Bara G0/G1 används, eftersom GRBL 1.1 saknar borrcykler (G81/G83). Ett objekt som inte är en cirkel med fräsens diameter ger en varning. Hålen ritas som cirkel med kryss och borras före ytterkonturer. Hållflikar och ramp gäller inte för borrning.
 
 - **Rita ovanpå objekt:** när Rektangel, Ellips eller Polylinje är valt ritar en dragning även inne i andra objekt, till exempel ett hål i en rektangel. Verktyget byter inte längre till Markera. Ctrl-klick markerar ett objekt, ett klick utan dragning markerar objektet under pekaren, och pekaren är ett kors medan ett ritverktyg är valt.
 
@@ -968,7 +974,7 @@ Förbättringarna kommer från ett program som har fungerat på maskinen (Kapsyl
 **Tester:** 336 tester.
 
 ## 0.8.6 – Efter första maskintestet
-- Första testet mot den riktiga X-Carve (GRBL 1.1g Inventables, 500 × 500 × 100 mm) gick igenom alla steg.
+- Första testet mot den riktiga X-Carve (GRBL 1.1g, 500 × 500 × 100 mm) gick igenom alla steg.
 - **Version utan välkomstmeddelande:** kontroller som inte startar om när porten öppnas känns nu igen som GRBL 1.1 via `$I` (`[VER:1.1g…]`). Varningen visar vad kontrollern faktiskt svarade.
 - **Maskininställningar kan alltid sparas** när profilen är giltig. Material eller fastspänningar som inte längre ryms (t.ex. efter mindre arbetsområde) blockerar bara körbanorna: kritiskt CAM-fel, röd kant i maskinvyn och knappen "Gå till materialplacering". Projekt kan sparas och öppnas ändå.
 

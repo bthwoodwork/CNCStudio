@@ -15,7 +15,7 @@ namespace CNCStudio.Desktop;
 /// </summary>
 public partial class MainWindow
 {
-    /// <summary>Hold longer than this to jog continuously (gSender uses 250 ms).</summary>
+    /// <summary>Hold longer than this to jog continuously (250 ms).</summary>
     private static readonly TimeSpan ContinuousJogDelay = TimeSpan.FromMilliseconds(250);
 
     private DispatcherTimer? _jogHoldTimer;

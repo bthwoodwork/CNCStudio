@@ -8,7 +8,7 @@ namespace CNCStudio.Core;
 public enum AlignMode { Left, CenterX, Right, Top, CenterY, Bottom }
 
 /// <summary>
-/// Justera, fördela, offset och kopior (as in Easel's and UGS's design tools). A group (same GroupId) moves as one
+/// Justera, fördela, offset och kopior. A group (same GroupId) moves as one
 /// piece. Design coordinates: X to the right, Y down from the back edge (Top = smallest Y).
 /// </summary>
 public static class Arrange

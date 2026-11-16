@@ -13,7 +13,7 @@ using Microsoft.Win32;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// G-code-editorn (Arkiv / Program → G-code-editor…): open a G-code file – from Fusion, VCarve or CNC Studio itself –
+/// G-code-editorn (Arkiv / Program → G-code-editor…): open a G-code file – from another CAM program or CNC Studio itself –
 /// edit it as text, and mirror, rotate, move or copy it in a grid. Every change is checked the way Öppna G-code
 /// checks a file, and the result is saved or loaded straight for a run (with the same checks before Starta).
 /// </summary>

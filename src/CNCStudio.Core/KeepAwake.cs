@@ -12,7 +12,7 @@ public enum AwakeLevel
 }
 
 /// <summary>
-/// Håll datorn vaken (like gSender's sleep management): a computer that goes to sleep while connected drops
+/// Håll datorn vaken: a computer that goes to sleep while connected drops
 /// the USB connection, and one that sleeps mid-run stops the program. While connected the computer is kept
 /// awake; while a program or macro runs the screen is kept on too. Released again when idle or disconnected.
 /// </summary>

@@ -12,7 +12,7 @@ public sealed record ModalState(string Group, string Code, string Meaning, bool 
 public sealed record PinState(char Pin, string Name, bool On);
 
 /// <summary>
-/// Maskininformation (like gSender's Machine Information): the active modes from $G ("[GC:G0 G54 G17 G21 G90
+/// Maskininformation: the active modes from $G ("[GC:G0 G54 G17 G21 G90
 /// G94 M5 M9 T0 F0 S0]") in plain words, and the inputs from Pn: (X Y Z limit switches, P probe, D door,
 /// H hold, R soft reset, S cycle start). "Unusual" marks a mode CNC Studio's programs do not expect – inches,
 /// relative, another work coordinate system, inverse-time feed, another plane.

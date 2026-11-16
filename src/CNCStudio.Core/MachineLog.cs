@@ -67,7 +67,7 @@ public sealed class MaintenanceTask
 public enum MaintenanceState { Ok, Soon, Due }
 
 /// <summary>
-/// Maskinlogg (like gSender's "Your Machine"): the jobs run, the alarms, running time and maintenance of one
+/// Maskinlogg: the jobs run, the alarms, running time and maintenance of one
 /// machine, in Inställningar\Maskiner\Historik\&lt;id&gt;.json beside the machine's profile – not in it, so projects
 /// do not carry the history. Synced like the profiles; each machine is normally run from one computer at a time.
 /// </summary>

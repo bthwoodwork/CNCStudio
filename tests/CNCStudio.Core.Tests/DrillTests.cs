@@ -3,7 +3,7 @@ using CNCStudio.Core.GCode;
 
 namespace CNCStudio.Core.Tests;
 
-/// <summary>Drilling as in Easel: straight pecks at the hole centre, only G0/G1 (GRBL 1.1 has no G81/G83).</summary>
+/// <summary>Drilling: straight pecks at the hole centre, only G0/G1 (GRBL 1.1 has no G81/G83).</summary>
 public class DrillTests
 {
     private static (CncDocument Doc, CamReport Report) Doc(double holeDiameter = 5, double tool = 5, double depth = 9, double peck = 3,

@@ -58,7 +58,7 @@ public static class ResumePlanner
     }
 
     /// <summary>
-    /// Starta från rad (as in gSender and Easel): start the program at line <paramref name="lineIndex"/> (0-based) –
+    /// Starta från rad: start the program at line <paramref name="lineIndex"/> (0-based) –
     /// or, since a line in the middle of a cut has no safe way in from above, at the nearest safe point before it
     /// (a rapid at travel height, the start of a depth pass, or down through an already cut slot). The machine is
     /// brought there the same way as when resuming: modes, Z up in machine coordinates, XY, spindle, down.

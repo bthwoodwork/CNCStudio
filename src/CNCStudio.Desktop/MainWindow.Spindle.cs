@@ -7,7 +7,7 @@ using CNCStudio.Core.Grbl;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Spindel och kylning in the Program panel (like gSender and UGS): rapid and spindle overrides next to the feed
+/// Spindel och kylning in the Program panel: rapid and spindle overrides next to the feed
 /// override, and buttons for the spindle, flood and mist. What each button may do in each state is decided by
 /// <see cref="SpindleCoolant"/>; the buttons light up from the machine's own report (A:).
 /// </summary>

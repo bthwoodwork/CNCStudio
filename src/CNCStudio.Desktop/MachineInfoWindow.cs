@@ -9,7 +9,7 @@ using CNCStudio.Core.Grbl;
 namespace CNCStudio.Desktop;
 
 /// <summary>
-/// Maskininformation (like gSender's Machine Information): firmware and connection, the active modes from $G
+/// Maskininformation: firmware and connection, the active modes from $G
 /// in plain words (unusual ones marked), the inputs from Pn: live, and Lås stegmotorerna ($1=255). A normal
 /// window that can stay open beside the work (Alltid överst). Reading $G only happens when the machine is Idle
 /// and no program, macro or jog is running.

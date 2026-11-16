@@ -41,7 +41,7 @@ public sealed record GamepadState(GamepadButton Buttons, double LeftX, double Le
 }
 
 /// <summary>
-/// The gamepad setup (Inställningar\gamepad.json). Modelled on how gSender uses a controller: sticks jog
+/// The gamepad setup (Inställningar\gamepad.json). Sticks jog
 /// continuously with speed following how far they are pushed, buttons run actions, a second-action button
 /// works like Shift, and a lockout button must be held for anything to happen. Stop works without it.
 /// </summary>

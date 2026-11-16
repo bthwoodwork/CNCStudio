@@ -7,7 +7,7 @@ using Clipper2Lib;
 namespace CNCStudio.Core;
 
 /// <summary>
-/// A V-carve inlay (as in VCarve Pro and Easel Pro): the pocket (hona) is V-carved into the base board, the plug
+/// A V-carve inlay: the pocket (hona) is V-carved into the base board, the plug
 /// (hane) – mirrored – is carved standing on another board, turned over and glued into the pocket.
 /// <para>
 /// Why it fits: the pocket's walls are the V-bit's cone from the outline at the surface. The plug's walls are the
