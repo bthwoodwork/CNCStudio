@@ -132,6 +132,7 @@ public partial class MainWindow
     {
         JogStatusText.Text = r.Message;
         if (r.StockTopMPosZ is not double z || z >= 0) return;
+        if (CurrentMachinePosition() is { Length: >= 2 } here) _lastProbeXY = (here[0], here[1]);   // the plate lay here
         _tableZReference = z - (_document.HasMaterial ? _document.MaterialThickness : 0);   // probing measured the surface
         RememberChange();
         _document.Motion.StockTopMachineZ = Math.Round(z, 3);

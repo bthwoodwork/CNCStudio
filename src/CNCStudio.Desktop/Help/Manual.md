@@ -151,6 +151,16 @@ Panelen **Jobb** (nedanför ritytan) visar alla operationer i körordning, grupp
 
 Maskinen har ingen verktygsväxlare, så varje fräs blir ett eget program, i rätt ordning. Mellan programmen byter du fräs och nollar Z igen – X0 Y0 ändras inte. CNC Studio laddar nästa program när Z är nollad.
 
+När ett program är klart öppnas **Fräsbyte** (finns också under **Maskin → Fräsbyte…**) och leder dig genom bytet:
+
+1. **Till fräsbytet** – maskinen lyfter Z och åker till platsen *Fräsbyte* (lägg till den under Platser…). Utan den lyfts bara Z.
+2. **Byt fräs.**
+3. **Över probplattan** – maskinen åker tillbaka, högt i luften, dit där Z probades senast. Lägg plattan där och jogga ned till några mm ovanför den. Höjden joggar du alltid själv: en längre fräs skulle annars kunna köra ned i plattan.
+4. **Proba Z** – Z0 sätts med den nya fräsen, och nästa program laddas och kontrolleras.
+5. **Starta.**
+
+Fönstret låter huvudfönstret vara aktivt, så du kan jogga och trycka STOPP hela tiden. Vill du hellre nolla Z för hand fungerar det som förut – programmet laddas då också.
+
 ## 3D-vyn
 
 **F4** visar materialet simulerat i 3D med banorna: blått skär, gult ned/upp, röd streckad snabbförflyttning. Under körning visas det som är kört i orange och fräsens position live.

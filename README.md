@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.56)
+﻿# CNC Studio – källkod (senaste: 0.9.57)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.57 – Fräsbyte i ett flöde
+
+När ett program i ett jobb med flera fräsar är klart öppnas fönstret **Fräsbyte**. Det finns också under **Maskin → Fräsbyte…**, och det leder genom bytet i fem steg:
+
+1. **Till fräsbytet:** Z lyfts och maskinen åker till den sparade platsen *Fräsbyte*. Utan en sådan plats lyfts bara Z till toppen.
+2. **Byt fräs:** du bekräftar att den nya fräsen sitter i.
+3. **Över probplattan:** maskinen åker högt i luften tillbaka dit Z probades senast. CNC Studio kommer ihåg det läget vid varje Z-probning. Höjden ned till plattan joggar du själv, eftersom en längre fräs annars skulle kunna köras ned i plattan.
+4. **Proba Z:** Z-probningen görs direkt från fönstret. Z0 sätts med den nya fräsen, och nästa program laddas och kontrolleras mot den nya Z-nollan, som när du nollar Z.
+5. **Starta:** nästa program startas med de vanliga kontrollerna.
+
+Fönstret är inte modalt. Jogg, STOPP, tangentbord och gamepad i huvudfönstret fungerar hela tiden. Varje steg får en bock eller ett kryss med förklaring. Att nolla Z för hand fungerar som förut.
 
 ## 0.9.56 – Linjalerna tänds och släcks var för sig
 
