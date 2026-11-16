@@ -46,7 +46,7 @@ public partial class MainWindow
                 Start = start, End = DateTime.Now, Name = _jobName.Length > 0 ? _jobName : _document.Name, Lines = totalLines, LinesRun = result.AckedLines,
                 Outcome = result.Outcome switch { JobOutcome.Finished => LoggedJobOutcome.Finished, JobOutcome.Stopped => LoggedJobOutcome.Stopped, _ => LoggedJobOutcome.Failed },
                 Message = result.Message, Computer = AppStorage.ComputerName, Resumed = resumed,
-                ProjectPath = resumed || _loadedExternalPath is not null ? null : _path,
+                ProjectPath = resumed || _loadedExternal ? null : _path,
                 ProgramNumber = resumed ? null : _loadedJob is { Count: > 1 } j ? j.Number : null,
                 GCodeFile = resumed ? null : _loadedExternalPath
             });
