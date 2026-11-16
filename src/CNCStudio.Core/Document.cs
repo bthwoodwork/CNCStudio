@@ -115,6 +115,9 @@ public sealed class CamOperation
     /// <summary>Inside/outside contour and pocket: a bone in every sharp corner the cutter cannot reach, so square parts fit (<see cref="Core.Dogbones"/>).</summary>
     public bool Dogbones { get; set; }
 
+    /// <summary>Through cut (outside/inside contour): stop this far above the bottom instead of tabs; 0 = off (<see cref="Core.OnionSkin"/>).</summary>
+    public double OnionSkinMm { get; set; }
+
     // ---- Fasning med V-fräs ----
     /// <summary>Chamfer width at the top edge (Fasning, and the chamfer pass of a contour or pocket).</summary>
     public double ChamferWidthMm { get; set; } = 1.5;
@@ -183,6 +186,7 @@ public static class CamValidation
         if (operation.Kind == CamOperationKind.Face && operation.UseTabs)
             return "Hållflikar används inte för planfräsning.";
         bool vcarve = operation.Kind is CamOperationKind.VCarve or CamOperationKind.VCarvePlug;
+        if (OnionSkin.Validate(operation) is string skin) return skin;
         if (operation.Kind == CamOperationKind.Chamfer)
         {
             if (operation.ToolKind != ToolKind.VBit) return "Fasning kräver en V-fräs – välj en V-fräs i listan.";
