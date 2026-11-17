@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.68)
+﻿# CNC Studio – källkod (senaste: 0.9.69)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,18 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.69 – Exportera ritningen som SVG/DXF
+
+- **Arkiv → Exportera ritning (SVG / DXF)…** sparar designen i mm, placerad som på materialet. Det går att välja hela ritningen eller bara de markerade objekten.
+- **Lager per bearbetning**, till exempel *Utskärning utvändig*, *Ficka*, *V-carve* och *Ingen bearbetning*, samt *Material* när hela ritningen exporteras. I SVG blir lagren `<g>`-grupper med egen färg. I DXF blir de lager (R12, ASCII, `$INSUNITS = 4`) med namn som bara innehåller ASCII-tecken.
+- **Geometri:**
+  - Runda former blir cirklar (`circle` / `CIRCLE`).
+  - Ovaler och konturer blir polylinjer: `polygon`/`polyline` i SVG och `POLYLINE`/`VERTEX` i DXF.
+  - Text och figurer är redan konturer.
+  - DXF har Y uppåt från materialets främre kant. SVG har Y nedåt.
+- **DXF-importen** läser nu också R12-polylinjer (`POLYLINE`/`VERTEX`/`SEQEND`), så exporterade filer kan läsas in igen.
+- Logiken finns i `DrawingExport` (Core) och har tester.
 
 ## 0.9.68 – Tidsuppskattning som lär sig
 
