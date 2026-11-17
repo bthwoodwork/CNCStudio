@@ -312,6 +312,14 @@ Bara X och Y ändras – Z, matning och varvtal står kvar, och bågar följer m
 
 Egna kodbitar som körs med ett klick (fliken **Makron**). *Ny…* öppnar en editor där färdiga rader kan infogas och förklaras. Makron som kan röra maskinen visar raderna och frågar först. Inställningar ($n=) och liknande stoppas – de görs i Maskininställningar.
 
+**Egen G-code vid start och stopp.** I makroeditorn kan ett makro under *Körs automatiskt* sättas att köras vid ett av tre tillfällen. Varje tillfälle kan ha ett makro. Väljer du ett tillfälle som ett annat makro redan har, tas det från det makrot.
+
+- **Före varje program:** körs när du startar, också från rad och vid återupptagning. Det kan till exempel slå på dammsugaren eller köra fram till en startpunkt. Stoppas makrot eller går det fel, startar inte programmet.
+- **När ett program har körts klart:** körs till exempel för att lyfta Z och parkera, eller stänga av något.
+- **Efter Stoppa:** körs när maskinen har stannat efter att du klickat Stoppa. Efter ett fel eller larm körs det inte, eftersom maskinen då är låst.
+
+Makrona körs utan att fråga, eftersom du själv har bestämt när de ska köras. Stoppa stoppar också dem. Det finns inget makro vid paus. När maskinen står i paus tar GRBL inte emot G-code. Den startar först när du klickar Fortsätt.
+
 ## Planfräsa offerskivan
 
 **Maskin → Planfräsa offerskivan…** fräser offerskivan plan med en bred fräs, över hela bordet eller en del av det. Det blir ett eget projekt.

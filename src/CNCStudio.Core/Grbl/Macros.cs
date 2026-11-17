@@ -7,6 +7,12 @@ using System.Text.RegularExpressions;
 
 namespace CNCStudio.Core.Grbl;
 
+/// <summary>
+/// When a macro runs by itself around a program: before it starts (also from a line and when resumed), after it
+/// has run to the end, or after it was stopped with Stoppa. Not at a pause: in a feed hold GRBL takes no G-code.
+/// </summary>
+public enum MacroTrigger { None, JobStart, JobEnd, JobStopped }
+
 /// <summary>A user's own piece of G-code, run from the Makron panel (e.g. "Lyft Z till toppen").</summary>
 public sealed class Macro
 {
@@ -15,6 +21,16 @@ public sealed class Macro
     public string Description { get; set; } = "";
     /// <summary>G-code and GRBL commands, one per line. Comments in ( ) or after ; are allowed.</summary>
     public string Code { get; set; } = "";
+    /// <summary>Runs by itself at this point of a program run; at most one macro per trigger.</summary>
+    public MacroTrigger RunAt { get; set; }
+
+    public static string TriggerText(MacroTrigger t) => t switch
+    {
+        MacroTrigger.JobStart => "före varje program",
+        MacroTrigger.JobEnd => "när ett program har körts klart",
+        MacroTrigger.JobStopped => "efter Stoppa",
+        _ => "bara när du kör det"
+    };
 
     public Macro Clone() => (Macro)MemberwiseClone();
 }
@@ -22,7 +38,7 @@ public sealed class Macro
 /// <summary>The macros, shared by all projects and computers (Inställningar\makron.json, synced like the libraries).</summary>
 public sealed class MacroLibrary
 {
-    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
 
     public List<Macro> Macros { get; set; } = new();
 
@@ -40,6 +56,18 @@ public sealed class MacroLibrary
             new Macro { Name = "Spindel av", Description = "Stänger av spindeln (bara om den styrs av GRBL).", Code = "M5" },
         }
     };
+
+    /// <summary>The macro that runs at <paramref name="trigger"/>, or null.</summary>
+    public Macro? For(MacroTrigger trigger) => trigger == MacroTrigger.None ? null : Macros.FirstOrDefault(m => m.RunAt == trigger);
+
+    /// <summary>Puts <paramref name="macro"/> in the library (replacing the one with its id); a trigger it takes is taken from any other.</summary>
+    public void Put(Macro macro)
+    {
+        if (macro.RunAt != MacroTrigger.None)
+            foreach (var other in Macros.Where(m => m.Id != macro.Id && m.RunAt == macro.RunAt)) other.RunAt = MacroTrigger.None;
+        int i = Macros.FindIndex(x => x.Id == macro.Id);
+        if (i >= 0) Macros[i] = macro; else Macros.Add(macro);
+    }
 
     public static MacroLibrary Load(string path)
     {

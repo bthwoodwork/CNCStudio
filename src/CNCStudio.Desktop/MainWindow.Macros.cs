@@ -31,7 +31,9 @@ public partial class MainWindow
                 Content = new StackPanel { Children =
                 {
                     new TextBlock { Text = m.Name, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
-                    new TextBlock { Text = m.Description, FontSize = 10.5, Foreground = System.Windows.Media.Brushes.LightSteelBlue, TextTrimming = TextTrimming.CharacterEllipsis }
+                    new TextBlock { Text = m.Description, FontSize = 10.5, Foreground = System.Windows.Media.Brushes.LightSteelBlue, TextTrimming = TextTrimming.CharacterEllipsis },
+                    new TextBlock { Text = "⟳ Körs " + Macro.TriggerText(m.RunAt), FontSize = 10.5, Foreground = System.Windows.Media.Brushes.Gold,
+                        Visibility = m.RunAt == MacroTrigger.None ? Visibility.Collapsed : Visibility.Visible }
                 } }
             };
             MacroList.Items.Add(item);
@@ -62,11 +64,7 @@ public partial class MainWindow
     {
         var w = new MacroEditorWindow(macro, isNew) { Owner = this };
         if (w.ShowDialog() != true || w.Result is not { } result) return;
-        ChangeMacros(lib =>
-        {
-            int i = lib.Macros.FindIndex(x => x.Id == result.Id);
-            if (i >= 0) lib.Macros[i] = result; else lib.Macros.Add(result);
-        }, result.Id);
+        ChangeMacros(lib => lib.Put(result), result.Id);
     }
 
     private void DeleteMacro_Click(object sender, RoutedEventArgs e)
