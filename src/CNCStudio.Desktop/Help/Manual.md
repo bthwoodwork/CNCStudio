@@ -79,6 +79,13 @@ Verktygslisten till vänster (och menyn **Rita**):
 
 Flera markerade former, eller en grupp som lådans delar, flyttas som en enhet. Når någon av dem materialets vänster- eller bakkant stannar hela markeringen där, så att delarna behåller sina avstånd.
 
+**Exportera 3D (STL)** (Arkiv-menyn) gör de markerade delarna, eller alla om inget är markerat, till solida kroppar. Konturen reses till en tjocklek, normalt materialets. Det används till exempel för att 3D-skriva ut en låda från Låda med fingerskarvar.
+
+- **Vad som blir delar:** former utan bearbetning, med utvändig utskärning eller med planfräsning. Former med invändig genomskärning blir hål i delen de ligger på. Fickor, gravyr, V-carve och borrhål tas inte med.
+- **Som det fräses**, av från början: utan bocken blir delen som den är ritad, med skarpa hörn och utan dogbones, vilket är vad man vill ha vid 3D-utskrift. Med bocken blir delen som fräsen lämnar den, med dogbones och fräsens radie i innerhörnen.
+- **En fil per del**, på från början: delarna sparas som *namn 1.stl*, *namn 2.stl* och så vidare. Utan bocken hamnar alla delar i en fil.
+- **Placering:** måtten är i mm och delarna ligger som på materialet, med Y bakåt och Z uppåt.
+
 Mått och läge för den markerade formen ändras exakt under **Egenskaper → Markerat objekt** (Tab eller Enter gäller).
 
 **Snap på/av** styr om formerna fäster mot rutnätet. Rutnätets steg följer zoomen och visas i statusraden.

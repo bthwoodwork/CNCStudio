@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.73)
+﻿# CNC Studio – källkod (senaste: 0.9.74)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,19 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.74 – Exportera 3D (STL)
+
+- **Arkiv → Exportera 3D (STL)…** gör de markerade delarna, eller alla, till solida kroppar för till exempel 3D-utskrift. Konturen reses till en tjocklek, som förvalt är materialets.
+  - **Delar:** former utan bearbetning, med utvändig utskärning eller planfräsning.
+  - **Hål:** former med invändig genomskärning skärs ut ur delen.
+  - **Tas inte med:** fickor, gravyr, V-carve och borrhål.
+- **Dogbones väljs bort som standard:** delen blir som den är ritad, med skarpa hörn. Med *Som det fräses* används i stället fräsbanan där den är beräknad:
+  - En del blir det banan omsluter, minus bandet fräsen tar.
+  - Ett hål blir det banan omsluter, plus bandet.
+  - Dogbones och fräsens radie i innerhörnen kommer då med.
+- **Filer:** binär STL i mm, en fil per del (*namn 1.stl* …) eller alla delar i en fil.
+- **Teknik:** `PartExport` (Core) delar upp topp och botten i trianglar med `Clipper.Triangulate` och lägger väggar längs varje kontur. Punkter mitt på raka kanter tas bort, så att kroppen blir sluten. Testerna kontrollerar att varje kant delas av två trianglar och att volymen stämmer, också för lådans delar.
 
 ## 0.9.73 – Rotera 90° och högerklicksmeny på formerna
 
