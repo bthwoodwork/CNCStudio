@@ -52,8 +52,9 @@ public partial class MainWindow
         _jobLines = result.Lines;
         _loadedExternalPath = null; _loadedExternal = false;
         _jobName = job.Count > 1 ? $"{_document.Name} – program {job.Number} av {job.Count} ({job.ToolLabel})" : _document.Name;
+        _loadedEstimate = EstimateProgram(job);
         JobInfoText.Text = (note is null ? "" : note + "\n") + $"{_jobName}: {result.Lines.Count} rader." +
-            (job.Count > 1 ? $" Fräs: {job.ToolLabel}. Z-nollan ska vara satt med den." : $" {RunTimeText()}") +
+            (job.Count > 1 ? $" Fräs: {job.ToolLabel}. Z-nollan ska vara satt med den. Uppskattad tid: {RunTimeEstimator.Format(_loadedEstimate.Value)}.{LearnedText(_loadedEstimate.Value)}" : $" {RunTimeText()}") +
             (result.Warnings.Count > 0 ? $" {result.Warnings.Count} varningar – visas när du startar." : "");
         _loadedJob = job;
         _loadedStockTop = _document.Motion.StockTopMachineZ;
@@ -140,6 +141,7 @@ public partial class MainWindow
         RecoveryBanner.Visibility = Visibility.Collapsed;
         StatusText.Text = startIndex == 0 ? "Programmet körs." : $"Programmet körs från rad {startIndex + 1}.";
         var started = DateTime.Now;
+        BeginHoldTracking();
         var result = await runner.RunAsync(startIndex, preamble);
         var due = LogJob(started, result, runner.TotalLines, resumed: startIndex > 0);
         var wear = RecordToolWear(started);
@@ -329,7 +331,7 @@ public partial class MainWindow
         if (AppDialog.Show(this, text, "Återuppta jobb", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         _jobLines = lines;
         _jobName = progress.Name;
-        _loadedJob = null;
+        _loadedJob = null; _loadedEstimate = null;
         JobInfoText.Text = $"{_jobName}: {lines.Length} rader (återupptas).";
         _jobStore.Begin(_jobName, lines, plan.StartIndex, g54 ?? progress.G54);
         await RunJob(g, plan.StartIndex, plan.Preamble);

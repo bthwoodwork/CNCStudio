@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.67)
+﻿# CNC Studio – källkod (senaste: 0.9.68)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,12 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.68 – Tidsuppskattning som lär sig
+
+- **Loggas per körning:** varje körning sparas i maskinloggen med programmets uppskattade tid (`EstimatedMinutes`, för just det programmet) och den tid maskinen stod i Hold eller Door (`HeldMinutes`). Det fångar pauser, M0 och start av fräsen för hand.
+- **Faktor per maskin:** `RunTimeLearning` (Core) tar medianen av förhållandet *(körtid − paus) / uppskattning* för maskinens senaste tio hela körningar. Stoppade och återupptagna körningar räknas inte, inte heller program kortare än 1 min eller förhållanden utanför 0,4–4. Faktorn används från och med två körningar.
+- **Visas:** i CAM-sammanfattningen, när ett program laddas (även för varje program i ett jobb med flera fräsar) och för G-code från fil: *Efter n körningar på maskinen: 14 min (+18 %)*.
 
 ## 0.9.67 – Körtid per fräs
 
