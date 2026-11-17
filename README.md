@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.70)
+﻿# CNC Studio – källkod (senaste: 0.9.71)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.71 – Fälten markerar texten
+
+- **I alla enradiga fält**, i alla fönster och dialoger, markeras hela texten när du klickar eller tabbar till fältet. Ett nytt värde kan skrivas direkt.
+  - Första klicket ger bara fokus. Ett andra klick placerar markören som vanligt.
+  - Flerradiga fält (makrokod, anteckningar, G-code-editorn) och skrivskyddade fält påverkas inte.
+- Det görs med klasshanterare för `TextBox` i `App` (`SelectAllOnEntry`). Därför gäller det också redigerbara listrutor och fönster som byggs i kod.
 
 ## 0.9.70 – Egen G-code vid start och stopp
 
