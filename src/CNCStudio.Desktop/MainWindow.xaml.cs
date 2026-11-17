@@ -472,6 +472,8 @@ public partial class MainWindow : Window
         { Group_Click(sender, new RoutedEventArgs()); e.Handled = true; return; }
         if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.G)
         { Ungroup_Click(sender, new RoutedEventArgs()); e.Handled = true; return; }
+        if (e.Key == Key.R && (Keyboard.Modifiers == ModifierKeys.Control || Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift)) && _selection.Count > 0)
+        { RotateSelection(clockwise: !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)); e.Handled = true; return; }
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.Z)
         { Undo_Click(sender, new RoutedEventArgs()); e.Handled = true; }
         else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.Y)
@@ -572,8 +574,8 @@ public partial class MainWindow : Window
     private void Canvas_RightDown(object sender, MouseButtonEventArgs e)
     {
         if (TabContextMenu((e.OriginalSource as FrameworkElement)?.Tag, e.GetPosition(DesignCanvas))) { e.Handled = true; return; }
-        if (_tool != Tool.Polyline || _polyPoints.Count == 0) return;
-        FinishPolyline(false); e.Handled = true;
+        if (_tool == Tool.Polyline && _polyPoints.Count > 0) { FinishPolyline(false); e.Handled = true; return; }
+        if (ShapeContextMenu((e.OriginalSource as FrameworkElement)?.Tag)) e.Handled = true;
     }
     private static bool SegmentsIntersect(Point a, Point b, Point c, Point d)
     {
