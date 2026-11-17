@@ -53,6 +53,18 @@ public sealed class ToolDefinition
     /// <summary>V-bit: diameter of the flat tip (0 = sharp point).</summary>
     public double? TipDiameter { get; set; }
 
+    // ---- Körtid och slitage ----
+
+    /// <summary>Minutes the tool has run in programs, in total.</summary>
+    public double RunMinutes { get; set; }
+    /// <summary>Minutes since it was last changed or sharpened (Ny/slipad nollställer).</summary>
+    public double RunMinutesSinceChange { get; set; }
+    /// <summary>Remind when it has run this many hours since the change; null = no reminder.</summary>
+    public double? ChangeIntervalHours { get; set; }
+
+    /// <summary>The reminder is due: the interval is set and has run out.</summary>
+    [JsonIgnore] public bool ChangeDue => ChangeIntervalHours is double h && h > 0 && RunMinutesSinceChange >= h * 60;
+
     /// <summary>Cutting data for this tool in specific materials (overrides the defaults above).</summary>
     public List<MaterialCuttingData> CuttingData { get; set; } = new();
 

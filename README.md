@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.66)
+﻿# CNC Studio – källkod (senaste: 0.9.67)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,13 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.67 – Körtid per fräs
+
+- **Räknas automatiskt:** när ett program från CNC Studio har körts (klart eller stoppat) läggs tiden till på fräsen i programmet. Den sparas i verktygsbiblioteket som `RunMinutes` (totalt) och `RunMinutesSinceChange` (sedan bytet). G-code från andra håll räknas inte.
+- **Påminnelse:** under SLITAGE i verktygsbiblioteket kan du ange *Påminn efter (timmar)* (`ChangeIntervalHours`). När tiden har gått ut visar klart-rutan *Dags att byta eller slipa*. Det sägs en gång, när gränsen passeras.
+- **Ny/slipad – nollställ** sätter tiden sedan bytet till noll. Den totala tiden finns kvar.
+- Biblioteket läses om från filen före varje registrering, så inget annat skrivs över. Logiken finns i `ToolWear` (Core) och har tester.
 
 ## 0.9.66 – Flytta hållflikarna själv
 

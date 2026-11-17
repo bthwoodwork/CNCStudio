@@ -142,6 +142,7 @@ public partial class MainWindow
         var started = DateTime.Now;
         var result = await runner.RunAsync(startIndex, preamble);
         var due = LogJob(started, result, runner.TotalLines, resumed: startIndex > 0);
+        var wear = RecordToolWear(started);
         _runner = null;
         UpdateKeepAwake();
         ShowJobProgress(runner);
@@ -175,14 +176,14 @@ public partial class MainWindow
                 if (_machineView) RenderMachine(refreshCam: false);
                 Update3DJob();
                 JobInfoText.Text = $"Program {done.Number} av {done.Count} klart. Nästa: program {next} – {tool}. Fräsbyte… (Maskin-menyn) leder genom bytet; Nolla Z eller probning laddar programmet.";
-                if (DueText(due) is { Length: > 0 } dueText)
+                if ((DueText(due) + wear) is { Length: > 0 } dueText)
                     AppDialog.Show(this, $"Program {done.Number} av {done.Count} är klart." + dueText, "Program klart", MessageBoxButton.OK, MessageBoxImage.Information);
                 OpenToolChange(done.Number, next, done.Count, tool);
             }
             else
             {
                 if (_loadedJob is { Count: > 1 } last) JobInfoText.Text = $"Alla {last.Count} program är klara.";
-                AppDialog.Show(this, (_loadedJob is { Count: > 1 } all ? $"Alla {all.Count} program är klara." : "Programmet är klart.") + stop + DueText(due),
+                AppDialog.Show(this, (_loadedJob is { Count: > 1 } all ? $"Alla {all.Count} program är klara." : "Programmet är klart.") + stop + DueText(due) + wear,
                     "Klart", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }

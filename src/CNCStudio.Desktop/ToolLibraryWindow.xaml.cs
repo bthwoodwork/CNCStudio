@@ -29,6 +29,7 @@ public partial class ToolLibraryWindow : Window
     private readonly ListCollectionView _view;
     private ToolDefinition? _shown;      // the tool the fields show
     private bool _loading, _reselecting;
+    private double _sinceChange;         // run time since the change, as the fields show it (Ny/slipad sets 0)
 
     /// <summary>One material in the cutting-data table; empty cells = use the tool's defaults.</summary>
     public sealed class CuttingRow
@@ -133,6 +134,9 @@ public partial class ToolLibraryWindow : Window
         NotesBox.Text = t.Notes;
         ShankBox.Text = F(t.ShankDiameter); OverallBox.Text = F(t.OverallLength); FluteBox.Text = F(t.FluteLength); StickoutBox.Text = F(t.StickoutLength);
         VendorBox.Text = t.Vendor; ArticleBox.Text = t.ArticleNumber; LinkBox.Text = t.ProductLink;
+        _sinceChange = t.RunMinutesSinceChange;
+        IntervalBox.Text = t.ChangeIntervalHours is double h ? F(h) : "";
+        ShowWear(t);
         FeedBox.Text = F(t.FeedRate); PlungeBox.Text = F(t.PlungeRate);
         PassBox.Text = F(t.DepthPerPass); RpmBox.Text = F(t.SpindleRpm);
         _rows.Clear();
@@ -210,6 +214,11 @@ public partial class ToolLibraryWindow : Window
         c.Notes = NotesBox.Text;
         c.ShankDiameter = shank; c.OverallLength = overall; c.FluteLength = flute; c.StickoutLength = stickout;
         c.Vendor = VendorBox.Text.Trim(); c.ArticleNumber = ArticleBox.Text.Trim(); c.ProductLink = LinkBox.Text.Trim();
+        c.RunMinutesSinceChange = _sinceChange;
+        if (string.IsNullOrWhiteSpace(IntervalBox.Text)) c.ChangeIntervalHours = null;
+        else if (double.TryParse(IntervalBox.Text.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var hours) && hours > 0)
+            c.ChangeIntervalHours = hours;
+        else { error = "Påminn efter ska vara ett antal timmar större än 0, eller tomt."; return null; }
         c.FeedRate = f; c.PlungeRate = p; c.DepthPerPass = pass; c.SpindleRpm = rpm;
         c.CuttingData = cutting;
         if (c.Validate() is string invalid) { error = invalid; return null; }
@@ -282,6 +291,20 @@ public partial class ToolLibraryWindow : Window
 
     private void NextNumber_Click(object sender, RoutedEventArgs e) =>
         NumberBox.Text = new ToolLibrary { Tools = _tools.Where(t => t != _shown).ToList() }.NextFreeToolNumber().ToString(CultureInfo.InvariantCulture);
+
+    private void ShowWear(ToolDefinition t)
+    {
+        var due = t.ChangeIntervalHours is double h && h > 0 && _sinceChange >= h * 60;
+        WearText.Text = $"{ToolWear.Hours(_sinceChange)} sedan bytet · {ToolWear.Hours(t.RunMinutes)} totalt" + (due ? " – dags att byta eller slipa" : "");
+    }
+
+    private void ResetWear_Click(object sender, RoutedEventArgs e)
+    {
+        if (_shown is null) return;
+        _sinceChange = 0;
+        ShowWear(_shown);
+        Say("Tiden sedan bytet är nollställd. Spara fräsen för att behålla det.", bad: false);
+    }
 
     private void OpenLink_Click(object sender, RoutedEventArgs e)
     {
