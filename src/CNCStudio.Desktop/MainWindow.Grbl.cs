@@ -328,6 +328,7 @@ public partial class MainWindow
         if (_lastLiveState == "Home" && s.State == "Idle" && !_homedThisSession)
         { _homedThisSession = true; if (_machineView) RenderMachine(refreshCam: false); }
         NoticeHold(_lastLiveState, s.State);
+        TrackHold(s.State);
         _lastLiveState = s.State;
         LiveStateText.Text = s.SubState is null ? s.State : $"{s.State}:{s.SubState}";
         LiveStateText.Foreground = s.State switch

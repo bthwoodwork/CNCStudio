@@ -323,6 +323,10 @@ Egna kodbitar som körs med ett klick (fliken **Makron**). *Ny…* öppnar en ed
 - **Maskinlogg och underhåll** – körda jobb, larm, total körtid och underhåll i körtimmar (blir gult och rött när det är dags).
 - **Kalibrering** (under Maskiner) – steg/mm och vinkelkontroll (squaring).
 
+**Tidsuppskattningen lär sig.** Den uppskattade körtiden räknas från banornas längd och matningen, men utan acceleration. Därför tar maskinen oftast lite längre tid. Varje körning sparas i maskinloggen med sin uppskattning och den tid maskinen stod i paus. Det gäller både pauser du gör och M0, till exempel när fräsen ska startas för hand. Efter två hela körningar visas också *Efter n körningar på maskinen: …*, till exempel *+18 %*. Det är medianen av de senaste tio körningarna, räknat utan pauserna.
+
+Stoppade och återupptagna körningar räknas inte. Det gör inte heller program kortare än en minut eller körningar som avviker kraftigt.
+
 # Bibliotek
 
 ## Verktygsbiblioteket

@@ -39,6 +39,7 @@ public partial class MainWindow
     private IReadOnlyList<MaintenanceTask> LogJob(DateTime start, JobResult result, int totalLines, bool resumed)
     {
         IReadOnlyList<MaintenanceTask> due = Array.Empty<MaintenanceTask>();
+        double held = EndHoldTracking();
         UpdateMachineLog(log =>
         {
             log.AddJob(new LoggedJob
@@ -48,10 +49,13 @@ public partial class MainWindow
                 Message = result.Message, Computer = AppStorage.ComputerName, Resumed = resumed,
                 ProjectPath = resumed || _loadedExternal ? null : _path,
                 ProgramNumber = resumed ? null : _loadedJob is { Count: > 1 } j ? j.Number : null,
-                GCodeFile = resumed ? null : _loadedExternalPath
+                GCodeFile = resumed ? null : _loadedExternalPath,
+                EstimatedMinutes = resumed ? null : _loadedEstimate,
+                HeldMinutes = Math.Round(held, 2)
             });
             due = log.DueTasks();
         });
+        _learned = null;   // learn again from the new run
         RefreshJobHistory();
         return due;
     }

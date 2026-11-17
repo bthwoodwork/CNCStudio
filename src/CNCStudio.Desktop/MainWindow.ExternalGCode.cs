@@ -75,7 +75,8 @@ public partial class MainWindow
         _jobName = program.Name;
         _loadedJob = null; _loadedStockTop = null; _nextProgramNumber = null;
         _loadedExternalPath = path; _loadedExternal = true;
-        JobInfoText.Text = $"{program.Name}: {program.Lines.Count} rader från fil. {RunTimeEstimator.Format(info.EstimatedMinutes)} ungefär. " +
+        _loadedEstimate = info.EstimatedMinutes;
+        JobInfoText.Text = $"{program.Name}: {program.Lines.Count} rader från fil. {RunTimeEstimator.Format(info.EstimatedMinutes)} ungefär.{LearnedText(info.EstimatedMinutes)} " +
             $"Utbredning {info.MaxX - info.MinX:0.#} × {info.MaxY - info.MinY:0.#} mm, djupast Z {info.MinZ:0.##}." +
             (program.Warnings.Count > 0 ? $" {program.Warnings.Count} saker att kontrollera (visades när filen öppnades)." : "");
         JobProgressBar.Value = 0; JobProgressText.Text = "";

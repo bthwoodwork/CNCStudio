@@ -277,6 +277,8 @@ public partial class MainWindow
                $"(fräsning {RunTimeEstimator.Format(t.CuttingMinutes)}, förflyttning {RunTimeEstimator.Format(t.RapidMinutes)})" +
                (t.ManualPauses > 0 ? $" + {t.ManualPauses} manuell(a) paus(er)" : "") +
                (t.RapidRateAssumed ? ". Snabbhastighet antagen – läs $110–$112 från maskinen för bättre uppskattning." : ".") +
-               " Acceleration ingår inte; verklig tid blir ofta något längre.";
+               (LearnedText(t.TotalMinutes) is { Length: > 0 } learned
+                   ? learned + " (räknat från maskinens tidigare körningar, utan pauser)"
+                   : " Acceleration ingår inte; verklig tid blir ofta något längre. Efter några körningar justeras uppskattningen efter maskinen.");
     }
 }

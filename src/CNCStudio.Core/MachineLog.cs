@@ -28,6 +28,10 @@ public sealed record LoggedJob
     public int? ProgramNumber { get; init; }
     /// <summary>The G-code file run (a program from another CAM), null for a project's program.</summary>
     public string? GCodeFile { get; init; }
+    /// <summary>What the program was estimated to take before it ran (uncorrected), null when not known.</summary>
+    public double? EstimatedMinutes { get; init; }
+    /// <summary>Minutes the machine stood in Hold or Door during the run (pauses, M0, the spindle start).</summary>
+    public double? HeldMinutes { get; init; }
     [JsonIgnore] public TimeSpan Duration => End > Start ? End - Start : TimeSpan.Zero;
 }
 
