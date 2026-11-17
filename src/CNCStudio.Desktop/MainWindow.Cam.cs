@@ -17,7 +17,7 @@ namespace CNCStudio.Desktop;
 public partial class MainWindow
 {
     /// <summary>Single source for the version shown in dialogs. Keep in sync with Title in MainWindow.xaml.</summary>
-    private const string AppTitle = "CNC Studio 0.9.65";
+    private const string AppTitle = "CNC Studio 0.9.66";
 
     private readonly CamPlanner _camPlanner = new(VectorContourPreview.Generate);
     private CamReport _camReport = CamReport.Empty;
@@ -157,7 +157,8 @@ public partial class MainWindow
                 if (result.Operation.Kind is not (CamOperationKind.Pocket or CamOperationKind.VCarve or CamOperationKind.VCarvePlug))
                     foreach (var centerline in preview.Centerlines)
                         DrawDirectionArrows(canvas, centerline, offsetX, offsetY);
-                DrawTabs(canvas, preview, result.TabSpans, result.Operation.ToolDiameter, offsetX, offsetY);
+                DrawTabs(canvas, preview, result.TabSpans, result.Operation.ToolDiameter, offsetX, offsetY,
+                    canvas == DesignCanvas && result.Operation.Parent is null ? result.Operation.ShapeId : null);
                 // Warnings first so critical marks are drawn on top.
                 AddConflictMarks(canvas, preview, result.Findings.Where(f => f.Severity == CamSeverity.Warning), offsetX, offsetY);
                 AddConflictMarks(canvas, preview, result.Findings.Where(f => f.Severity == CamSeverity.Critical), offsetX, offsetY);
@@ -236,8 +237,9 @@ public partial class MainWindow
     /// few pixels wide so they stay visible at any zoom. The tool lifts over these.
     /// </summary>
     private void DrawTabs(Canvas canvas, ContourPreview preview, IReadOnlyList<TabSpan> tabs,
-        double toolDiameter, double offsetX, double offsetY)
+        double toolDiameter, double offsetX, double offsetY, Guid? editableFor = null)
     {
+        int index = 0;
         var paths = preview.Centerlines.Count > 0 ? preview.Centerlines :
             new IReadOnlyList<CamPoint>[] { preview.Centerline };
         double width = Math.Max(toolDiameter, 7 / _zoom);
@@ -250,10 +252,19 @@ public partial class MainWindow
                 StrokeThickness = width + 2 / _zoom, StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Flat, StrokeEndLineCap = PenLineCap.Flat,
                 IsHitTestVisible = false });
-            canvas.Children.Add(new Polyline { Points = points, Stroke = CanvasTheme.Tab,
+            var tabLine = new Polyline { Points = points, Stroke = CanvasTheme.Tab,
                 StrokeThickness = width, StrokeLineJoin = PenLineJoin.Round,
                 StrokeStartLineCap = PenLineCap.Flat, StrokeEndLineCap = PenLineCap.Flat,
-                IsHitTestVisible = false });
+                IsHitTestVisible = editableFor is not null };
+            if (editableFor is Guid id)
+            {
+                // In the design view a tab can be dragged along the path, or right-clicked to remove it.
+                tabLine.Tag = new TabHandle(id, index);
+                tabLine.Cursor = Cursors.SizeAll;
+                tabLine.ToolTip = "Hållflik: dra längs banan för att flytta den. Högerklicka för att ta bort den eller fördela flikarna jämnt.";
+            }
+            canvas.Children.Add(tabLine);
+            index++;
         }
     }
 

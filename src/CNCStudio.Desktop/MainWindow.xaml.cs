@@ -571,6 +571,7 @@ public partial class MainWindow : Window
     }
     private void Canvas_RightDown(object sender, MouseButtonEventArgs e)
     {
+        if (TabContextMenu((e.OriginalSource as FrameworkElement)?.Tag, e.GetPosition(DesignCanvas))) { e.Handled = true; return; }
         if (_tool != Tool.Polyline || _polyPoints.Count == 0) return;
         FinishPolyline(false); e.Handled = true;
     }
@@ -1120,6 +1121,7 @@ public partial class MainWindow : Window
     {
         var p = e.GetPosition(DesignCanvas);
         var sourceTag = (e.OriginalSource as FrameworkElement)?.Tag;
+        if (_tool == Tool.Select && BeginTabDrag(sourceTag, p)) { e.Handled = true; return; }
         // The material: a click selects it, and once selected a drag on it (not on a shape) moves it on the table.
         bool onStock = _document.HasMaterial && !_machineView && _tool == Tool.Select && sourceTag is not DesignShape && sourceTag is not ResizeHandle
             && p.X >= 0 && p.Y >= 0 && p.X <= _document.MaterialWidth && p.Y <= _document.MaterialHeight;
@@ -1210,6 +1212,7 @@ public partial class MainWindow : Window
     }
     private void Canvas_Move(object sender, MouseEventArgs e)
     {
+        if (_tabDrag is not null) { MoveTabDrag(e.GetPosition(DesignCanvas)); return; }
         if (_stockDragStart is Point stockStart)
         {
             if (e.LeftButton != MouseButtonState.Pressed) return;
@@ -1285,6 +1288,7 @@ public partial class MainWindow : Window
     }
     private void Canvas_Up(object sender, MouseButtonEventArgs e)
     {
+        if (EndTabDrag()) { e.Handled = true; return; }
         if (_stockDragStart is not null)
         {
             _stockDragStart = null;
@@ -1723,6 +1727,10 @@ public partial class MainWindow : Window
             FaceCenterReachesLimits = kind == CamOperationKind.Face && CamFaceCenterReachesLimits?.IsChecked == true,
             Dogbones = kind is CamOperationKind.Inside or CamOperationKind.Outside or CamOperationKind.Pocket && CamDogbones?.IsChecked == true,
             Direction = (MillingDirection)Math.Max(0, CamDirectionPicker?.SelectedIndex ?? 0) };
+        // Hand-placed tabs belong to the shape's cut: keep them when the settings are saved again.
+        if (kind is CamOperationKind.Outside or CamOperationKind.Inside &&
+            _document.CamOperations.FirstOrDefault(o => o.ShapeId == _selected.Id) is { ManualTabs: { Count: > 0 } tabs } existing && existing.Kind == kind)
+            result.ManualTabs = tabs.Select(t => new TabPoint(t.X, t.Y)).ToList();
         if (kind is CamOperationKind.Outside or CamOperationKind.Inside && CamOnionSkin?.IsChecked == true)
         {
             if (!Parse(CamOnionSkinMm, out var skin)) return null;
@@ -1788,7 +1796,7 @@ public partial class MainWindow : Window
                 : op.OnionSkinMm > 0 ? $"Tunt sista lager {F(op.OnionSkinMm)} mm (inga flikar)"
                 : "Hållflikar: " + (!op.UseTabs ? "Nej"
                     : op.TotalDepth >= _document.MaterialThickness - 1e-6
-                        ? $"{op.TabCount} st, {F(op.TabWidth)} × {F(op.TabHeight)} mm"
+                        ? (op.ManualTabs is { Count: > 0 } m ? $"{m.Count} st placerade för hand" : $"{op.TabCount} st") + $", {F(op.TabWidth)} × {F(op.TabHeight)} mm"
                         : "används först vid genomskärning")) + (error is null ? SecondSuffix(op) : "") +
             (error is null && op.Dogbones ? " · dogbones i innerhörnen" : "") + (error is null ? ChamferSuffix(op) : "");
     }

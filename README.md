@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.65)
+﻿# CNC Studio – källkod (senaste: 0.9.66)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,15 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.66 – Flytta hållflikarna själv
+
+- **Dra en flik:** i Design-vyn går de gula hållflikarna att ta tag i. Markören blir ett flyttkors. Medan du drar glider en markering längs banan, och fliken hamnar där du släpper.
+- **Högerklick på en flik:** *Ta bort fliken* eller *Fördela flikarna jämnt igen*. Tas den sista fliken bort stängs hållflikarna av.
+- **Högerklick på banan** (nära en utskärning med flikar): *Lägg till flik här*.
+- **Lagring:** när en flik har flyttats sparas operationens flikar som handplacerade punkter i projektet (`ManualTabs`, i mm från formens hörn). De följer med när formen flyttas. Varje punkt hamnar på närmaste punkt på banan, och en flik som skulle ligga för nära en annan läggs inte ut. Statusraden säger till när det händer.
+- *Spara CAM* behåller de handplacerade flikarna. Sammanfattningen visar *n st placerade för hand*. *Fördela jämnt* går tillbaka till antalet i fältet.
+- Logiken finns i `CamTabs.Nearest`, `CamTabs.Centres` och `CamTabs.Plan` med form (Core), med tre tester.
 
 ## 0.9.65 – Tunt sista lager (onion skin)
 
