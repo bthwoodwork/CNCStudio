@@ -329,6 +329,11 @@ Egna kodbitar som körs med ett klick (fliken **Makron**). *Ny…* öppnar en ed
 
 **CAM → Verktygsbibliotek…** – fräsar i kategorier med diameter, typ (rak, kulfräs, V-fräs), skaftmått, inköpsställe och skärdata per material. Fräsen du väljer i Fräsning fyller i matning, varvtal och djup.
 
+**Körtid och slitage.** Varje gång ett program från CNC Studio körs läggs tiden till på fräsen i programmet. Det gäller även en körning som stoppas. G-code från andra håll räknas inte, eftersom den inte säger vilken fräs den använder. Under **SLITAGE** syns tiden sedan bytet och den totala körtiden.
+
+- **Påminn efter (timmar):** när fräsen har kört så länge sedan bytet säger CNC Studio till i klart-rutan att det är dags att byta eller slipa den. Tomt betyder ingen påminnelse.
+- **Ny/slipad – nollställ:** tiden sedan bytet börjar om. Den totala körtiden finns kvar. Klicka *Spara fräsen* efteråt.
+
 ## Materialbiblioteket
 
 **CAM → Materialbibliotek…** – material i kategorier. Materialtypen i projektet bestämmer vilken skärdata som hämtas.

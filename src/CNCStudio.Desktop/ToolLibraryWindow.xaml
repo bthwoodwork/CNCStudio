@@ -108,6 +108,19 @@
               </DockPanel>
             </Grid>
 
+            <TextBlock Text="SLITAGE – körtiden räknas när ett program från CNC Studio körs" Style="{StaticResource Section}" Margin="3,14,3,2"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+              <TextBlock Text="Körtid"/>
+              <DockPanel Grid.Column="1">
+                <Button DockPanel.Dock="Right" Content="Ny/slipad – nollställ" Click="ResetWear_Click" Padding="8,3" Margin="3" ToolTip="Fräsen är bytt eller slipad: tiden sedan bytet börjar om (den totala körtiden finns kvar). Spara fräsen efteråt."/>
+                <TextBlock x:Name="WearText" VerticalAlignment="Center" TextWrapping="Wrap"/>
+              </DockPanel>
+              <TextBlock Grid.Row="1" Text="Påminn efter (timmar)"/>
+              <TextBox x:Name="IntervalBox" Grid.Row="1" Grid.Column="1" ToolTip="Efter så många timmars körning sedan bytet påminns du om att byta eller slipa fräsen. Tomt = ingen påminnelse."/>
+            </Grid>
+
             <TextBlock Text="STANDARDVÄRDEN – när materialet saknar egen skärdata" Style="{StaticResource Section}" Margin="3,14,3,2"/>
             <UniformGrid Columns="4">
               <StackPanel><TextBlock Text="Matning (mm/min)" Style="{StaticResource Small}"/><TextBox x:Name="FeedBox"/></StackPanel>
