@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace CNCStudio.Desktop;
@@ -31,6 +33,25 @@ public partial class App : Application
         if (CNCStudio.Core.AppStorage.Current.Settings.ModernLook != false)
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
                 new RoutedEventHandler((sender, _) => { if (sender is Window w) WindowLook.Apply(w); }));
+        SelectAllOnEntry();
+    }
+
+    /// <summary>
+    /// Every one-line field selects its text when it is entered – by Tab or by a click – so a new value can be
+    /// typed straight away. A second click in a field that already has focus places the cursor as usual.
+    /// Multi-line fields (code, notes, the G-code editor) and read-only ones keep the normal behaviour.
+    /// </summary>
+    private static void SelectAllOnEntry()
+    {
+        static bool Applies(TextBox b) => !b.AcceptsReturn && !b.IsReadOnly;
+        EventManager.RegisterClassHandler(typeof(TextBox), UIElement.GotKeyboardFocusEvent,
+            new KeyboardFocusChangedEventHandler((sender, _) => { if (sender is TextBox b && Applies(b)) b.SelectAll(); }));
+        EventManager.RegisterClassHandler(typeof(TextBox), UIElement.PreviewMouseLeftButtonDownEvent,
+            new System.Windows.Input.MouseButtonEventHandler((sender, e) =>
+            {
+                // The first click only gives focus (which selects all); otherwise the click would put the cursor there.
+                if (sender is TextBox b && Applies(b) && !b.IsKeyboardFocusWithin) { b.Focus(); e.Handled = true; }
+            }));
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

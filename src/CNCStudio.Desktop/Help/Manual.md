@@ -37,6 +37,8 @@ Panelerna kan dras, dockas, flytas ut och döljas. **Visa**-menyn tar fram en do
 
 Statusraden längst ned visar vad som händer och vad nästa steg är. Läs den när du är osäker.
 
+**Fält:** när du klickar eller tabbar till ett fält markeras hela texten, så du kan skriva det nya värdet direkt. Vill du ändra en del av texten klickar du en gång till, så hamnar markören där du klickar. Flerradiga fält, till exempel kod och anteckningar, fungerar som vanligt.
+
 # Projekt och filer
 
 ## Spara och öppna
