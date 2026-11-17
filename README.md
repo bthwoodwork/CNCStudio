@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.69)
+﻿# CNC Studio – källkod (senaste: 0.9.70)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,15 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.70 – Egen G-code vid start och stopp
+
+- **Körs automatiskt:** ett nytt val i makroeditorn (`Macro.RunAt`, `MacroTrigger`). Ett makro kan köras före varje program, när ett program har körts klart eller efter Stoppa. Varje tillfälle kan ha ett makro, och `MacroLibrary.Put` flyttar tillfället om ett annat makro tar det. I listan står *⟳ Körs …* på de makron som har ett tillfälle.
+- **Före varje program:** körs före start, start från rad och återupptagning, innan jobbet registreras. Stoppas makrot eller går det fel startar inte programmet.
+- **Efter programmet:** körs när programmet har körts klart, eller efter Stoppa när maskinen har stannat. Det körs inte efter fel eller larm.
+- Makrona körs med samma kontroll som vanliga makron (`MacroCode.Prepare`) men utan att fråga. Stoppa-knappen stoppar dem.
+- **Paus:** GRBL tar inte emot G-code i feed hold, så paus kan inte få något eget makro. Det står i dialogen.
+- Programmet som genereras ändras inte, så alla kontroller av det gäller som förut.
 
 ## 0.9.69 – Exportera ritningen som SVG/DXF
 

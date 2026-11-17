@@ -127,6 +127,7 @@ public partial class MainWindow
         if (!await CheckXyZero(g, _jobLines, "Starta")) return;
         if (_loadedJob is not null && !ConfirmProgram(_loadedJob, "Starta programmet", "Starta")) return;
         var g54 = await ReadG54(g);
+        if (!await RunTriggeredMacro(g, MacroTrigger.JobStart)) return;
         _jobStore.Begin(_jobName, _jobLines, 0, g54);
         await RunJob(g, 0, null);
     }
@@ -151,6 +152,13 @@ public partial class MainWindow
         UpdateJobButtons();
         JobProgressText.Text = result.Message;
         StatusText.Text = result.Message;
+        // The user's own G-code after the program: to the end, or after Stoppa (not after an error – the machine is in alarm).
+        if (result.Outcome is JobOutcome.Finished or JobOutcome.Stopped)
+        {
+            var text = result.Message;
+            await RunTriggeredMacro(g, result.Outcome == JobOutcome.Finished ? MacroTrigger.JobEnd : MacroTrigger.JobStopped);
+            JobProgressText.Text = text;
+        }
         if (result.Outcome == JobOutcome.Failed) Notify(NoticeKind.Stopped, "Körningen stoppades: " + result.Message);
         else if (result.Outcome == JobOutcome.Finished)
             Notify(NoticeKind.Done, _loadedJob is { Count: > 1 } j && j.Number < j.Count
@@ -278,6 +286,7 @@ public partial class MainWindow
             "\nStarta härifrån?";
         if (AppDialog.Show(this, text, "Starta från rad", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) != MessageBoxResult.OK) return;
         var g54 = await ReadG54(g);
+        if (!await RunTriggeredMacro(g, MacroTrigger.JobStart)) return;
         _jobStore.Begin(_jobName, lines, plan.StartIndex, g54);
         await RunJob(g, plan.StartIndex, plan.Preamble);
     }
@@ -333,6 +342,7 @@ public partial class MainWindow
         _jobName = progress.Name;
         _loadedJob = null; _loadedEstimate = null;
         JobInfoText.Text = $"{_jobName}: {lines.Length} rader (återupptas).";
+        if (!await RunTriggeredMacro(g, MacroTrigger.JobStart)) return;
         _jobStore.Begin(_jobName, lines, plan.StartIndex, g54 ?? progress.G54);
         await RunJob(g, plan.StartIndex, plan.Preamble);
     }

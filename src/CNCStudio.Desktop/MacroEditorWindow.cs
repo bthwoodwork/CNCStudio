@@ -25,6 +25,7 @@ public sealed class MacroEditorWindow : Window
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, TextWrapping = TextWrapping.NoWrap
     };
     private readonly ComboBox _snippets = new() { MinWidth = 300, Margin = new Thickness(0, 0, 6, 0) };
+    private readonly ComboBox _runAt = new() { Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 300 };
     private readonly TextBlock _check = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
 
     public Macro? Result { get; private set; }
@@ -37,6 +38,9 @@ public sealed class MacroEditorWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = B(0x17, 0x21, 0x2C); Foreground = Ink; FontFamily = new FontFamily("Segoe UI");
         _name.Text = macro.Name; _description.Text = macro.Description; _code.Text = macro.Code;
+        foreach (var t in Enum.GetValues<MacroTrigger>())
+            _runAt.Items.Add(new ComboBoxItem { Content = t == MacroTrigger.None ? "Nej – bara när du kör det" : "Ja, " + Macro.TriggerText(t), Tag = t });
+        _runAt.SelectedIndex = (int)macro.RunAt;
 
         foreach (var (code, what) in MacroCode.Snippets)
             _snippets.Items.Add(new ComboBoxItem { Content = $"{code}   –   {what}", Tag = code, ToolTip = what });
@@ -55,6 +59,11 @@ public sealed class MacroEditorWindow : Window
         var top = new StackPanel { Children =
         {
             Label("Namn"), _name, Label("Beskrivning"), _description,
+            Label("Körs automatiskt"), _runAt,
+            new TextBlock { Text = "Ett makro per tillfälle – väljer du ett som ett annat makro har, tas det från det. Före varje program körs makrot innan programmet startar " +
+                                   "(också från rad och vid återupptagning); stoppas makrot startar inte programmet. Efter Stoppa körs det när maskinen har stannat. " +
+                                   "Vid paus går det inte: när maskinen står i paus tar GRBL inte emot G-code.",
+                Foreground = Muted, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) },
             new TextBlock { Text = "KOD – en rad per kommando. Kommentarer i ( ) eller efter ; är tillåtna.", FontWeight = FontWeights.Bold, FontSize = 11, Foreground = B(0xA5, 0xC0, 0xD9), Margin = new Thickness(0, 4, 0, 4) },
             new DockPanel { Margin = new Thickness(0, 0, 0, 6), Children = { _snippets, insert, file } },
         } };
@@ -122,6 +131,7 @@ public sealed class MacroEditorWindow : Window
         if (string.IsNullOrWhiteSpace(_name.Text)) { _check.Foreground = Bad; _check.Text = "Ge makrot ett namn."; _name.Focus(); return; }
         if (!Check()) return;
         _macro.Name = _name.Text.Trim(); _macro.Description = _description.Text.Trim(); _macro.Code = _code.Text.TrimEnd();
+        _macro.RunAt = (_runAt.SelectedItem as ComboBoxItem)?.Tag is MacroTrigger t ? t : MacroTrigger.None;
         Result = _macro;
         DialogResult = true;
     }
