@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.71)
+﻿# CNC Studio – källkod (senaste: 0.9.72)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,11 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.72 – Grupper flyttas som en enhet
+
+- **Felet:** när flera former drogs, till exempel lådans delar, stoppades varje form för sig vid X 0 och Y 0. Så fort en del nådde kanten stannade den, medan de andra fortsatte, och delarna sköts in i varandra.
+- **Nu:** förflyttningen begränsas för hela markeringen. Den stannar när den första formen når kanten, och avstånden mellan delarna behålls. En form som redan ligger utanför kanten blockerar bara åt det hållet och flyttar inte de andra.
 
 ## 0.9.71 – Fälten markerar texten
 

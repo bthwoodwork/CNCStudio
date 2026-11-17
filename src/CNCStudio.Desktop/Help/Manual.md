@@ -77,6 +77,8 @@ Verktygslisten till vänster (och menyn **Rita**):
   - **Text och figurer** sparas som konturer, så att mottagaren inte behöver typsnitten.
   - **Koordinater:** i DXF räknas Y uppåt från materialets främre vänstra hörn, som på maskinen. SVG har Y nedåt, som i ritvyn.
 
+Flera markerade former, eller en grupp som lådans delar, flyttas som en enhet. Når någon av dem materialets vänster- eller bakkant stannar hela markeringen där, så att delarna behåller sina avstånd.
+
 Mått och läge för den markerade formen ändras exakt under **Egenskaper → Markerat objekt** (Tab eller Enter gäller).
 
 **Snap på/av** styr om formerna fäster mot rutnätet. Rutnätets steg följer zoomen och visas i statusraden.
