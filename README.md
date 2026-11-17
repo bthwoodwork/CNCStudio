@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.72)
+﻿# CNC Studio – källkod (senaste: 0.9.73)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.73 – Rotera 90° och högerklicksmeny på formerna
+
+- **Objekt → Rotera 90° medurs/moturs** (Ctrl+R / Ctrl+Shift+R) vrider markeringen ett kvarts varv runt mitten av dess gemensamma ruta. Ett enskilt objekt vrids runt sin egen mitt. Det är tänkt till exempel för att lägga en låddel längs fiberriktningen.
+  - Konturer, mått och handplacerade hållflikar (`ManualTabs`) vrids med.
+  - En text blir vanliga konturer.
+  - En 3D-modell kan inte vridas.
+  - Hamnar markeringen utanför bak- eller vänsterkanten flyttas den in igen.
+- **Högerklick på en form** markerar den med sin grupp och öppnar en meny: Rotera, Avgruppera, Gruppera, Duplicera och Ta bort. Avgruppera fanns redan (Ctrl+Shift+G), men nu syns det där man behöver det.
+- Logiken finns i `ShapeRotation` (Core) och har tester.
 
 ## 0.9.72 – Grupper flyttas som en enhet
 

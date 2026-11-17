@@ -90,7 +90,9 @@ Mått och läge för den markerade formen ändras exakt under **Egenskaper → M
 - **Offset** – en ny kontur ett visst avstånd utanför eller innanför.
 - **Rutnät** – kopior i rader och kolumner.
 - **Nesta** – lägger delarna tätt på materialet (nesting).
-- **Gruppera** (Ctrl+G) håller ihop former som en enhet.
+- **Gruppera** (Ctrl+G) håller ihop former som en enhet. **Avgruppera** (Ctrl+Shift+G) gör dem fristående igen. Det används till exempel för lådans delar, när en del ska flyttas eller vridas för sig.
+- **Rotera 90°** (Objekt-menyn, Ctrl+R medurs, Ctrl+Shift+R moturs) vrider markeringen ett kvarts varv runt sin mitt, till exempel för att lägga en del längs fiberriktningen. En grupp vrids som en enhet. Handplacerade hållflikar följer med. En text blir konturer och kan sedan inte ändras som text. Hamnar delen utanför bak- eller vänsterkanten flyttas den in igen.
+- **Högerklick på en form** öppnar en meny med rotera, avgruppera, gruppera, duplicera och ta bort.
 - **Kontrollera vektorer** hittar öppna konturer, dubbletter och korsande linjer som ger problem vid fräsning.
 
 ## Navigera i vyn
@@ -383,7 +385,7 @@ Ett larm (ALARM) stoppar maskinen. Läs meddelandet i maskinpanelen, åtgärda o
 - **F1** Design, **F2** Fräsning, **F3** Maskin, **F4** 2D/3D, **Shift+F1** den här manualen
 - **Ctrl+N / O / S** Nytt, Öppna, Spara – **Ctrl+Shift+S** Spara som
 - **Ctrl+Z / Y** Ångra, Gör om – **Ctrl+A** Markera alla – **Ctrl+D** Duplicera – **Delete** Ta bort
-- **Ctrl+G / Ctrl+Shift+G** Gruppera, Avgruppera
+- **Ctrl+G / Ctrl+Shift+G** Gruppera, Avgruppera – **Ctrl+R / Ctrl+Shift+R** Rotera 90° medurs, moturs
 - **Ctrl+I** Importera SVG/DXF – **Ctrl+E** Exportera G-code
 - **F** Anpassa vyn till materialet
 - Jogg: piltangenterna, Page Up/Down, Esc stoppar (när det är påslaget under Tangenter…)
