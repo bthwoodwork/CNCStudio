@@ -69,6 +69,11 @@ Verktygslisten till vänster (och menyn **Rita**):
 - **Bild** – gör en bild (foto, logga, skiss) till vektorer.
 - **3D** – en 3D-modell från STL som fräses i 3D.
 - **Importera** – SVG och DXF.
+- **Exportera ritning** (Arkiv → Exportera ritning (SVG / DXF)…) – sparar designen som vektorfil i millimeter. Formerna placeras som på materialet.
+  - **Lager:** varje sorts bearbetning får ett eget lager, till exempel utskärning, ficka och V-carve. Former utan bearbetning hamnar i *Ingen bearbetning*. Materialets kontur kommer med när hela ritningen exporteras.
+  - **Markerade objekt:** är några objekt markerade får du välja om hela ritningen eller bara de markerade ska exporteras.
+  - **Text och figurer** sparas som konturer, så att mottagaren inte behöver typsnitten.
+  - **Koordinater:** i DXF räknas Y uppåt från materialets främre vänstra hörn, som på maskinen. SVG har Y nedåt, som i ritvyn.
 
 Mått och läge för den markerade formen ändras exakt under **Egenskaper → Markerat objekt** (Tab eller Enter gäller).
 

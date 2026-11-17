@@ -256,6 +256,25 @@ internal static class VectorFileImporter
                     AddContour(shapes, Enumerable.Range(0, xs.Count).Select(j => P(xs[j], ys[j])).ToList(), closed);
                     break;
                 }
+                case "POLYLINE":
+                {
+                    // R12 polyline: the points follow as VERTEX entities up to SEQEND.
+                    var closed = (((int)One(70)) & 1) != 0;
+                    var pts = new List<Point>();
+                    while (i < pairs.Count && pairs[i].Code == 0 && pairs[i].Value == "VERTEX")
+                    {
+                        i++;
+                        var v = new List<Pair>();
+                        while (i < pairs.Count && pairs[i].Code != 0) v.Add(pairs[i++]);
+                        if (v.Any(q => q.Code == 42 && Math.Abs(Num(q.Value)) > 1e-9))
+                            throw new InvalidDataException("DXF-polylinje med bulge-bågar stöds inte ännu; exportera bågarna som segment.");
+                        pts.Add(P(Num(v.FirstOrDefault(q => q.Code == 10)?.Value), Num(v.FirstOrDefault(q => q.Code == 20)?.Value)));
+                    }
+                    if (i < pairs.Count && pairs[i].Code == 0 && pairs[i].Value == "SEQEND")
+                    { i++; while (i < pairs.Count && pairs[i].Code != 0) i++; }
+                    if (pts.Count >= 2) AddContour(shapes, pts, closed);
+                    break;
+                }
                 case "CIRCLE":
                 {
                     double r = One(40) * scale, x = One(10) * scale, y = -One(20) * scale;
