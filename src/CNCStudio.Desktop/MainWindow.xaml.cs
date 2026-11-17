@@ -1271,10 +1271,18 @@ public partial class MainWindow : Window
         {
             var dx = Snap(p.X - _start.Value.X);
             var dy = Snap(p.Y - _start.Value.Y);
+            // The selection moves as one piece: it stops as a whole when its first shape reaches the edge
+            // (clamping each shape on its own pushed a group's parts onto each other).
+            if (_moveOrigins.Count > 0)
+            {
+                // (A shape already past the edge does not throw the others off: the group just cannot go further that way.)
+                dx = Math.Max(dx, Math.Min(0, -_moveOrigins.Values.Min(o => o.X)));
+                dy = Math.Max(dy, Math.Min(0, -_moveOrigins.Values.Min(o => o.Y)));
+            }
             foreach (var (shape, origin) in _moveOrigins)
             {
-                shape.X = Math.Max(0, origin.X + dx);
-                shape.Y = Math.Max(0, origin.Y + dy);
+                shape.X = origin.X + dx;
+                shape.Y = origin.Y + dy;
             }
         }
         else if (_drawing)
