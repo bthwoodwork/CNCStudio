@@ -238,8 +238,14 @@ public partial class MainWindow
     /// </summary>
     private void FocusField(System.Windows.Controls.TextBox field, System.Windows.Controls.Expander? section, string? hint)
     {
-        SetWorkspace(Workspace.Machine);
+        // The field's own workspace: the machine table's sections (fixtures, Z) belong to Maskin, the rest
+        // (material, its placement) to Design. Then the panel itself, which Maskin keeps hidden until asked for.
+        SetWorkspace(IsWithin(field, MachineSections) ? Workspace.Machine : Workspace.Design);
+        SetPanelVisible("Properties", true);
+        if (Anchorable("Properties") is { } panel) panel.IsActive = true;
         if (section is not null) section.IsExpanded = true;
+        for (DependencyObject? p = field; p is not null; p = LogicalTreeHelper.GetParent(p))
+            if (p is System.Windows.Controls.Expander expander) expander.IsExpanded = true;
         Dispatcher.BeginInvoke(new Action(() =>
         {
             field.BringIntoView();
@@ -257,6 +263,13 @@ public partial class MainWindow
             timer.Start();
             if (hint is not null) StatusText.Text = hint;
         }), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private static bool IsWithin(DependencyObject element, DependencyObject container)
+    {
+        for (DependencyObject? p = element; p is not null; p = LogicalTreeHelper.GetParent(p))
+            if (ReferenceEquals(p, container)) return true;
+        return false;
     }
 
     private static string SafeFileName(string name)

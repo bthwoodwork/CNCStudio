@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.74)
+﻿# CNC Studio – källkod (senaste: 0.9.75)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,11 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.75 – Knapparna i felrutan visar fältet
+
+- **Rättat:** när ett program inte kunde laddas eller exporteras, ledde knappen i felrutan (*Gå till fältet*, *Gå till MPos Z*, *Gå till Z-höjder*) till Maskin. Där var panelen med fältet dold, så inget fält syntes. Nu öppnas panelen *Maskinbord*, och sektionen och fältet markeras.
+- **Rättat:** *Gå till material* och *Gå till materialplacering* hamnade också i Maskin, där materialets fält inte visas. Nu öppnas de i Design med sektionen utfälld, även *Material på bordet*.
 
 ## 0.9.74 – Exportera 3D (STL)
 
