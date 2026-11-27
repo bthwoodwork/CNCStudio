@@ -56,7 +56,8 @@ public enum PlungeMode { Vertical, Ramp }
 /// </summary>
 public enum MillingDirection { Default, Climb, Conventional }
 
-public enum ToolKind { FlatEndMill, BallNose, VBit }
+/// <summary>TaperedBallNose: konisk kulfräs – ball tip (radius = diameter / 2) on a cone with an included angle (<see cref="ToolShape"/>).</summary>
+public enum ToolKind { FlatEndMill, BallNose, VBit, TaperedBallNose }
 
 /// <summary>Where G54 X0 Y0 lies on the material. Z0 is always the top surface.</summary>
 public enum WorkZero { FrontLeft, Center }
@@ -78,7 +79,7 @@ public sealed class CamOperation
     public Guid ShapeId { get; set; }
     public CamOperationKind Kind { get; set; } = CamOperationKind.Outside;
     public double ToolDiameter { get; set; } = 3.175;
-    /// <summary>V-bit: the included angle in degrees (60° V-bit = 60). Used by V-carving and the 3D view.</summary>
+    /// <summary>V-bit and tapered ball nose: the included angle in degrees (60° V-bit = 60). Used by V-carving, 3D carving and the 3D view.</summary>
     public double ToolAngleDeg { get; set; } = 60;
     /// <summary>Inlay plug: the depth the carving starts at, right at the outline (the plug's top lands this deep in the pocket).</summary>
     public double InlayStartDepthMm { get; set; }
@@ -153,6 +154,8 @@ public sealed class CamOperation
     public double SecondDepthPerPass { get; set; } = 2;
     /// <summary>The second tool's kind (3D finishing is usually a ball nose).</summary>
     public ToolKind SecondToolKind { get; set; } = ToolKind.FlatEndMill;
+    /// <summary>The second tool's included angle, when it is a tapered ball nose.</summary>
+    public double SecondToolAngleDeg { get; set; } = 10;
 
     /// <summary>The second tool's pass only: the operation it was made from (never saved).</summary>
     [System.Text.Json.Serialization.JsonIgnore]
@@ -213,6 +216,13 @@ public static class CamValidation
         if (operation.Kind == CamOperationKind.VCarvePlug &&
             (!double.IsFinite(operation.InlayStartDepthMm) || operation.InlayStartDepthMm < 0 || operation.InlayStartDepthMm >= operation.TotalDepth))
             return "Hanens startdjup måste vara minst 0 och mindre än hanens djup.";
+        if (operation.ToolKind == ToolKind.TaperedBallNose && ToolShape.ValidateTaper(operation.ToolAngleDeg) is string taper)
+            return taper;
+        if (operation.SecondToolEnabled && operation.Kind == CamOperationKind.Carve3D && operation.SecondToolKind == ToolKind.TaperedBallNose &&
+            ToolShape.ValidateTaper(operation.SecondToolAngleDeg, "Andra fräsens") is string secondTaper)
+            return secondTaper;
+        if (operation.ToolKind == ToolKind.TaperedBallNose && operation.Kind is not (CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish))
+            return "En konisk kulfräs används för 3D-fräsning – välj 3D-fräsning som bearbetning.";
         if (operation.Kind is CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish && operation.UseTabs)
             return "Hållflikar används inte för 3D-fräsning.";
         if (operation.Kind is CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish &&

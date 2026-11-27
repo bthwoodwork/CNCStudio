@@ -69,7 +69,7 @@ public static class CamOperationChecks
             list.Add(new CamFinding(CamSeverity.Critical, "VBitNotSupported",
                 "En V-fräs kan inte användas för kontur eller ficka – den skär inte med full diameter. " +
                 "Välj V-carving som bearbetning, eller en rak fräs för kontur och ficka.", id));
-        if (op.ToolKind == ToolKind.BallNose)
+        if (op.ToolKind is ToolKind.BallNose or ToolKind.TaperedBallNose)
             list.Add(new CamFinding(CamSeverity.Info, "BallNoseFloor",
                 "Kulfräs: botten och väggens nederkant blir rundade, inte plana.", id));
         if (op.Kind == CamOperationKind.Drill && !DrillToolpaths.MatchesTool(shape, op))
@@ -382,7 +382,7 @@ public sealed class CamPlanner
             shape.Contours?.Count ?? -1, ContourHash(shape),
             op.Kind, R(op.ToolDiameter), R(op.ToolAngleDeg), op.ToolKind, R(op.InlayStartDepthMm), R(op.InlayClearanceMm), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
             op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, op.Dogbones, R(op.ChamferWidthMm), R(op.OnionSkinMm), R(thickness),
-            op.SecondToolEnabled, R(op.SecondToolDiameter), op.SecondToolKind,
+            op.SecondToolEnabled, R(op.SecondToolDiameter), op.SecondToolKind, R(op.SecondToolAngleDeg),
             shape.Model is { } model ? model.Hash + "/" + R(model.DepthMm) + "/" + model.Quarter : "",
             op.Parent is null ? "" : "parent:" + Fingerprint(shape, op.Parent, thickness));
     }

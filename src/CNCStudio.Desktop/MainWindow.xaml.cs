@@ -1671,7 +1671,7 @@ public partial class MainWindow : Window
         if (kind == CamOperationKind.VCarvePlug &&
             (CamInlayStart is null || CamInlayClearance is null || !Parse(CamInlayStart, out inlayStart) || !Parse(CamInlayClearance, out inlayClearance)))
             return null;
-        bool useTabs = !pocket && !face && !vcarve && !chamfer && kind != CamOperationKind.Drill && CamTabs.IsChecked == true; // tabs never apply to pockets, holes, facing or V-carving
+        bool useTabs = !pocket && !face && !vcarve && !chamfer && kind is not (CamOperationKind.Drill or CamOperationKind.Carve3D) && CamTabs.IsChecked == true; // tabs never apply to pockets, holes, facing, V-carving or 3D carving
         double vAngle = new CamOperation().ToolAngleDeg;
         if (CamVAngle is not null && !Parse(CamVAngle, out vAngle))
         {
@@ -1726,9 +1726,12 @@ public partial class MainWindow : Window
             ToolName = fromLibrary ? tool!.Name : null,
             // V-carving always uses a V-bit (also a custom one typed in by diameter and angle).
             ToolKind = vcarve || chamfer ? ToolKind.VBit : fromLibrary ? tool!.Kind : ToolKind.FlatEndMill,
-            ToolAngleDeg = vAngle, InlayStartDepthMm = inlayStart, InlayClearanceMm = inlayClearance,
+            // A tapered ball nose takes its angle from the library (the angle field is the V-bit's).
+            ToolAngleDeg = fromLibrary && tool!.Kind == ToolKind.TaperedBallNose ? tool.AngleDeg : vAngle,
+            InlayStartDepthMm = inlayStart, InlayClearanceMm = inlayClearance,
             SecondToolEnabled = second, SecondToolDiameter = secondDia, SecondDepthPerPass = secondPass,
             SecondToolKind = SecondTool is { Kind: not ToolKind.VBit } stk && Math.Abs(stk.Diameter - secondDia) < 1e-9 ? stk.Kind : ToolKind.FlatEndMill,
+            SecondToolAngleDeg = SecondTool is { Kind: ToolKind.TaperedBallNose } sta && Math.Abs(sta.Diameter - secondDia) < 1e-9 ? sta.AngleDeg : defaults.SecondToolAngleDeg,
             SecondToolName = second && SecondTool is { } st && Math.Abs(st.Diameter - secondDia) < 1e-9 ? st.Name : null,
             SecondFeedRate = _secondFeed ?? feed, SecondPlungeRate = _secondPlunge ?? plunge, SecondSpindleRpm = _secondRpm ?? rpm,
             Plunge = plungeMode, RampAngleDeg = rampAngle, RampFeedPercent = rampFeed,
@@ -1748,6 +1751,14 @@ public partial class MainWindow : Window
         }
         return ReadChamfer(result) ? result : null;
     }
+    /// <summary>"Ø 6 mm rak", "Ø 3 mm kulfräs", "konisk kulfräs R0.8 11°".</summary>
+    private static string ToolText(ToolKind kind, double diameter, double angle) => kind switch
+    {
+        ToolKind.TaperedBallNose => $"konisk kulfräs R{F(diameter / 2)} {F(angle)}°",
+        ToolKind.BallNose => $"Ø {F(diameter)} mm kulfräs",
+        _ => $"Ø {F(diameter)} mm rak"
+    };
+
     private void UpdateCamSummary()
     {
         if (CamSummary is null) return;
@@ -1767,8 +1778,9 @@ public partial class MainWindow : Window
         if (error is null && op.Kind == CamOperationKind.Carve3D)
         {
             CamSummary.Text = _selected?.Model is null ? "3D-fräsning kräver en 3D-modell – importera en med Rita → 3D-modell från STL…."
-                : $"3D-fräsning · Ø {F(op.ToolDiameter)} mm {(op.ToolKind == ToolKind.BallNose ? "kulfräs" : "rak")} · {F(op.TotalDepth)} mm djup i {Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9):0} nivåer · " +
-                  $"rader med {F(op.ToolDiameter * op.StepoverPercent / 100)} mm stegning" + (op.SecondToolEnabled ? $" · + finfräsning Ø {F(op.SecondToolDiameter)} mm" : "");
+                : $"3D-fräsning · {ToolText(op.ToolKind, op.ToolDiameter, op.ToolAngleDeg)} · {F(op.TotalDepth)} mm djup i {Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9):0} nivåer · " +
+                  $"rader med {F(op.ToolDiameter * op.StepoverPercent / 100)} mm stegning" +
+                  (op.SecondToolEnabled ? $" · + finfräsning {ToolText(op.SecondToolKind, op.SecondToolDiameter, op.SecondToolAngleDeg)}" : "");
             return;
         }
         if (error is null && op.Kind == CamOperationKind.VCarvePlug)

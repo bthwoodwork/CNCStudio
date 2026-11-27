@@ -31,6 +31,8 @@ public partial class MainWindow
     {
         if (CamToolPicker is null) return;
         var keep = _loadingCam;
+        // The second tool stays chosen when the library is read again (the main tool is restored by the callers).
+        var second = SecondTool?.Name;
         _loadingCam = true;
         try
         {
@@ -44,9 +46,11 @@ public partial class MainWindow
                 CamSecondTool.ItemsSource = new[] { CustomTool }
                     .Concat(_tools.Tools.Where(t => t.Kind != ToolKind.VBit).OrderBy(t => t.Diameter).ThenBy(t => t.Name)).ToList();
                 CamSecondTool.SelectedIndex = 0;
+                if (second is not null) SelectSecondTool(second);
             }
         }
         finally { _loadingCam = keep; }
+        if (second is not null) UpdateCamSummary();
     }
 
     private double? _secondFeed, _secondPlunge, _secondRpm;

@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.75)
+﻿# CNC Studio – källkod (senaste: 0.9.76)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,21 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.76 – Konisk kulfräs för 3D-fräsning
+
+- **Ny fräsform: konisk kulfräs** (tapered ball nose) i verktygsbiblioteket. Den beskrivs med kulans diameter (2 × spetsradien) och hela spetsvinkeln.
+- **3D-fräsningen räknar med konen:** fräsen blir bredare uppåt, och nära branta väggar är det konen som når materialet först. Banan lyfts där, så att konen inte skär in i väggen eller utanför formen. Det gäller både finfräsning som andra fräs och 3D-fräsning med bara den koniska fräsen.
+- **Simuleringen** av materialet och riggbladet visar den koniska fräsen.
+- Den koniska fräsen används bara för 3D-fräsning. Kontur, ficka och de andra bearbetningarna säger till om den väljs där.
+- **Tester:** formen (kula och kon), att banan aldrig går under ytan, att konen håller avstånd till en brant vägg och att vinkeln följer med till finfräsningen.
+
+**Rättat på vägen:**
+- **3D-fräsning gick inte att spara** ("Hållflikar används inte för 3D-fräsning"). Rutan för hållflikar är dold i 3D-läget men räknades som ibockad.
+- **Materialet föll bort vid omstart:** utan sparat materialbibliotek fick standardmaterialen nya id:n vid varje start, så projektets material blev "finns inte i biblioteket". Nu har de fasta id:n.
+- **Andra fräsen nollställdes** i Fräsning-panelen när verktygsbiblioteket sparades. Om man då klickade Spara CAM blev den en egen rak fräs. Nu står den kvar.
+- **Spara fräsen i verktygsbiblioteket** frågade om osparade ändringar när namn eller kategori hade ändrats. Nu sparar den direkt.
+- **En ny fräs** byter till typens kategori när typen ändras, i stället för att ligga kvar bland "Raka fräsar".
 
 ## 0.9.75 – Knapparna i felrutan visar fältet
 

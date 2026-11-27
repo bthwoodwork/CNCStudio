@@ -103,7 +103,9 @@ public static class StockSimulator
     private static void Stamp(StockHeightMap map, double x, double yDesign, double z, CamOperation op, double length)
     {
         double y = length - yDesign; // work Y: towards the back
-        double r = op.ToolDiameter / 2;
+        double tipR = op.ToolDiameter / 2;
+        // A tapered ball nose widens upwards: it reaches as far out as its cone is wide at the material's top.
+        double r = op.ToolKind == ToolKind.TaperedBallNose ? ToolShape.RadiusAt(op.ToolKind, tipR, op.ToolAngleDeg, Math.Max(0, -z)) : tipR;
         int ix0 = Math.Max(0, (int)Math.Floor((x - r) / map.Cell)), ix1 = Math.Min(map.Nx - 1, (int)Math.Floor((x + r) / map.Cell));
         int iy0 = Math.Max(0, (int)Math.Floor((y - r) / map.Cell)), iy1 = Math.Min(map.Ny - 1, (int)Math.Floor((y + r) / map.Cell));
         float floor = (float)-map.Thickness;
@@ -120,6 +122,7 @@ public static class StockSimulator
                 {
                     ToolKind.BallNose => z + r - Math.Sqrt(r * r - d2),
                     ToolKind.VBit => z + Math.Sqrt(d2) / vTan,
+                    ToolKind.TaperedBallNose => z + ToolShape.Height(op.ToolKind, tipR, op.ToolAngleDeg, Math.Sqrt(d2)),
                     _ => z
                 };
                 int idx = iy * map.Nx + ix;

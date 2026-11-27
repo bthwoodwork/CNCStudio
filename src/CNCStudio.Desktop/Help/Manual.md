@@ -146,7 +146,7 @@ Markera en form och öppna panelen **Fräsning** (F2):
 - **Planfräsning** – planar hela ytan rad för rad. Körs först.
 - **V-carving** – V-fräs, djupare där formen är bredare, skarpa hörn. För text och skyltar.
 - **Inlay-hane** – hanen i en V-carve inlay (se *Inlay*).
-- **3D-fräsning** – en STL-modell fräses i rader.
+- **3D-fräsning** – en STL-modell fräses i rader. Med *Andra fräs* grovfräser den första fräsen i nivåer och lämnar 0,5 mm, och den andra finfräser ytan i ett sicksack. Till finfräsningen passar en kulfräs eller en **konisk kulfräs** (tapered ball nose). Den koniska fräsens kon räknas med, så den skär inte in i branta väggar som är djupare än kulan.
 - **Fasning** – V-fräsens spets följer formens kant och fasar den. Ange fasens bredd i stället för djup; djupet räknas ut från fräsens vinkel (90° ger lika djupt som brett).
 
 ## Fräs, djup och hastigheter
@@ -357,7 +357,9 @@ Stoppade och återupptagna körningar räknas inte. Det gör inte heller program
 
 ## Verktygsbiblioteket
 
-**CAM → Verktygsbibliotek…** – fräsar i kategorier med diameter, typ (rak, kulfräs, V-fräs), skaftmått, inköpsställe och skärdata per material. Fräsen du väljer i Fräsning fyller i matning, varvtal och djup.
+**CAM → Verktygsbibliotek…** – fräsar i kategorier med diameter, typ (rak, kulfräs, V-fräs, konisk kulfräs), skaftmått, inköpsställe och skärdata per material. Fräsen du väljer i Fräsning fyller i matning, varvtal och djup.
+
+**Konisk kulfräs:** ange kulans diameter (2 × spetsradien, R0,8 ger 1,6 mm) och hela spetsvinkeln. En fräs som säljs som 5,5° per sida har 11° spetsvinkel. Den används bara för 3D-fräsning.
 
 **Körtid och slitage.** Varje gång ett program från CNC Studio körs läggs tiden till på fräsen i programmet. Det gäller även en körning som stoppas. G-code från andra håll räknas inte, eftersom den inte säger vilken fräs den använder. Under **SLITAGE** syns tiden sedan bytet och den totala körtiden.
 

@@ -24,25 +24,30 @@ public static class Carve3DToolpaths
     public static ContourPreview Generate(DesignShape shape, CamOperation op, double thickness)
     {
         var model = shape.Model ?? throw new ArgumentException("3D-fräsning kräver en 3D-modell (Rita → 3D-modell från STL…).");
-        if (op.ToolKind == ToolKind.VBit) throw new ArgumentException("3D-fräsning görs med rak fräs eller kulfräs, inte V-fräs.");
+        if (op.ToolKind == ToolKind.VBit) throw new ArgumentException("3D-fräsning görs med rak fräs, kulfräs eller konisk kulfräs, inte V-fräs.");
         if (model.DepthMm > thickness + 1e-9) throw new ArgumentException($"Modellens djup ({model.DepthMm:0.##} mm) är större än materialet ({thickness:0.##} mm).");
         var map = Heightmap.Build(shape);
         double r = op.ToolDiameter / 2;
-        bool ball = op.ToolKind == ToolKind.BallNose;
+        bool ball = op.ToolKind is ToolKind.BallNose or ToolKind.TaperedBallNose;
         bool finish = op.Kind == CamOperationKind.Carve3DFinish || (op.Kind == CamOperationKind.Carve3D && !op.SecondToolEnabled);
         double allowance = op.Kind == CamOperationKind.Carve3D && op.SecondToolEnabled ? RoughAllowanceMm : 0;
         double step = Math.Max(op.ToolDiameter * op.StepoverPercent / 100, 0.05);
         double sample = Math.Max(map.Cell, 0.1);
 
         // The tool's tip height at (x, y): the highest point under its end, lowered by the end's shape.
-        int reach = (int)Math.Ceiling(r / map.Cell);
+        // A tapered ball nose widens upwards: as far out as its cone reaches over the model's whole depth (and a little more).
+        double outer = op.ToolKind == ToolKind.TaperedBallNose
+            ? ToolShape.RadiusAt(op.ToolKind, r, op.ToolAngleDeg, model.DepthMm + allowance + 1)
+            : r;
+        int reach = (int)Math.Ceiling(outer / map.Cell);
         var kernel = new List<(int Di, int Dj, double Drop)>();
         for (int dj = -reach; dj <= reach; dj++)
             for (int di = -reach; di <= reach; di++)
             {
                 double d = Math.Sqrt(di * di + dj * dj) * map.Cell;
-                if (d > r + 1e-9) continue;
-                kernel.Add((di, dj, ball ? r - Math.Sqrt(Math.Max(r * r - d * d, 0)) : 0));
+                if (d > outer + 1e-9) continue;
+                double drop = ToolShape.Height(op.ToolKind, r, op.ToolAngleDeg, d);
+                if (double.IsFinite(drop)) kernel.Add((di, dj, drop));
             }
         double Tip(double x, double y)
         {

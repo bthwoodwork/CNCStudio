@@ -76,10 +76,10 @@
                         ToolTip="Välj en kategori eller skriv en ny, t.ex. &quot;Raka fräsar&quot;, &quot;Kompressionsfräsar&quot;, &quot;Planfräsar&quot;"/>
               <TextBlock Grid.Row="3" Text="Typ"/>
               <ComboBox x:Name="KindBox" Grid.Row="3" Grid.Column="1" Margin="3" SelectionChanged="KindBox_SelectionChanged">
-                <ComboBoxItem Content="Rak fräs (plan botten)"/><ComboBoxItem Content="Kulfräs"/><ComboBoxItem Content="V-fräs"/>
+                <ComboBoxItem Content="Rak fräs (plan botten)"/><ComboBoxItem Content="Kulfräs"/><ComboBoxItem Content="V-fräs"/><ComboBoxItem Content="Konisk kulfräs (för 3D)"/>
               </ComboBox>
-              <TextBlock Grid.Row="4" Text="Diameter (mm)"/><TextBox x:Name="DiameterBox" Grid.Row="4" Grid.Column="1" ToolTip="Skärdiametern (för V-fräs: största diametern)"/>
-              <TextBlock Grid.Row="5" Text="Vinkel (grader)" x:Name="AngleLabel"/><TextBox x:Name="AngleBox" Grid.Row="5" Grid.Column="1" ToolTip="V-fräsens spetsvinkel, t.ex. 60 eller 90"/>
+              <TextBlock Grid.Row="4" Text="Diameter (mm)"/><TextBox x:Name="DiameterBox" Grid.Row="4" Grid.Column="1" ToolTip="Skärdiametern (för V-fräs: största diametern; för konisk kulfräs: kulans diameter, 2 × spetsradien)"/>
+              <TextBlock Grid.Row="5" Text="Vinkel (grader)" x:Name="AngleLabel"/><TextBox x:Name="AngleBox" Grid.Row="5" Grid.Column="1" ToolTip="Hela spetsvinkeln: V-fräs t.ex. 60 eller 90, konisk kulfräs t.ex. 11 (5,5° per sida)"/>
               <TextBlock Grid.Row="6" Text="Spetsdiameter (mm)" x:Name="TipLabel"/><TextBox x:Name="TipBox" Grid.Row="6" Grid.Column="1" ToolTip="V-fräsens platta spets. 0 = spetsig. Tomt = okänt."/>
               <TextBlock Grid.Row="7" Text="Antal skär"/><TextBox x:Name="FlutesBox" Grid.Row="7" Grid.Column="1"/>
               <TextBlock Grid.Row="8" Text="Skärmaterial"/>

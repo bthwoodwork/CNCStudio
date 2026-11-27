@@ -29,18 +29,30 @@ public sealed class MaterialLibrary
 
     public List<MaterialDefinition> Materials { get; set; } = new();
 
-    /// <summary>Common starting materials – without cutting data; add that per tool in the tool library.</summary>
+    /// <summary>
+    /// Common starting materials – without cutting data; add that per tool in the tool library.
+    /// Their ids are fixed (from the name), so a project keeps its material even while the library has never been saved.
+    /// </summary>
     public static MaterialLibrary Defaults() => new()
     {
         Materials =
         {
-            new MaterialDefinition { Name = "Furu", Category = "Trä" },
-            new MaterialDefinition { Name = "Ek", Category = "Trä" },
-            new MaterialDefinition { Name = "Björkplywood", Category = "Skivmaterial" },
-            new MaterialDefinition { Name = "MDF", Category = "Skivmaterial" },
-            new MaterialDefinition { Name = "Akryl (plexiglas)", Category = "Plast" },
+            Default("Furu", "Trä"),
+            Default("Ek", "Trä"),
+            Default("Björkplywood", "Skivmaterial"),
+            Default("MDF", "Skivmaterial"),
+            Default("Akryl (plexiglas)", "Plast"),
         }
     };
+
+    private static MaterialDefinition Default(string name, string category) => new() { Id = StableId(name), Name = name, Category = category };
+
+    /// <summary>The same id for the same default material on every start.</summary>
+    public static Guid StableId(string name)
+    {
+        var hash = System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes("CNC Studio material: " + name));
+        return new Guid(hash);
+    }
 
     public static MaterialLibrary Load(string path)
     {
