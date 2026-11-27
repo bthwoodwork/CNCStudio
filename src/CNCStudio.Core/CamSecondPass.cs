@@ -70,10 +70,21 @@ public static class CamSecondPass
             ToolAngleDeg = kind == CamOperationKind.Carve3DFinish ? op.SecondToolAngleDeg : DefaultAngleDeg,
             TotalDepth = depth, DepthPerPass = op.SecondDepthPerPass, UseTabs = false,
             FeedRate = op.SecondFeedRate, PlungeRate = op.SecondPlungeRate, SpindleRpm = op.SecondSpindleRpm,
-            StepoverPercent = op.Kind == CamOperationKind.Pocket ? op.StepoverPercent : op.Kind == CamOperationKind.Carve3D ? 10 : 40,
+            StepoverPercent = op.Kind == CamOperationKind.Pocket ? op.StepoverPercent
+                : op.Kind == CamOperationKind.Carve3D ? FinishStepoverMm(op) / op.SecondToolDiameter * 100 : 40,
             Plunge = op.Plunge, RampAngleDeg = op.RampAngleDeg, RampFeedPercent = op.RampFeedPercent, Direction = op.Direction,
         };
     }
+
+    /// <summary>3D finishing's default stepover: this share of the finishing tool's diameter.</summary>
+    public const double DefaultFinishStepoverPercent = 10;
+
+    /// <summary>3D finishing's default distance between rows for a tool of <paramref name="diameter"/> mm.</summary>
+    public static double DefaultFinishStepoverMm(double diameter) => diameter * DefaultFinishStepoverPercent / 100;
+
+    /// <summary>3D finishing's distance between rows: the operation's own, or the default for its second tool.</summary>
+    public static double FinishStepoverMm(CamOperation op) =>
+        op.SecondStepoverMm is double mm && mm > 0 ? mm : DefaultFinishStepoverMm(op.SecondToolDiameter);
 
     /// <summary>The second pass's toolpath: a pocket, but only where it is needed.</summary>
     public static ContourPreview Generate(DesignShape shape, CamOperation op, double materialThickness)

@@ -156,6 +156,8 @@ public sealed class CamOperation
     public ToolKind SecondToolKind { get; set; } = ToolKind.FlatEndMill;
     /// <summary>The second tool's included angle, when it is a tapered ball nose.</summary>
     public double SecondToolAngleDeg { get; set; } = 10;
+    /// <summary>3D finishing: the distance between its rows in mm. Null = the default share of the second tool's diameter (<see cref="CamSecondPass.DefaultFinishStepoverMm"/>).</summary>
+    public double? SecondStepoverMm { get; set; }
 
     /// <summary>The second tool's pass only: the operation it was made from (never saved).</summary>
     [System.Text.Json.Serialization.JsonIgnore]
@@ -221,6 +223,9 @@ public static class CamValidation
         if (operation.SecondToolEnabled && operation.Kind == CamOperationKind.Carve3D && operation.SecondToolKind == ToolKind.TaperedBallNose &&
             ToolShape.ValidateTaper(operation.SecondToolAngleDeg, "Andra fräsens") is string secondTaper)
             return secondTaper;
+        if (operation.SecondToolEnabled && operation.Kind == CamOperationKind.Carve3D && operation.SecondStepoverMm is double finishStep &&
+            (!double.IsFinite(finishStep) || finishStep < 0.02 || finishStep > operation.SecondToolDiameter * 0.9))
+            return $"Finfräsningens stegning måste vara minst 0,02 mm och högst 90 % av fräsdiametern ({operation.SecondToolDiameter * 0.9:0.###} mm).";
         if (operation.ToolKind == ToolKind.TaperedBallNose && operation.Kind is not (CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish))
             return "En konisk kulfräs används för 3D-fräsning – välj 3D-fräsning som bearbetning.";
         if (operation.Kind is CamOperationKind.Carve3D or CamOperationKind.Carve3DFinish && operation.UseTabs)

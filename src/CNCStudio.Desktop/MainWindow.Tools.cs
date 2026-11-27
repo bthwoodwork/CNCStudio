@@ -69,6 +69,8 @@ public partial class MainWindow
         var v = t.CuttingFor(_document.MaterialId);
         CamSecondDiameter.Text = F(t.Diameter);
         CamSecondPass.Text = F(v.DepthPerPass);
+        // A new finishing tool starts from the usual stepover for its size; change it after choosing the tool.
+        CamSecondStepover.Text = F(Math.Round(CNCStudio.Core.CamSecondPass.DefaultFinishStepoverMm(t.Diameter), 3));
         _secondFeed = v.FeedRate; _secondPlunge = v.PlungeRate; _secondRpm = v.SpindleRpm;
         UpdateCamSummary();
     }

@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.76)
+﻿# CNC Studio – källkod (senaste: 0.9.77)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.77 – Ställbar stegning för 3D-finfräsning
+
+- **Stegning (mm)** för finfräsningen i 3D-fräsning, under *Finfräs med en andra fräs efteråt*. Den ersätter *Djup per pass*, som inte används där, eftersom finfräsningen gör ett enda pass över ytan.
+  - När en fräs väljs fylls 10 % av fräsdiametern i, som förut. Värdet kan ändras.
+  - Det tillåtna intervallet är 0,02 mm till 90 % av fräsdiametern.
+  - Projekt utan värdet behåller 10 %.
+- **Exempel:** reliefen 240 × 294,5 mm med en konisk kulfräs R0,4 tar cirka 14 h med 0,08 mm stegning och ungefär hälften med 0,16 mm.
+- **Borttagen falsk varning:** "Djup per pass är större än fräsdiametern" visas inte längre för 3D-finfräsningen.
+- **Tester:** standardvärdet, att raderna glesas ut med större stegning, gränserna och varningen.
 
 ## 0.9.76 – Konisk kulfräs för 3D-fräsning
 
