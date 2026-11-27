@@ -13,9 +13,9 @@ public sealed class ToolDefinition
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "Ny fräs";
     public ToolKind Kind { get; set; } = ToolKind.FlatEndMill;
-    /// <summary>Cutting diameter in mm (for a V-bit: the largest diameter).</summary>
+    /// <summary>Cutting diameter in mm (for a V-bit: the largest diameter; for a tapered ball nose: the ball tip's diameter, 2 × the tip radius).</summary>
     public double Diameter { get; set; } = 3.175;
-    /// <summary>V-bit included angle in degrees (ignored for other kinds).</summary>
+    /// <summary>V-bit and tapered ball nose: included angle in degrees (ignored for other kinds).</summary>
     public double AngleDeg { get; set; } = 90;
     public int Flutes { get; set; } = 2;
     public double FeedRate { get; set; } = 1000;
@@ -75,7 +75,7 @@ public sealed class ToolDefinition
 
     public static string DefaultCategory(ToolKind kind) => kind switch
     {
-        ToolKind.BallNose => "Kulfräsar", ToolKind.VBit => "V-fräsar", _ => "Raka fräsar"
+        ToolKind.BallNose => "Kulfräsar", ToolKind.TaperedBallNose => "Koniska kulfräsar", ToolKind.VBit => "V-fräsar", _ => "Raka fräsar"
     };
 
     /// <summary>Cutting data for a material, or the tool's defaults (Material = null) when there is none.</summary>
@@ -94,6 +94,7 @@ public sealed class ToolDefinition
         if (string.IsNullOrWhiteSpace(Name)) return "Ange ett namn på fräsen.";
         if (!double.IsFinite(Diameter) || Diameter <= 0 || Diameter > 100) return "Diametern måste vara större än 0 och högst 100 mm.";
         if (Kind == ToolKind.VBit && (!double.IsFinite(AngleDeg) || AngleDeg <= 0 || AngleDeg >= 180)) return "V-fräsens vinkel måste vara mellan 0 och 180 grader.";
+        if (Kind == ToolKind.TaperedBallNose && ToolShape.ValidateTaper(AngleDeg) is string taper) return taper;
         if (Flutes < 1 || Flutes > 12) return "Antal skär måste vara 1–12.";
         if (!double.IsFinite(FeedRate) || FeedRate < 1 || FeedRate > 20000) return "Matningen måste vara 1–20000 mm/min.";
         if (!double.IsFinite(PlungeRate) || PlungeRate < 1 || PlungeRate > 20000) return "Nedmatningen måste vara 1–20000 mm/min.";
@@ -134,6 +135,7 @@ public sealed class ToolDefinition
     {
         var v = CuttingFor(materialId);
         op.ToolName = Name; op.ToolKind = Kind; op.ToolDiameter = Diameter;
+        if (Kind == ToolKind.TaperedBallNose) op.ToolAngleDeg = AngleDeg;
         op.FeedRate = v.FeedRate; op.PlungeRate = v.PlungeRate; op.DepthPerPass = v.DepthPerPass; op.SpindleRpm = v.SpindleRpm;
     }
 }

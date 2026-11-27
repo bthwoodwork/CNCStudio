@@ -53,7 +53,13 @@ public static class SetupSheet
              .Append(" – ").Append(E(p.ToolLabel)).Append("</h2><div class=\"tool\">");
             if (first is not null)
                 h.Append("Ø ").Append(F(first.ToolDiameter)).Append(" mm")
-                 .Append(first.ToolKind == ToolKind.VBit ? $" · V-fräs {F(first.ToolAngleDeg)}°" : first.ToolKind == ToolKind.BallNose ? " · kulfräs" : "")
+                 .Append(first.ToolKind switch
+                 {
+                     ToolKind.VBit => $" · V-fräs {F(first.ToolAngleDeg)}°",
+                     ToolKind.BallNose => " · kulfräs",
+                     ToolKind.TaperedBallNose => $" · konisk kulfräs R{F(first.ToolDiameter / 2)} {F(first.ToolAngleDeg)}°",
+                     _ => ""
+                 })
                  .Append(" · ").Append(F(first.SpindleRpm, 0)).Append(" varv/min · ").Append(F(first.FeedRate, 0)).Append(" mm/min");
             h.Append(" · ").Append(E(RunTimeEstimator.Format(p.CuttingMinutes))).Append(" skär</div>");
             h.Append("<table><tr><th>Objekt</th><th>Bearbetning</th><th>Djup</th><th>Per pass</th><th>Status</th></tr>");

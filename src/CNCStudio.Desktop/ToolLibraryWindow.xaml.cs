@@ -98,7 +98,7 @@ public partial class ToolLibraryWindow : Window
     {
         var text = CategoryBox.Text;
         CategoryBox.ItemsSource = Library().AllCategories()
-            .Concat(new[] { "Raka fräsar", "Kulfräsar", "V-fräsar", "Kompressionsfräsar", "Planfräsar" })
+            .Concat(new[] { "Raka fräsar", "Kulfräsar", "Koniska kulfräsar", "V-fräsar", "Kompressionsfräsar", "Planfräsar" })
             .Distinct(StringComparer.CurrentCultureIgnoreCase).ToList();
         CategoryBox.Text = text;
     }
@@ -158,13 +158,23 @@ public partial class ToolLibraryWindow : Window
         Pass = c is null ? "" : F(c.DepthPerPass), Rpm = c is null ? "" : F(c.SpindleRpm)
     };
 
-    private void KindBox_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (!_loading) UpdateKindFields(); }
+    private void KindBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading) return;
+        // A category that is just a type's default follows the new type (a kulfräs is not left among "Raka fräsar").
+        var kinds = Enum.GetValues<ToolKind>();
+        if (KindBox.SelectedIndex >= 0 && kinds.Any(k => ToolDefinition.DefaultCategory(k).Equals(CategoryBox.Text.Trim(), StringComparison.CurrentCultureIgnoreCase)))
+            CategoryBox.Text = ToolDefinition.DefaultCategory((ToolKind)KindBox.SelectedIndex);
+        UpdateKindFields();
+    }
 
     private void UpdateKindFields()
     {
         if (AngleBox is null) return;
-        var v = KindBox.SelectedIndex == (int)ToolKind.VBit ? Visibility.Visible : Visibility.Collapsed;
-        AngleBox.Visibility = AngleLabel.Visibility = TipBox.Visibility = TipLabel.Visibility = v;
+        bool vbit = KindBox.SelectedIndex == (int)ToolKind.VBit, tapered = KindBox.SelectedIndex == (int)ToolKind.TaperedBallNose;
+        AngleBox.Visibility = AngleLabel.Visibility = vbit || tapered ? Visibility.Visible : Visibility.Collapsed;
+        TipBox.Visibility = TipLabel.Visibility = vbit ? Visibility.Visible : Visibility.Collapsed;
+        AngleLabel.Text = tapered ? "Spetsvinkel, hela (grader)" : "Vinkel (grader)";
     }
 
     /// <summary>The shown tool with the fields' values, or null (and <paramref name="error"/>) when a value is invalid.</summary>
@@ -181,6 +191,7 @@ public partial class ToolLibraryWindow : Window
         double angle = t.AngleDeg;
         bool vbit = KindBox.SelectedIndex == (int)ToolKind.VBit;
         if (vbit && !Num(AngleBox, out angle)) { error = "Ange V-fräsens vinkel."; return null; }
+        if (KindBox.SelectedIndex == (int)ToolKind.TaperedBallNose && !Num(AngleBox, out angle)) { error = "Ange den koniska kulfräsens hela spetsvinkel, t.ex. 11."; return null; }
         int? number = null;
         if (NumberBox.Text.Trim() is { Length: > 0 } nt)
         {
@@ -260,8 +271,14 @@ public partial class ToolLibraryWindow : Window
         var c = FromFields(out var error);
         if (c is null) { Say(error ?? "Ogiltigt värde.", bad: true); return false; }
         int i = _tools.IndexOf(t);
-        _tools[i] = c;
-        if (!SaveLibrary($"{c.Name} sparad.")) { _tools[i] = t; return false; }
+        // Replacing the item drops the list's selection; that is the save itself, not leaving the tool.
+        _reselecting = true;
+        try
+        {
+            _tools[i] = c;
+            if (!SaveLibrary($"{c.Name} sparad.")) { _tools[i] = t; return false; }
+        }
+        finally { _reselecting = false; }
         RefreshCategories();
         Select(c);
         if (c.Warning is string w) Say(w, bad: true);

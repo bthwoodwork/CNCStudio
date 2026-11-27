@@ -18,6 +18,7 @@ namespace CNCStudio.Core;
 public static class CamSecondPass
 {
     private const int Precision = 4;
+    private static readonly double DefaultAngleDeg = new CamOperation().ToolAngleDeg;
 
     /// <summary>The operations as they run: each with a second tool expanded into its two passes.</summary>
     public static IEnumerable<CamOperation> Expand(IEnumerable<CamOperation> ops)
@@ -66,6 +67,7 @@ public static class CamSecondPass
         {
             ShapeId = op.ShapeId, Kind = kind, Parent = op,
             ToolName = op.SecondToolName, ToolKind = kind == CamOperationKind.Carve3DFinish ? op.SecondToolKind : ToolKind.FlatEndMill, ToolDiameter = op.SecondToolDiameter,
+            ToolAngleDeg = kind == CamOperationKind.Carve3DFinish ? op.SecondToolAngleDeg : DefaultAngleDeg,
             TotalDepth = depth, DepthPerPass = op.SecondDepthPerPass, UseTabs = false,
             FeedRate = op.SecondFeedRate, PlungeRate = op.SecondPlungeRate, SpindleRpm = op.SecondSpindleRpm,
             StepoverPercent = op.Kind == CamOperationKind.Pocket ? op.StepoverPercent : op.Kind == CamOperationKind.Carve3D ? 10 : 40,
