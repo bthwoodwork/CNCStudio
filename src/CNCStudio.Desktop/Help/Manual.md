@@ -372,7 +372,7 @@ Stoppade och återupptagna körningar räknas inte. Det gör inte heller program
 
 ## Programmet stoppar export eller körning
 
-Dialogen listar vad som måste åtgärdas, med ett förslag och en knapp som tar dig dit. Vanligast:
+Dialogen listar vad som måste åtgärdas, med ett förslag och en knapp som tar dig dit. Knappen byter till rätt arbetsyta, öppnar panelen och sektionen och markerar fältet. Z-höjderna och MPos Z hamnar i panelen *Maskinbord* i Maskin, och materialet och dess placering i *Egenskaper* i Design. Vanligast:
 
 - **Inget material** – lägg till material under Projekt och material.
 - **Körbanan är inaktuell** – klicka *Beräkna körbanor*.
