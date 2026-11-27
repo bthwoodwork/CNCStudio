@@ -1566,6 +1566,7 @@ public partial class MainWindow : Window
             CamSecondEnabled.IsChecked = operation?.SecondToolEnabled == true;
             CamSecondDiameter.Text = F(operation?.SecondToolDiameter ?? 3.175);
             CamSecondPass.Text = F(operation?.SecondDepthPerPass ?? 2);
+            CamSecondStepover.Text = F(Math.Round(operation is null ? CNCStudio.Core.CamSecondPass.DefaultFinishStepoverMm(3.175) : CNCStudio.Core.CamSecondPass.FinishStepoverMm(operation), 3));
             _secondFeed = operation?.SecondToolEnabled == true ? operation.SecondFeedRate : null;
             _secondPlunge = operation?.SecondToolEnabled == true ? operation.SecondPlungeRate : null;
             _secondRpm = operation?.SecondToolEnabled == true ? operation.SecondSpindleRpm : null;
@@ -1629,6 +1630,12 @@ public partial class MainWindow : Window
             SecondToolPanel.Visibility = pocket || vcarve || carve3d ? Visibility.Visible : Visibility.Collapsed;
             CamSecondEnabled.Content = pocket ? "Detaljer och hörn med en mindre fräs efteråt" : carve3d ? "Finfräs med en andra fräs efteråt (t.ex. kulfräs)" : "Rensa breda bottnar med en rak fräs först";
             SecondToolFields.Visibility = CamSecondEnabled.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            // 3D finishing is one pass over the surface: its rows' spacing matters, not a depth per pass.
+            if (CamSecondPassPanel is not null && CamSecondStepoverPanel is not null)
+            {
+                CamSecondPassPanel.Visibility = carve3d ? Visibility.Collapsed : Visibility.Visible;
+                CamSecondStepoverPanel.Visibility = carve3d ? Visibility.Visible : Visibility.Collapsed;
+            }
             CamSecondHint.Text = carve3d
                 ? $"Den första fräsen grovfräser nivå för nivå och lämnar {Carve3DToolpaths.RoughAllowanceMm:0.#} mm; den andra (helst kulfräs) finfräser hela ytan i tätare rader. Två program, ett per fräs."
                 : pocket
@@ -1666,7 +1673,15 @@ public partial class MainWindow : Window
         bool second = (kind is CamOperationKind.Pocket or CamOperationKind.Carve3D || vcarve) && CamSecondEnabled?.IsChecked == true;
         if (kind == CamOperationKind.Carve3D && _selected.Model is { } model) depth = model.DepthMm;   // the model's depth decides
         double secondDia = 3.175, secondPass = 2;
-        if (second && (CamSecondDiameter is null || CamSecondPass is null || !Parse(CamSecondDiameter, out secondDia) || !Parse(CamSecondPass, out secondPass)))
+        double? secondStepover = null;
+        if (second && kind == CamOperationKind.Carve3D)
+        {
+            // Finishing: one pass over the whole surface, so its depth per pass is the model's depth; the rows' spacing is set in mm.
+            if (CamSecondDiameter is null || CamSecondStepover is null || !Parse(CamSecondDiameter, out secondDia) || !Parse(CamSecondStepover, out var stepMm)) return null;
+            secondPass = depth;
+            secondStepover = stepMm;
+        }
+        else if (second && (CamSecondDiameter is null || CamSecondPass is null || !Parse(CamSecondDiameter, out secondDia) || !Parse(CamSecondPass, out secondPass)))
             return null;
         if (kind == CamOperationKind.VCarvePlug &&
             (CamInlayStart is null || CamInlayClearance is null || !Parse(CamInlayStart, out inlayStart) || !Parse(CamInlayClearance, out inlayClearance)))
@@ -1729,7 +1744,7 @@ public partial class MainWindow : Window
             // A tapered ball nose takes its angle from the library (the angle field is the V-bit's).
             ToolAngleDeg = fromLibrary && tool!.Kind == ToolKind.TaperedBallNose ? tool.AngleDeg : vAngle,
             InlayStartDepthMm = inlayStart, InlayClearanceMm = inlayClearance,
-            SecondToolEnabled = second, SecondToolDiameter = secondDia, SecondDepthPerPass = secondPass,
+            SecondToolEnabled = second, SecondToolDiameter = secondDia, SecondDepthPerPass = secondPass, SecondStepoverMm = secondStepover,
             SecondToolKind = SecondTool is { Kind: not ToolKind.VBit } stk && Math.Abs(stk.Diameter - secondDia) < 1e-9 ? stk.Kind : ToolKind.FlatEndMill,
             SecondToolAngleDeg = SecondTool is { Kind: ToolKind.TaperedBallNose } sta && Math.Abs(sta.Diameter - secondDia) < 1e-9 ? sta.AngleDeg : defaults.SecondToolAngleDeg,
             SecondToolName = second && SecondTool is { } st && Math.Abs(st.Diameter - secondDia) < 1e-9 ? st.Name : null,

@@ -3,7 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:CNCStudio.Desktop"
  xmlns:ad="https://github.com/Dirkster99/AvalonDock"
- Title="CNC Studio 0.9.76 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
+ Title="CNC Studio 0.9.77 – verktygslist" Width="1500" Height="930" MinWidth="1060" MinHeight="650"
  KeyDown="Window_KeyDown" PreviewKeyDown="Window_PreviewKeyDown" PreviewKeyUp="Window_PreviewKeyUp" Deactivated="Window_Deactivated" Loaded="Window_Loaded" Closing="MainWindow_Closing"
  Background="#17212C" Foreground="#E8F1FA">
  <Window.Resources>
@@ -688,7 +688,9 @@
                     <Grid>
                       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                       <StackPanel><TextBlock Text="Diameter (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamSecondDiameter" Text="3.175" TextChanged="CamInput_Changed"/></StackPanel>
-                      <StackPanel Grid.Column="1"><TextBlock Text="Djup per pass (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamSecondPass" Text="2" TextChanged="CamInput_Changed"/></StackPanel>
+                      <StackPanel Grid.Column="1" x:Name="CamSecondPassPanel"><TextBlock Text="Djup per pass (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamSecondPass" Text="2" TextChanged="CamInput_Changed"/></StackPanel>
+                      <StackPanel Grid.Column="1" x:Name="CamSecondStepoverPanel" Visibility="Collapsed"><TextBlock Text="Stegning (mm)" Style="{StaticResource FieldLabel}"/><TextBox x:Name="CamSecondStepover" Text="0.16" TextChanged="CamInput_Changed"
+                          ToolTip="Avståndet mellan finfräsningens rader. Mindre ger jämnare yta men längre tid. Tumregel för kulfräs: 5–25 % av kulans diameter."/></StackPanel>
                     </Grid>
                     <TextBlock x:Name="CamSecondHint" Text="" TextWrapping="Wrap" FontSize="10.5" Foreground="#8CA3BA" Margin="3,2,3,0"/>
                   </StackPanel>

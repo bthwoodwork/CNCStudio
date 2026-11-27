@@ -76,7 +76,9 @@ public static class CamOperationChecks
             list.Add(new CamFinding(CamSeverity.Warning, "HoleSizeMismatch",
                 $"Borrningen ger ett hål med fräsens diameter (Ø{F(op.ToolDiameter)} mm) i objektets mitt, men objektet är " +
                 $"{F(shape.Width)} × {F(shape.Height)} mm. Välj en fräs med objektets diameter, eller ficka för ett större hål.", id));
-        if (op.Kind is not (CamOperationKind.Drill or CamOperationKind.VCarve or CamOperationKind.VCarvePlug or CamOperationKind.Chamfer) && op.DepthPerPass > op.ToolDiameter + 1e-9)
+        // 3D finishing is one pass over the surface: its depth per pass is never used.
+        if (op.Kind is not (CamOperationKind.Drill or CamOperationKind.VCarve or CamOperationKind.VCarvePlug or CamOperationKind.Chamfer or CamOperationKind.Carve3DFinish) &&
+            op.DepthPerPass > op.ToolDiameter + 1e-9)
             list.Add(new CamFinding(CamSeverity.Warning, "DeepPass",
                 $"Djup per pass ({F(op.DepthPerPass)} mm) är större än fräsdiametern ({F(op.ToolDiameter)} mm). " +
                 "Risk för fräsbrott; ett vanligt riktvärde i trä är högst 1 × diametern.", id));
@@ -382,7 +384,7 @@ public sealed class CamPlanner
             shape.Contours?.Count ?? -1, ContourHash(shape),
             op.Kind, R(op.ToolDiameter), R(op.ToolAngleDeg), op.ToolKind, R(op.InlayStartDepthMm), R(op.InlayClearanceMm), R(op.TotalDepth), R(op.DepthPerPass), op.UseTabs,
             op.TabCount, R(op.TabWidth), R(op.TabHeight), R(op.StepoverPercent), op.Direction, op.Dogbones, R(op.ChamferWidthMm), R(op.OnionSkinMm), R(thickness),
-            op.SecondToolEnabled, R(op.SecondToolDiameter), op.SecondToolKind, R(op.SecondToolAngleDeg),
+            op.SecondToolEnabled, R(op.SecondToolDiameter), op.SecondToolKind, R(op.SecondToolAngleDeg), op.SecondStepoverMm is double ss ? R(ss) : "",
             shape.Model is { } model ? model.Hash + "/" + R(model.DepthMm) + "/" + model.Quarter : "",
             op.Parent is null ? "" : "parent:" + Fingerprint(shape, op.Parent, thickness));
     }
