@@ -54,12 +54,20 @@ public class DrillTests
     }
 
     [Fact]
-    public void A_shape_bigger_than_the_tool_is_warned_about()
+    public void A_shape_that_does_not_fit_the_tool_is_warned_about_but_a_larger_circle_is_spiral_drilled()
     {
-        var (_, report) = Doc(holeDiameter: 10, tool: 5);
-        Assert.Contains(report.Operations[0].Findings, f => f.Code == "HoleSizeMismatch" && f.Severity == CamSeverity.Warning);
+        // A rectangle larger than the tool: still only a tool-sized hole at its centre.
+        var (_, rect) = Doc(tweak: d => { d.Shapes[0].Kind = ShapeKind.Rectangle; d.Shapes[0].Width = d.Shapes[0].Height = 10; });
+        Assert.Contains(rect.Operations[0].Findings, f => f.Code == "HoleSizeMismatch" && f.Severity == CamSeverity.Warning);
+        // A circle smaller than the tool.
+        var (_, small) = Doc(holeDiameter: 4, tool: 5);
+        Assert.Contains(small.Operations[0].Findings, f => f.Code == "HoleSizeMismatch");
+        // A circle larger than the tool: spiral drilling, no mismatch.
+        var (_, big) = Doc(holeDiameter: 10, tool: 5);
+        Assert.DoesNotContain(big.Operations[0].Findings, f => f.Code == "HoleSizeMismatch");
+        Assert.Contains(big.Operations[0].Findings, f => f.Code == "HelixBore");
         var (_, ok) = Doc(holeDiameter: 5, tool: 5);
-        Assert.DoesNotContain(ok.Operations[0].Findings, f => f.Code == "HoleSizeMismatch");
+        Assert.DoesNotContain(ok.Operations[0].Findings, f => f.Code is "HoleSizeMismatch" or "HelixBore");
     }
 
     [Fact]

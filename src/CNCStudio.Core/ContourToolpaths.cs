@@ -18,6 +18,15 @@ public sealed record ContourPreview(IReadOnlyList<CamPoint> Centerline, IReadOnl
     public bool IsFace { get; init; }
     /// <summary>True for drilling: Centerline is the single hole centre and PassDepths are the pecks.</summary>
     public bool IsDrill { get; init; }
+    /// <summary>
+    /// Spiral drilling (a hole larger than the tool): Centerlines are closed circles, innermost first; each is cut as a
+    /// spiral down through <see cref="PassDepths"/> (one turn per depth), then once flat at the bottom.
+    /// </summary>
+    public bool IsHelix { get; init; }
+    /// <summary>Spiral drilling: the hole's centre (the tool goes there at the bottom before lifting).</summary>
+    public CamPoint? HelixCentre { get; init; }
+    /// <summary>Spiral drilling: the finished hole's diameter.</summary>
+    public double HelixHoleDiameter { get; init; }
     /// <summary>True for a pocket: Centerlines are loops in cutting order (inside out).</summary>
     public bool IsPocket { get; init; }
     /// <summary>Pocket only: where the tool centre may go (the pocket shrunk by the tool radius).</summary>

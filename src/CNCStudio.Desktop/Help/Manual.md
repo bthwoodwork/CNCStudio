@@ -142,7 +142,7 @@ Markera en form och öppna panelen **Fräsning** (F2):
 - **Utvändig kontur** – skär ut formen, fräsen går utanför linjen.
 - **Invändig kontur** – fräsen går innanför linjen (hål, urtag).
 - **Fickfräsning** – fräser bort allt innanför, varv för varv.
-- **Borrning** – ett hål med fräsens diameter i formens mitt.
+- **Borrning** – ett hål med fräsens diameter i formens mitt. Är formen en **cirkel som är större än fräsen** blir det **spiralborrning**: fräsen går runt i hålet och sjunker *Djup per varv* för varje varv, med rampens matning. Sist går den ett plant varv i botten och till hålets mitt innan den lyfter. Ett hål som är mer än dubbelt så stort som fräsen får flera spiraler inifrån och ut, så att ingen kärna blir kvar. Lutar spiralen mer än 10° visas en varning; minska då djupet per varv.
 - **Planfräsning** – planar hela ytan rad för rad. Körs först.
 - **V-carving** – V-fräs, djupare där formen är bredare, skarpa hörn. För text och skyltar.
 - **Inlay-hane** – hanen i en V-carve inlay (se *Inlay*).

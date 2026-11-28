@@ -22,7 +22,7 @@ public static class CamDirection
         var outline = CamGeometryChecks.Outline(shape);
         var result = paths.Select(path =>
         {
-            bool? wallRight = p.IsPocket || p.IsVCarve ? PocketWallOnRight(path) : ContourWallOnRight(path, shape, op, outline);
+            bool? wallRight = p.IsHelix ? HelixWallOnRight(path) : p.IsPocket || p.IsVCarve ? PocketWallOnRight(path) : ContourWallOnRight(path, shape, op, outline);
             return wallRight is bool r && r != wantRight ? Reverse(path) : path;
         }).ToList();
         return p with { Centerline = result[0], Centerlines = result };
@@ -31,7 +31,14 @@ public static class CamDirection
     /// <summary>Which side of the path the wall (the material that stays) is on, in machine coordinates; null if unknown.</summary>
     public static bool? WallOnRight(IReadOnlyList<CamPoint> path, ContourPreview p, DesignShape shape, CamOperation op,
         IReadOnlyList<IReadOnlyList<CamPoint>> outline) =>
-        p.IsPocket || p.IsVCarve ? PocketWallOnRight(path) : ContourWallOnRight(path, shape, op, outline);
+        p.IsHelix ? HelixWallOnRight(path) : p.IsPocket || p.IsVCarve ? PocketWallOnRight(path) : ContourWallOnRight(path, shape, op, outline);
+
+    /// <summary>A spiral-drilled hole: the wall is outside the circle, so it is on the right when travelling counter-clockwise.</summary>
+    private static bool? HelixWallOnRight(IReadOnlyList<CamPoint> path)
+    {
+        double area = MachineArea(path);
+        return Math.Abs(area) < 1e-9 ? null : area > 0;
+    }
 
     /// <summary>Signed area in machine coordinates (Y up): positive = counter-clockwise.</summary>
     public static double MachineArea(IReadOnlyList<CamPoint> path)

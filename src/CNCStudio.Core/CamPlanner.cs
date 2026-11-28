@@ -72,10 +72,27 @@ public static class CamOperationChecks
         if (op.ToolKind is ToolKind.BallNose or ToolKind.TaperedBallNose)
             list.Add(new CamFinding(CamSeverity.Info, "BallNoseFloor",
                 "Kulfräs: botten och väggens nederkant blir rundade, inte plana.", id));
-        if (op.Kind == CamOperationKind.Drill && !DrillToolpaths.MatchesTool(shape, op))
+        if (op.Kind == CamOperationKind.Drill && DrillToolpaths.HelixHoleDiameter(shape, op) is double hole)
+        {
+            var radii = DrillToolpaths.HelixRadii(hole, op.ToolDiameter);
+            int turns = (int)Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9);
+            double perTurn = op.TotalDepth / Math.Max(1, turns);
+            double angle = DrillToolpaths.HelixAngleDeg(radii[^1], perTurn);
+            list.Add(new CamFinding(CamSeverity.Info, "HelixBore",
+                $"Spiralborrning: hålet Ø{F(hole)} mm är större än fräsen (Ø{F(op.ToolDiameter)} mm). Fräsen går runt i hålet " +
+                $"och sjunker {F(Math.Round(perTurn, 3))} mm per varv ({F(Math.Round(angle, 1))}°), {F(op.RampFeedRate)} mm/min" +
+                (radii.Count > 1 ? $", i {radii.Count} spiraler inifrån och ut" : "") + ".", id));
+            if (angle > DrillToolpaths.SteepHelixDeg + 1e-9)
+                list.Add(new CamFinding(CamSeverity.Warning, "SteepHelix",
+                    $"Spiralen lutar {F(Math.Round(angle, 1))}° – brantare än {F(DrillToolpaths.SteepHelixDeg)}°. Fräsen skär då mest med spetsen. " +
+                    "Minska djup per varv (Djup per pass).", id));
+        }
+        else if (op.Kind == CamOperationKind.Drill && !DrillToolpaths.MatchesTool(shape, op))
             list.Add(new CamFinding(CamSeverity.Warning, "HoleSizeMismatch",
-                $"Borrningen ger ett hål med fräsens diameter (Ø{F(op.ToolDiameter)} mm) i objektets mitt, men objektet är " +
-                $"{F(shape.Width)} × {F(shape.Height)} mm. Välj en fräs med objektets diameter, eller ficka för ett större hål.", id));
+                DrillToolpaths.IsCircle(shape)
+                    ? $"Hålet (Ø{F(shape.Width)} mm) är mindre än fräsen (Ø{F(op.ToolDiameter)} mm): borrningen blir fräsens storlek. Välj en mindre fräs."
+                    : $"Borrningen ger ett hål med fräsens diameter (Ø{F(op.ToolDiameter)} mm) i objektets mitt, men objektet är " +
+                      $"{F(shape.Width)} × {F(shape.Height)} mm och inte runt. Rita en cirkel för ett större hål (spiralborrning), eller välj ficka.", id));
         // 3D finishing is one pass over the surface: its depth per pass is never used.
         if (op.Kind is not (CamOperationKind.Drill or CamOperationKind.VCarve or CamOperationKind.VCarvePlug or CamOperationKind.Chamfer or CamOperationKind.Carve3DFinish) &&
             op.DepthPerPass > op.ToolDiameter + 1e-9)
