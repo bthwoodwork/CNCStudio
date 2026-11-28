@@ -180,6 +180,11 @@ public static class MotionPlanner
                 PlanDrill(preview, opIndex);
                 continue;
             }
+            if (preview.IsHelix)
+            {
+                PlanHelix(preview, paths, opIndex);
+                continue;
+            }
             if (preview.IsFace)
             {
                 PlanFace(preview, opIndex);
@@ -277,6 +282,46 @@ public static class MotionPlanner
             }
             moves.Add(new MotionMove(MoveKind.Rapid, c.X, c.Y, z, c.X, c.Y, m.TravelHeightMm, "Lyft ur hålet"));
             z = m.TravelHeightMm; at = c;
+        }
+
+        // Spiral drilling: per circle (innermost first) down to the surface, one spiral turn per depth along the circle
+        // (Z falls with the distance, like a ramp), one flat turn at the bottom. Between circles the tool lifts straight
+        // up out of the hole to the plunge clearance and goes over to the next circle's start. At the end it goes to
+        // the hole's centre at the bottom (already cut: the innermost circle reaches it) so it lifts free of the wall.
+        void PlanHelix(ContourPreview preview, IReadOnlyList<IReadOnlyList<CamPoint>> rings, int opIndex)
+        {
+            double bottom = -preview.PassDepths[^1];
+            CamPoint? pos = null;
+            for (int k = 0; k < rings.Count; k++)
+            {
+                var ring = rings[k];
+                if (ring.Count < 2) continue;
+                var s = ring[0];
+                double length = PathMath.Length(ring);
+                if (pos is null) TravelTo(s);
+                else
+                {
+                    moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, z, pos.X, pos.Y, m.PlungeClearanceMm, "Lyft inför nästa spiral"));
+                    moves.Add(new MotionMove(MoveKind.Rapid, pos.X, pos.Y, m.PlungeClearanceMm, s.X, s.Y, m.PlungeClearanceMm, "Till nästa spiral"));
+                    z = m.PlungeClearanceMm;
+                }
+                moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, 0, "Ned till materialytan", opIndex));
+                z = 0;
+                for (int t = 0; t < preview.PassDepths.Count; t++)
+                {
+                    double to = -preview.PassDepths[t];
+                    moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, to,
+                        $"Spiral varv {t + 1} av {preview.PassDepths.Count} ned till {F(-to)} mm", opIndex, k, 0, length));
+                    z = to;
+                }
+                AddCut(moves, ring, opIndex, k, 0, length, bottom, "Plant varv i botten");
+                pos = s;
+            }
+            if (pos is null) return;
+            var centre = preview.HelixCentre ?? pos;
+            moves.Add(new MotionMove(MoveKind.Feed, pos.X, pos.Y, z, centre.X, centre.Y, z, "Till hålets mitt", opIndex));
+            moves.Add(new MotionMove(MoveKind.Rapid, centre.X, centre.Y, z, centre.X, centre.Y, m.TravelHeightMm, "Lyft ur hålet"));
+            z = m.TravelHeightMm; at = centre;
         }
 
         // Pocket: level by level (the whole area at one depth before going deeper), loops inside out.

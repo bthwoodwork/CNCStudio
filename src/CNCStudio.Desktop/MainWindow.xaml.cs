@@ -1655,7 +1655,10 @@ public partial class MainWindow : Window
         TabSettingsPanel.Visibility = !pocket && !drill && !face && !vcarve && !carve3d && !chamfer && !onion && CamTabs.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         // Drilling plunges straight down, facing plunges beside the material: ramping does not apply.
         if (PlungeModePanel is not null) PlungeModePanel.Visibility = drill || face ? Visibility.Collapsed : Visibility.Visible;
-        if (CamPassLabel is not null) CamPassLabel.Text = drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
+        // A round shape larger than the tool is drilled with a spiral: the depth is then per turn.
+        bool helix = drill && _selected is not null && DrillToolpaths.IsCircle(_selected) &&
+                     CamDiameter is not null && Parse(CamDiameter, out var dia) && (_selected.Width + _selected.Height) / 2 > dia + DrillToolpaths.SizeTolerance;
+        if (CamPassLabel is not null) CamPassLabel.Text = helix ? "Djup per varv i spiralen (mm)" : drill ? "Djup per steg (mm) – lyfter ur hålet mellan stegen" : "Djup per pass (mm)";
         if (RampAnglePanel is not null && CamPlungeMode is not null)
             RampAnglePanel.Visibility = RampFeedPanel.Visibility = CamPlungeMode.SelectedIndex == (int)PlungeMode.Ramp ? Visibility.Visible : Visibility.Hidden;
     }
@@ -1817,6 +1820,16 @@ public partial class MainWindow : Window
         {
             CamSummary.Text = $"Planfräsning · Ø {F(op.ToolDiameter)} mm · {F(op.TotalDepth)} mm totalt i {Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9):0} pass · " +
                 $"rader längs {(op.FaceAlongY ? "Y" : "X")} med {F(op.ToolDiameter * op.StepoverPercent / 100)} mm stegning · {F(op.FaceOverhangMm)} mm ut förbi kanten{(op.FaceCenterReachesLimits ? " · fräsens centrum når gränslägena (fräsen går utanför)" : "")} · körs först";
+            return;
+        }
+        if (error is null && op.Kind == CamOperationKind.Drill && _selected is not null && DrillToolpaths.HelixHoleDiameter(_selected, op) is double hole)
+        {
+            var radii = DrillToolpaths.HelixRadii(hole, op.ToolDiameter);
+            int turns = (int)Math.Ceiling(op.TotalDepth / op.DepthPerPass - 1e-9);
+            double perTurn = op.TotalDepth / Math.Max(1, turns);
+            CamSummary.Text = $"Spiralborrning · hål Ø {F(hole)} mm med Ø {F(op.ToolDiameter)} mm fräs · {F(op.TotalDepth)} mm djupt · " +
+                $"{turns} varv à {F(Math.Round(perTurn, 3))} mm ({F(Math.Round(DrillToolpaths.HelixAngleDeg(radii[^1], perTurn), 1))}°) + ett plant i botten" +
+                (radii.Count > 1 ? $" · {radii.Count} spiraler inifrån och ut" : "") + $" · {F(op.RampFeedRate)} mm/min";
             return;
         }
         if (error is null && op.Kind == CamOperationKind.Drill)

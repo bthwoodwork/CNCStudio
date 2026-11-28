@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.79)
+﻿# CNC Studio – källkod (senaste: 0.9.80)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,17 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.80 – Hål med spiralnedgång
+
+- **Spiralborrning.** Borrning av en cirkel som är större än fräsen gör nu hålet i cirkelns storlek. Förut blev hålet fräsens storlek, med en varning. Det fungerar som Fusions borrning med spiral.
+  - **Spiralen:** fräsen går runt i hålet, med fräsens centrum fräsradien innanför kanten, och sjunker *Djup per varv* per varv. Varven är lika djupa, till exempel 3,3 mm med högst 1 mm per varv: fyra varv à 0,825 mm. Sist kommer ett plant varv i botten. Därefter går fräsen till hålets mitt, som redan är fräst, och lyfter.
+  - **Stora hål:** ett hål som är mer än dubbelt så stort som fräsen får flera spiraler inifrån och ut, högst halva fräsdiametern isär. Den innersta når mitten, så ingen kärna blir kvar och lossnar vid genomborrning.
+  - **Matning och riktning:** spiralen går i rampens matning (70 % av matningen som standard). Den går moturs, medfräsning med M3. *Motfräsning* vänder den.
+  - **G-code:** korta `G1`-rörelser längs cirkeln där Z sjunker, som rampad nedmatning. Inga `G2`/`G3` och inga borrcykler, så programmet använder bara de verifierade G0/G1-koderna.
+  - **Cirklar:** en ellips med samma bredd och höjd, eller en importerad form med en sluten kontur där alla punkter ligger på en cirkel. En rektangel eller en cirkel som är mindre än fräsen ger som förut ett hål med fräsens storlek och en varning.
+  - **Kontroller:** en informationsrad visar djup per varv, spiralens lutning och matningen. En varning visas om spiralen lutar mer än 10°.
+- **Tester:** antalet varv och spiraler, att innersta spiralen når mitten, att G-coden bara har G1 under ytan och håller sig inom hålet, att Z bara sjunker, rampmatningen, att fräsen går till mitten och lyfter, riktningen, varningen för brant spiral, det simulerade hålets volym, importerade cirklar och tidsuppskattningen.
 
 ## 0.9.79 – Arbetsytan stannar kvar vid dockning, joggen kan sparas
 
