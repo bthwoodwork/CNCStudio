@@ -180,11 +180,54 @@ public partial class MainWindow
 
     // ---- Jogging ----
 
+    private IReadOnlyList<JogPreset>? _jogPresets;
+    private IReadOnlyList<JogPreset> JogPresets => _jogPresets ??= GrblMachineCommands.PresetsFrom(AppStorage.Current.Settings.JogPresets);
+    private RadioButton[] JogPresetButtons => new[] { PresetPrecise, PresetNormal, PresetRapid };
+
+    /// <summary>At start: the saved presets, and the preset that was chosen when they were saved.</summary>
+    private void InitJogPresets()
+    {
+        int index = AppStorage.Current.Settings.JogPresetIndex is int i and >= 0 and <= 2 ? i : 1;
+        if (JogPresetButtons[index].IsChecked == true) ShowJogPreset(index);
+        else JogPresetButtons[index].IsChecked = true;   // Checked shows its values
+    }
+
     private void JogPreset_Checked(object sender, RoutedEventArgs e)
     {
         if (JogStepXY is null || sender is not RadioButton { Tag: string tag }) return;
-        var p = GrblMachineCommands.DefaultPresets[int.Parse(tag, CultureInfo.InvariantCulture)];
+        ShowJogPreset(int.Parse(tag, CultureInfo.InvariantCulture));
+    }
+
+    private void ShowJogPreset(int index)
+    {
+        var p = JogPresets[index];
         JogStepXY.Text = F(p.StepXY); JogStepZ.Text = F(p.StepZ); JogFeed.Text = F(p.FeedRate);
+    }
+
+    private int SelectedJogPreset => Array.FindIndex(JogPresetButtons, b => b.IsChecked == true) is var i and >= 0 ? i : 1;
+
+    /// <summary>The save button: the steps and speed in the fields become the chosen preset, kept on this computer.</summary>
+    private void SaveJogPreset_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Parse(JogStepXY, out var xy) || xy <= 0) { Error("XY-steget måste vara ett tal större än 0.", JogStepXY); return; }
+        if (!Parse(JogStepZ, out var z) || z <= 0) { Error("Z-steget måste vara ett tal större än 0.", JogStepZ); return; }
+        if (!Parse(JogFeed, out var feed) || feed <= 0) { Error("Hastigheten måste vara ett tal större än 0.", JogFeed); return; }
+        int index = SelectedJogPreset;
+        var presets = JogPresets.ToList();
+        presets[index] = presets[index] with { StepXY = xy, StepZ = z, FeedRate = feed };
+        var settings = AppStorage.Current.Settings;
+        var oldPresets = settings.JogPresets; var oldIndex = settings.JogPresetIndex;
+        settings.JogPresets = presets.Cast<JogPreset?>().ToList();
+        settings.JogPresetIndex = index;
+        try { AppStorage.Current.SaveSettings(); }
+        catch (Exception ex)
+        {
+            settings.JogPresets = oldPresets; settings.JogPresetIndex = oldIndex;
+            Error("Joggens inställningar kunde inte sparas: " + ex.Message);
+            return;
+        }
+        _jogPresets = presets;
+        JogStatusText.Text = $"Sparat som {presets[index].Name}: XY {F(xy)} mm, Z {F(z)} mm, {F(feed)} mm/min.";
     }
 
     private bool ReadJog(string tag, out double dx, out double dy, out double dz, out double feed, bool step)

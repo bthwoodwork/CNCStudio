@@ -28,6 +28,12 @@ public sealed class AppSettings
 
     /// <summary>Sound when a program is done, waits at M0, is stopped or the machine raises an alarm. Null = on.</summary>
     public bool? NotifySound { get; set; }
+
+    /// <summary>The jog presets Precis, Normal and Snabb as saved with the save button in Maskinstyrning. Null = the defaults.</summary>
+    public List<Grbl.JogPreset?>? JogPresets { get; set; }
+
+    /// <summary>The jog preset chosen when it was last saved (0 Precis, 1 Normal, 2 Snabb). Null = Normal.</summary>
+    public int? JogPresetIndex { get; set; }
 }
 
 /// <summary>A window's size and place on the screen, in WPF units (1/96 inch).</summary>
@@ -53,6 +59,18 @@ public sealed class WindowPlacement
         bool titleOnScreen = Top >= screenTop - 1 && Top + 30 <= screenTop + screenHeight;
         if (visibleX < 120 || !titleOnScreen) return null;
         return new WindowPlacement { Left = Left, Top = Top, Width = w, Height = h, Maximized = Maximized };
+    }
+
+    /// <summary>
+    /// Where a window's top-left corner should be so the whole window is on the screen area; a window larger
+    /// than the area keeps its top-left corner (and so its title bar) on it. Unchanged when it already fits.
+    /// </summary>
+    public static (double Left, double Top) KeepOnScreen(double left, double top, double width, double height,
+        double screenLeft, double screenTop, double screenWidth, double screenHeight)
+    {
+        static double Clamp(double v, double start, double size, double length) =>
+            !double.IsFinite(v) ? start : Math.Max(start, Math.Min(v, start + Math.Max(0, length - size)));
+        return (Clamp(left, screenLeft, width, screenWidth), Clamp(top, screenTop, height, screenHeight));
     }
 }
 
