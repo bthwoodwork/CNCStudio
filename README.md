@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.81)
+﻿# CNC Studio – källkod (senaste: 0.9.82)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,19 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.82 – Materialet fräses bort i 3D under körning
+
+- **3D-vyn följer körningen.** När ett program har startat visar 3D-vyn materialet så som det ser ut just nu, i stället för det färdiga planerade resultatet. Det fräses bort där programmet har gått, fram till fräsens verkliga position i statusrapporterna.
+  - **Simuleringen** (`LiveStockSimulator`) går igenom det laddade programmets rörelser ur G-coden. Varje gång fräsen har flyttat sig fräser den bara bort det nya, även en del av den rörelse som pågår. Går körningen bakåt, till exempel vid en ny start, börjar den om. Snabbförflyttningar och allt ovanför ytan fräser inte.
+  - **Flera fräsar:** program 2 i ett jobb börjar med det som de tidigare programmen fräste bort.
+  - **Fräsens form:** fräsen och dess form, rak, kulfräs, V-fräs eller konisk kulfräs, tas från programmets operation. För en G-code-fil från ett annat program antas den valda fräsen eller Ø 3,175 mm, och det står på informationsraden.
+  - **Visningen:** materialet byggs om högst var 0,4 s, med ett grövre visningsrutnät än den planerade vyn, så att körningen inte blir trög. Informationsraden visar djupaste skär och bortfräst volym.
+  - **Före start och efteråt:** före start, och när inget program är laddat, visas det planerade resultatet som förut. Efter körningen står det färdiga materialet kvar tills programmet tas bort.
+- **Rättat:** materialets ovansida blev svart i 3D-vyn när inget alls var fräst. Djupfärgen räknades över det intervall som texturkoordinaterna täckte, och det intervallet är tomt när allt ligger på djup 0. Nu används absoluta koordinater.
+- **Kärnan:** `StockSimulator` har delats upp i `NewMap`, `Apply` och `StampSegment`, som delas av den planerade och den löpande simuleringen. Fräsens form ligger i `ToolSpec`.
+- **Tester:** bara det som har körts fräses bort, och en halv rörelse ger halva spåret. Många små steg ger samma resultat som ett stort. Att gå bakåt börjar om. En nollpunkt i mitten räknas om. Ett tidigare program ligger kvar. Hela det genererade programmet fräser bort ungefär lika mycket som den planerade simuleringen, inom 3 %.
+- **Provat mot demomaskinen:** en ficka i en cirkel på 8 mm. Ovansidan var orörd vid start, hålet växte fram under körningen och var 6 mm djupt till slut.
 
 ## 0.9.81 – Brytarpanel för demomaskinen
 

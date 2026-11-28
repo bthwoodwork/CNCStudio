@@ -31,6 +31,78 @@ public sealed class StockHeightMap
     public bool IsThrough(int ix, int iy) => this[ix, iy] <= -Thickness + 1e-4;
     public double MinHeight => Heights.Length == 0 ? 0 : Heights.Min();
     public double RemovedVolume => Heights.Sum(h => -(double)h) * Cell * Cell;
+
+    /// <summary>An independent copy (the same cells, its own heights).</summary>
+    public StockHeightMap Clone()
+    {
+        var copy = new StockHeightMap(Nx, Ny, Cell, Width, Length, Thickness);
+        Array.Copy(Heights, copy.Heights, Heights.Length);
+        return copy;
+    }
+}
+
+/// <summary>The cutting tool's shape for the material simulation.</summary>
+public readonly record struct ToolSpec(ToolKind Kind, double Diameter, double AngleDeg)
+{
+    public static ToolSpec Of(CamOperation op) => new(op.ToolKind, op.ToolDiameter, op.ToolAngleDeg);
+}
+
+/// <summary>
+/// The material while a program runs: the program's cutting moves (parsed G-code, work coordinates) are cut into the
+/// map up to where the machine is – move by move, part of the current one – so the 3D view shows what has been cut so
+/// far. <see cref="Advance"/> only cuts what is new since the last call; going back (a new run) starts over from the
+/// material the program started with (for program 2 of a multi-tool job: what program 1 left).
+/// A visual estimate from the planned path, like <see cref="StockSimulator"/>.
+/// </summary>
+public sealed class LiveStockSimulator
+{
+    private readonly StockHeightMap _start;
+    private readonly ToolSpec _tool;
+    private readonly double _offsetX, _offsetY;
+
+    /// <param name="start">The material before the program (copied); its cells are used.</param>
+    /// <param name="workZero">Where G54 X0 Y0 is on the material: work coordinates are moved to the map's front-left origin.</param>
+    public LiveStockSimulator(StockHeightMap start, WorkZero workZero, ToolSpec tool)
+    {
+        _start = start.Clone();
+        Map = start.Clone();
+        _tool = tool;
+        if (workZero == WorkZero.Center) { _offsetX = start.Width / 2; _offsetY = start.Length / 2; }
+    }
+
+    public StockHeightMap Map { get; private set; }
+    /// <summary>Moves before this index are cut; the one at it up to <see cref="Fraction"/>.</summary>
+    public int Index { get; private set; }
+    public double Fraction { get; private set; }
+
+    /// <summary>
+    /// Cuts up to move <paramref name="index"/>, part <paramref name="fraction"/> (0–1) of it. True when the material
+    /// changed. Rapids never cut; nor does anything above the surface.
+    /// </summary>
+    public bool Advance(IReadOnlyList<CNCStudio.Core.GCode.ProgramMove> moves, int index, double fraction)
+    {
+        index = Math.Clamp(index, 0, moves.Count);
+        fraction = index >= moves.Count ? 0 : Math.Clamp(fraction, 0, 1);
+        bool changed = false;
+        if (index < Index || index == Index && fraction < Fraction - 1e-9)
+        {
+            Map = _start.Clone(); Index = 0; Fraction = 0; changed = true;   // back to the start (a new run)
+        }
+        for (int i = Index; i <= index && i < moves.Count; i++)
+        {
+            double from = i == Index ? Fraction : 0, to = i == index ? fraction : 1;
+            if (to <= from + 1e-12) continue;
+            var m = moves[i];
+            if (m.Rapid || Math.Min(m.Z0, m.Z1) >= 0) continue;
+            double dx = m.X1 - m.X0, dy = m.Y1 - m.Y0, dz = m.Z1 - m.Z0;
+            StockSimulator.StampSegment(Map,
+                m.X0 + dx * from + _offsetX, m.Y0 + dy * from + _offsetY, m.Z0 + dz * from,
+                m.X0 + dx * to + _offsetX, m.Y0 + dy * to + _offsetY, m.Z0 + dz * to, _tool);
+            changed = true;
+        }
+        Index = index; Fraction = fraction;
+        return changed;
+    }
 }
 
 /// <summary>
@@ -48,32 +120,54 @@ public static class StockSimulator
 
     public static StockHeightMap Simulate(CncDocument doc, CamReport report, double? cellSize = null)
     {
+        var map = NewMap(doc, cellSize);
+        Apply(map, doc, report.Operations, report.Motion.Moves);
+        return map;
+    }
+
+    /// <summary>Uncut material for the document, in cells of <paramref name="cellSize"/> (default: <see cref="CellSizeFor"/>).</summary>
+    public static StockHeightMap NewMap(CncDocument doc, double? cellSize = null)
+    {
         double w = doc.MaterialWidth, l = doc.MaterialLength(), t = doc.MaterialThickness;
         double cell = cellSize ?? CellSizeFor(w, l);
         int nx = Math.Max(1, (int)Math.Ceiling(w / cell)), ny = Math.Max(1, (int)Math.Ceiling(l / cell));
-        var map = new StockHeightMap(nx, ny, cell, w, l, t);
+        return new StockHeightMap(nx, ny, cell, w, l, t);
+    }
 
-        foreach (var m in report.Motion.Moves)
+    /// <summary>Cuts the planned moves of these operations into the map (e.g. one program of a multi-tool job).</summary>
+    public static void Apply(StockHeightMap map, CncDocument doc, IReadOnlyList<CamOperationResult> operations, IEnumerable<MotionMove> moves)
+    {
+        double l = doc.MaterialLength();
+        foreach (var m in moves)
         {
             if (m.Kind != MoveKind.Feed || Math.Min(m.Z0, m.Z1) >= 0) continue; // only below the surface
-            if (m.OperationIndex < 0 || m.OperationIndex >= report.Operations.Count) continue;
-            var result = report.Operations[m.OperationIndex];
-            var op = result.Operation;
+            if (m.OperationIndex < 0 || m.OperationIndex >= operations.Count) continue;
+            var result = operations[m.OperationIndex];
+            var tool = ToolSpec.Of(result.Operation);
             var pts = Points(m, result);
-            double step = Math.Max(cell * 0.5, 0.05);
             for (int i = 1; i < pts.Count; i++)
             {
                 var (ax, ay, az) = pts[i - 1]; var (bx, by, bz) = pts[i];
-                double len = Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
-                int n = Math.Max(1, (int)Math.Ceiling(len / step));
-                for (int k = 0; k <= n; k++)
-                {
-                    double f = (double)k / n;
-                    Stamp(map, ax + (bx - ax) * f, ay + (by - ay) * f, az + (bz - az) * f, op, l);
-                }
+                StampSegment(map, ax, l - ay, az, bx, l - by, bz, tool);   // design Y is flipped to work Y
             }
         }
-        return map;
+    }
+
+    /// <summary>
+    /// Stamps the tool along a straight line from a to b (stock coordinates: X from the left edge, Y from the front
+    /// edge, Z 0 = top), closely enough that no cell between the stamps is missed.
+    /// </summary>
+    public static void StampSegment(StockHeightMap map, double ax, double ay, double az, double bx, double by, double bz, ToolSpec tool)
+    {
+        if (Math.Min(az, bz) >= 0) return;
+        double step = Math.Max(map.Cell * 0.5, 0.05);
+        double len = Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+        int n = Math.Max(1, (int)Math.Ceiling(len / step));
+        for (int k = 0; k <= n; k++)
+        {
+            double f = (double)k / n;
+            Stamp(map, ax + (bx - ax) * f, ay + (by - ay) * f, az + (bz - az) * f, tool);
+        }
     }
 
     /// <summary>Material length helper (the design's Height property).</summary>
@@ -99,17 +193,16 @@ public static class StockSimulator
         return list;
     }
 
-    /// <summary>Lowers every cell under the tool at (x, y) with its tip at z. Design Y is flipped to work Y.</summary>
-    private static void Stamp(StockHeightMap map, double x, double yDesign, double z, CamOperation op, double length)
+    /// <summary>Lowers every cell under the tool at (x, y) (stock coordinates, Y from the front) with its tip at z.</summary>
+    private static void Stamp(StockHeightMap map, double x, double y, double z, ToolSpec op)
     {
-        double y = length - yDesign; // work Y: towards the back
-        double tipR = op.ToolDiameter / 2;
+        double tipR = op.Diameter / 2;
         // A tapered ball nose widens upwards: it reaches as far out as its cone is wide at the material's top.
-        double r = op.ToolKind == ToolKind.TaperedBallNose ? ToolShape.RadiusAt(op.ToolKind, tipR, op.ToolAngleDeg, Math.Max(0, -z)) : tipR;
+        double r = op.Kind == ToolKind.TaperedBallNose ? ToolShape.RadiusAt(op.Kind, tipR, op.AngleDeg, Math.Max(0, -z)) : tipR;
         int ix0 = Math.Max(0, (int)Math.Floor((x - r) / map.Cell)), ix1 = Math.Min(map.Nx - 1, (int)Math.Floor((x + r) / map.Cell));
         int iy0 = Math.Max(0, (int)Math.Floor((y - r) / map.Cell)), iy1 = Math.Min(map.Ny - 1, (int)Math.Floor((y + r) / map.Cell));
         float floor = (float)-map.Thickness;
-        double vTan = op.ToolKind == ToolKind.VBit ? Math.Tan(op.ToolAngleDeg * Math.PI / 360) : 0;
+        double vTan = op.Kind == ToolKind.VBit ? Math.Tan(op.AngleDeg * Math.PI / 360) : 0;
         for (int iy = iy0; iy <= iy1; iy++)
         {
             double cy = (iy + 0.5) * map.Cell - y;
@@ -118,11 +211,11 @@ public static class StockSimulator
                 double cx = (ix + 0.5) * map.Cell - x;
                 double d2 = cx * cx + cy * cy;
                 if (d2 > r * r) continue;
-                double h = op.ToolKind switch
+                double h = op.Kind switch
                 {
                     ToolKind.BallNose => z + r - Math.Sqrt(r * r - d2),
                     ToolKind.VBit => z + Math.Sqrt(d2) / vTan,
-                    ToolKind.TaperedBallNose => z + ToolShape.Height(op.ToolKind, tipR, op.ToolAngleDeg, Math.Sqrt(d2)),
+                    ToolKind.TaperedBallNose => z + ToolShape.Height(op.Kind, tipR, op.AngleDeg, Math.Sqrt(d2)),
                     _ => z
                 };
                 int idx = iy * map.Nx + ix;

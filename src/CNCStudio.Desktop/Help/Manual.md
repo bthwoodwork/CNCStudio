@@ -207,7 +207,7 @@ Fönstret låter huvudfönstret vara aktivt, så du kan jogga och trycka STOPP h
 
 ## 3D-vyn
 
-**F4** visar materialet simulerat i 3D med banorna: blått skär, gult ned/upp, röd streckad snabbförflyttning. Under körning visas det som är kört i orange och fräsens position live.
+**F4** visar materialet simulerat i 3D med banorna: blått skär, gult ned/upp, röd streckad snabbförflyttning. Under körning visas det som är kört i orange och fräsens position live, och **materialet fräses bort efter hand** där programmet har gått – från start visas orört material, inte det färdiga resultatet. Program 2 i ett jobb med flera fräsar börjar med det som program 1 fräste bort. För en G-code-fil från ett annat program antas den valda fräsen (eller Ø 3,175 mm), eftersom filen inte säger vilken fräs den är gjord för. När programmet tas bort visas det planerade resultatet igen.
 
 Höger musknapp roterar, hjulet zoomar, mittenknappen panorerar. *Anpassa vy* och *Hela bordet* zoomar om.
 
