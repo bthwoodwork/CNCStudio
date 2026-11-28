@@ -10,8 +10,10 @@ using System.Threading;
 namespace CNCStudio.Core.Grbl;
 
 /// <summary>What the demo machine panel shows: the "real" carriage position next to what GRBL reports.</summary>
+/// <param name="Switches">Per axis X, Y, Z: the switch is closed – pressed by hand or the carriage is on it (before $5 inversion).</param>
+/// <param name="PressedByHand">Per axis: held down by hand from the demo machine panel.</param>
 public sealed record SimSnapshot(string State, bool Homed, double[] MPos, double[] Physical, double[] PhysicalTravel,
-    string Pins, double Feed, double Spindle, int QueuedBlocks, bool CriticalAlarm);
+    string Pins, double Feed, double Spindle, int QueuedBlocks, bool CriticalAlarm, bool[] Switches, bool[] PressedByHand);
 
 /// <summary>
 /// A simulated GRBL 1.1 controller on a demo machine with X-Carve 750 properties (750 × 750 × 65 mm,
@@ -243,7 +245,8 @@ public sealed class SimulatedGrbl : IGrblTransport
     {
         lock (_sync)
             return new SimSnapshot(StateText(), _homed, (double[])_pos.Clone(), (double[])_phys.Clone(),
-                (double[])_physTravel.Clone(), PinText(), _currentFeed, _spindle, _queue.Count, _critical);
+                (double[])_physTravel.Clone(), PinText(), _currentFeed, _spindle, _queue.Count, _critical,
+                Enumerable.Range(0, 3).Select(SwitchTriggered).ToArray(), (bool[])_pressedByHand.Clone());
     }
 
     /// <summary>Presses or releases a limit switch by hand (for the switch test).</summary>

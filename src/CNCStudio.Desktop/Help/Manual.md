@@ -21,7 +21,7 @@ Den här manualen beskriver arbetsgången från ritning till färdig detalj. Anv
 2. Kör **Maskin → Första test mot maskinen…**. Testet leder dig steg för steg: anslutning, läsning av $$ (med säkerhetskopia), brytartest, axelriktning, homing, jogg, en luftkörning och paus/STOPP.
 3. Ställ in **Maskininställningar…**: arbetsområde ($130/$131/$132), hemhörn (där X/Y-brytarna sitter), marginal till gränslägena och om spindeln styrs av GRBL eller för hand.
 
-Utan maskin kan du öva med porten **DEMO (simulerad maskin)** – den beter sig som en riktig GRBL, med brytare, probplatta och till och med strömavbrott.
+Utan maskin kan du öva med porten **DEMO (simulerad maskin)** – den beter sig som en riktig GRBL, med brytare, probplatta och till och med strömavbrott. Under **Maskin → Demomaskinen – brytare och ström…** trycker du demomaskinens X-, Y- och Z-brytare för hand och slår av och på strömmen. En brytare som ändras ger larm (ALARM:1) när hårda gränser är på, och då behövs Återställ. Efter ett strömavbrott räknar maskinen från 0 och är låst tills homing.
 
 ## Arbetsgången i korthet
 

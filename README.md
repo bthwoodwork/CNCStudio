@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.80)
+﻿# CNC Studio – källkod (senaste: 0.9.81)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.81 – Brytarpanel för demomaskinen
+
+- **Maskin → Demomaskinen – brytare och ström…** öppnar en panel för demomaskinen. Den kan stå öppen bredvid arbetet, med *Alltid överst* om du vill.
+  - **Brytare:** X-, Y- och Z-brytarna trycks in för hand och släpps med ett klick till. En lampa per brytare lyser när den är sluten. Bredvid står om den är intryckt för hand eller om vagnen står på den. Med hårda gränser på ($21=1) ger en brytare som ändras ALARM:1, också när maskinen står still. Huvudfönstret visar då *Återställ krävs*, precis som på riktiga maskinen.
+  - **Ström:** *Strömavbrott – slå av och på* startar om kortet där vagnen står. GRBL räknar från 0 igen och är låst tills homing ($22=1). Ett program som körs avbryts, så återupptagningen kan övas. Knappen ersätter menyvalet *Demomaskin: simulera strömavbrott*.
+  - **Läge:** panelen visar läget (Alarm, Idle …), om maskinen är homad, GRBL:s MPos och Pn live.
+  - **Bara demomaskinen:** panelen fungerar bara när DEMO är ansluten. Annars säger den hur du ansluter.
+- Simulatorns ögonblicksbild (`SimSnapshot`) visar nu också vilka brytare som är slutna och vilka som är intryckta för hand.
+- **Tester:** att en brytare som trycks för hand syns i ögonblicksbilden och i Pn och ger larm, och att ett strömavbrott ger Alarm och MPos 0 medan vagnen står kvar.
 
 ## 0.9.80 – Hål med spiralnedgång
 
