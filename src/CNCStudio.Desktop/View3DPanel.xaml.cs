@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Threading;
 using CNCStudio.Core;
 using HelixToolkit.Wpf;
 
@@ -276,6 +277,7 @@ public partial class View3DPanel : UserControl
         catch (Exception ex) { InfoText.Text = "Simuleringen misslyckades: " + ex.Message; return; }
         if (cts.IsCancellationRequested) return;
         _lastMap = map;
+        if (_liveMap is not null) return;           // a program is running: the material follows it instead
         _stock.Content = BuildStockModel(map, StockOpacity);
         var ms = (DateTime.Now - started).TotalMilliseconds;
         InfoText.Text = $"Material {F(w)} × {F(l)} × {F(t)} mm · rutnät {F(map.Cell, 2)} mm · " +
@@ -292,14 +294,65 @@ public partial class View3DPanel : UserControl
 
     private void StockMode_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (_lastMap is not null) _stock.Content = BuildStockModel(_lastMap, StockOpacity);
+        if (_liveMap is not null) _stock.Content = BuildStockModel(_liveMap, StockOpacity, MaxLiveVertices);
+        else if (_lastMap is not null) _stock.Content = BuildStockModel(_lastMap, StockOpacity);
         Layer_Changed(sender, e);
     }
 
-    private static Model3DGroup BuildStockModel(StockHeightMap map, double opacity)
+    // ---- Material during a run ----
+
+    /// <summary>The material while a program runs (rebuilt often, so a coarser display grid than the plan's).</summary>
+    private const int MaxLiveVertices = 80_000;
+    /// <summary>At most this often the material is rebuilt during a run.</summary>
+    private static readonly TimeSpan LiveRebuildInterval = TimeSpan.FromMilliseconds(400);
+    private StockHeightMap? _liveMap;
+    private string? _liveNote;
+    private bool _liveDirty;
+    private DispatcherTimer? _liveTimer;
+
+    /// <summary>
+    /// While a program runs: shows <paramref name="map"/> – the material cut so far – instead of the planned result,
+    /// rebuilt at most every 0.4 s. <paramref name="changed"/> = the map has new cuts. Null: back to the planned result.
+    /// </summary>
+    public void ShowLiveStock(StockHeightMap? map, bool changed, string? note = null)
+    {
+        if (map is null)
+        {
+            if (_liveMap is null) return;
+            _liveMap = null; _liveNote = null; _liveDirty = false; _liveTimer?.Stop();
+            if (_lastMap is not null) _stock.Content = BuildStockModel(_lastMap, StockOpacity);
+            return;
+        }
+        bool first = !ReferenceEquals(map, _liveMap);
+        _liveMap = map; _liveNote = note;
+        if (first) { RebuildLive(); return; }
+        if (!changed) return;
+        _liveDirty = true;
+        _liveTimer ??= CreateLiveTimer();
+        if (!_liveTimer.IsEnabled) _liveTimer.Start();
+    }
+
+    private DispatcherTimer CreateLiveTimer()
+    {
+        var t = new DispatcherTimer { Interval = LiveRebuildInterval };
+        t.Tick += (_, _) => { if (_liveDirty) RebuildLive(); else t.Stop(); };
+        return t;
+    }
+
+    private void RebuildLive()
+    {
+        if (_liveMap is not StockHeightMap map) return;
+        _liveDirty = false;
+        _stock.Content = BuildStockModel(map, StockOpacity, MaxLiveVertices);
+        InfoText.Text = $"Under körning: materialet fräses bort där programmet har gått · djupast {F(-map.MinHeight, 2)} mm · " +
+                        $"bortfräst {F(map.RemovedVolume / 1000, 1)} cm³" + (_liveNote is null ? "" : " · " + _liveNote) +
+                        ". Visuell uppskattning från programmets bana.";
+    }
+
+    private static Model3DGroup BuildStockModel(StockHeightMap map, double opacity, int maxVertices = MaxDisplayVertices)
     {
         // Thin the grid for display, keeping the DEEPEST value in each block so no groove disappears.
-        int step = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((double)map.Nx * map.Ny / MaxDisplayVertices)));
+        int step = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((double)map.Nx * map.Ny / maxVertices)));
         int nx = (map.Nx + step - 1) / step, ny = (map.Ny + step - 1) / step;
         double cx = map.Width / nx, cy = map.Length / ny, t = map.Thickness;
         var h = new double[nx, ny];
@@ -334,7 +387,9 @@ public partial class View3DPanel : UserControl
         Freeze(top);
 
         // Depth colouring: light wood at the surface, darker deeper, grey spoilboard where cut through.
-        var depthBrush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0) };
+        // Absolute: the gradient runs over texture X 0–1 itself, not over the range the texture coordinates happen to span –
+        // with nothing cut yet (all at depth 0, e.g. at the start of a run) that range is empty and the top turned black.
+        var depthBrush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0), MappingMode = BrushMappingMode.Absolute };
         depthBrush.GradientStops.Add(new GradientStop(Color.FromRgb(231, 202, 158), 0.0));
         depthBrush.GradientStops.Add(new GradientStop(Color.FromRgb(196, 160, 112), 0.35));
         depthBrush.GradientStops.Add(new GradientStop(Color.FromRgb(140, 104, 66), 0.985));

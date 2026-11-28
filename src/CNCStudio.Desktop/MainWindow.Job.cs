@@ -56,7 +56,7 @@ public partial class MainWindow
         JobInfoText.Text = (note is null ? "" : note + "\n") + $"{_jobName}: {result.Lines.Count} rader." +
             (job.Count > 1 ? $" Fräs: {job.ToolLabel}. Z-nollan ska vara satt med den. Uppskattad tid: {RunTimeEstimator.Format(_loadedEstimate.Value)}.{LearnedText(_loadedEstimate.Value)}" : $" {RunTimeText()}") +
             (result.Warnings.Count > 0 ? $" {result.Warnings.Count} varningar – visas när du startar." : "");
-        _loadedJob = job;
+        _loadedJob = job; _loadedJobs = jobs;
         _loadedStockTop = _document.Motion.StockTopMachineZ;
         _nextProgramNumber = null;
         JobProgressBar.Value = 0; JobProgressText.Text = "";

@@ -102,10 +102,58 @@ public partial class MainWindow
     private void Update3DJob()
     {
         if (!_show3D || View3DPanel is null) return;
-        if (!HasJobPath) { View3DPanel.ClearJob(); return; }
+        if (!HasJobPath) { View3DPanel.ClearJob(); View3DPanel.ShowLiveStock(null, false); _liveStock = null; return; }
         double l = _document.MaterialHeight;
         View3DPanel.ShowJob(JobPath, _jobPathIndex, _jobPathFraction,
             (x, y) => { var (dx, dy) = _document.FromWork(x, y); return new Point(dx, l - dy); }, _jobToolWork);
+        UpdateLiveStock();
+    }
+
+    // ---- The material during a run ----
+
+    private LiveStockSimulator? _liveStock;
+    private IReadOnlyList<ProgramMove>? _liveStockFor;
+    private string? _liveStockNote;
+    /// <summary>All programs of the loaded job (several with several tools): the earlier ones' cuts are already in the material.</summary>
+    private IReadOnlyList<GCodeJob>? _loadedJobs;
+
+    /// <summary>
+    /// Once the program has started (or partly run) the 3D material shows what has been cut so far, following the
+    /// machine's position; before that, and when no program is loaded, it shows the planned result.
+    /// </summary>
+    private void UpdateLiveStock()
+    {
+        var path = JobPath;
+        bool live = path.Count > 0 && _document.HasMaterial && (_runner is not null || _jobPathIndex > 0);
+        if (!live) { View3DPanel.ShowLiveStock(null, false); return; }
+        if (_liveStock is null || !ReferenceEquals(_liveStockFor, path))
+        {
+            try { _liveStock = new LiveStockSimulator(StartStock(), _document.WorkZero, LiveTool(out _liveStockNote)); }
+            catch (Exception ex) { App.LogError(ex); View3DPanel.ShowLiveStock(null, false); return; }
+            _liveStockFor = path;
+        }
+        bool changed = _liveStock.Advance(path, _jobPathIndex, _jobPathFraction);
+        View3DPanel.ShowLiveStock(_liveStock.Map, changed, _liveStockNote);
+    }
+
+    /// <summary>The material before the loaded program: uncut, or with the earlier programs of the same job cut.</summary>
+    private StockHeightMap StartStock()
+    {
+        var map = StockSimulator.NewMap(_document);
+        if (_loadedJob is GCodeJob job && _loadedJobs is { } jobs)
+            foreach (var earlier in jobs.Where(j => j.Number < job.Number))
+                StockSimulator.Apply(map, _document, earlier.Operations, earlier.Motion.Moves);
+        return map;
+    }
+
+    /// <summary>The loaded program's tool; for a G-code file (tool unknown) the selected tool or a 3.175 mm end mill.</summary>
+    private ToolSpec LiveTool(out string? note)
+    {
+        note = null;
+        if (_loadedJob?.Operations.FirstOrDefault(o => o.Analyzed)?.Operation is CamOperation op) return ToolSpec.Of(op);
+        var t = SelectedTool is { } s && s.Diameter > 0 ? new ToolSpec(s.Kind, s.Diameter, s.AngleDeg) : new ToolSpec(ToolKind.FlatEndMill, 3.175, 0);
+        note = $"fräsen antas vara Ø {t.Diameter.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} mm (filen säger inte vilken)";
+        return t;
     }
 
     /// <summary>

@@ -73,7 +73,7 @@ public partial class MainWindow
 
         _jobLines = program.Lines;
         _jobName = program.Name;
-        _loadedJob = null; _loadedStockTop = null; _nextProgramNumber = null;
+        _loadedJob = null; _loadedJobs = null; _loadedStockTop = null; _nextProgramNumber = null;
         _loadedExternalPath = path; _loadedExternal = true;
         _loadedEstimate = info.EstimatedMinutes;
         JobInfoText.Text = $"{program.Name}: {program.Lines.Count} rader från fil. {RunTimeEstimator.Format(info.EstimatedMinutes)} ungefär.{LearnedText(info.EstimatedMinutes)} " +
