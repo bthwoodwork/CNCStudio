@@ -393,12 +393,19 @@ public partial class MainWindow
         catch (Exception) { return null; }
     }
 
-    /// <summary>Demo machine only: cuts the power mid-job to try resuming.</summary>
-    private void SimulatePowerCut_Click(object sender, RoutedEventArgs e)
+    private DemoMachineWindow? _demoPanel;
+
+    /// <summary>The demo machine while it is the connected machine; null otherwise.</summary>
+    internal SimulatedGrbl? DemoMachine => _demoMachine is { IsOpen: true } d && Grbl is not null ? d : null;
+
+    internal void ShowStatus(string text) => StatusText.Text = text;
+
+    /// <summary>Maskin → Demomaskinen: press its switches by hand and cut its power (also mid-job, to try resuming).</summary>
+    private void DemoMachinePanel_Click(object sender, RoutedEventArgs e)
     {
-        if (_demoMachine is null || Grbl is null)
-        { Error("Anslut till demomaskinen (DEMO i portlistan) först. Det här går bara på demomaskinen."); return; }
-        _demoMachine.PowerCycle();
-        StatusText.Text = "Demomaskin: strömavbrott simulerat – maskinen startade om och tappade sin position.";
+        if (_demoPanel is { IsLoaded: true }) { _demoPanel.Activate(); return; }
+        _demoPanel = new DemoMachineWindow(this) { Owner = this };
+        _demoPanel.Closed += (_, _) => _demoPanel = null;
+        _demoPanel.Show();
     }
 }

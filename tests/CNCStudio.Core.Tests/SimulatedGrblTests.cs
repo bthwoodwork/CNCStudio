@@ -46,6 +46,38 @@ public class SimulatedGrblTests
         client.Dispose();
     }
 
+    [Fact(Timeout = 30000)]
+    public async Task The_panel_snapshot_shows_switches_pressed_by_hand_and_a_power_cut_loses_the_position()
+    {
+        var sim = new SimulatedGrbl(speedFactor: 40);
+        var client = new GrblClient(sim);
+        await client.ConnectAsync(TimeSpan.FromSeconds(1));
+        var before = sim.Snapshot();
+        Assert.Equal(new[] { false, false, false }, before.Switches);
+        sim.PressSwitch(2, true);
+        var pressed = sim.Snapshot();
+        Assert.Equal(new[] { false, false, true }, pressed.PressedByHand);
+        Assert.Equal(new[] { false, false, true }, pressed.Switches);
+        Assert.Equal("Z", pressed.Pins);
+        Assert.True(pressed.CriticalAlarm);                                   // $21=1: ALARM:1
+        sim.PressSwitch(2, false);
+        Assert.Equal(new[] { false, false, false }, sim.Snapshot().PressedByHand);
+        client.SendRealtime(GrblProtocol.SoftReset);
+        await Task.Delay(200);
+
+        var banner = new List<string>();
+        client.LineReceived += l => banner.Add(l.Raw);
+        sim.PowerCycle();                                                     // the board restarts where the carriage stands
+        await Task.Delay(200);
+        var after = sim.Snapshot();
+        Assert.Equal("Alarm", after.State);                                   // $22=1: locked until $H or $X
+        Assert.False(after.Homed);
+        Assert.Equal(new double[3], after.MPos);                              // counts from 0 again
+        Assert.Equal(before.Physical, after.Physical);                        // the carriage did not move
+        Assert.Contains(banner, l => l.StartsWith("Grbl 1.1"));
+        client.Dispose();
+    }
+
     [Fact]
     public async Task Demo_machine_starts_locked_homes_to_minus_pulloff_and_jogs()
     {
