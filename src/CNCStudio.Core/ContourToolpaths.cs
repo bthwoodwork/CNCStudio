@@ -31,6 +31,12 @@ public sealed record ContourPreview(IReadOnlyList<CamPoint> Centerline, IReadOnl
     /// <summary>3D carving: each path has a Z per point in <see cref="PathZ"/> (work Z, 0 = stock top) and is cut whole.</summary>
     public bool Is3D { get; init; }
     public IReadOnlyList<IReadOnlyList<double>> PathZ { get; init; } = Array.Empty<IReadOnlyList<double>>();
+    /// <summary>
+    /// 3D carving: per path, the highest the material can be (work Z) anywhere the tool passes on a straight line from the
+    /// previous path's end to this path's start – so the tool can cross just above it instead of lifting to travel height.
+    /// Null (or missing) = no short link; travel as usual.
+    /// </summary>
+    public IReadOnlyList<double?> LinkStockTop { get; init; } = Array.Empty<double?>();
     public IReadOnlyList<double> LoopDepths { get; init; } = Array.Empty<double>();
     public IReadOnlyList<double> LoopClearedDepths { get; init; } = Array.Empty<double>();
     /// <summary>V-carving: true for a loop's last pass (its full depth); earlier passes of the same loop are false.</summary>

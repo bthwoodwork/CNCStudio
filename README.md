@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.77)
+﻿# CNC Studio – källkod (senaste: 0.9.78)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,15 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.78 – Korta lyft i 3D-fräsningen
+
+- **Korta lyft mellan banorna i 3D-grovfräsningen.** Förut lyfte fräsen till förflyttningshöjden (10 mm) före varje ny bana och matade sedan ner hela vägen i nedmatningens hastighet. Nu lyfter den bara till 2 mm (höjden före nedmatning) över det högsta materialet kan vara längs vägen. Därefter går den i sidled och matar ner den korta biten.
+  - **Den säkra höjden** räknas fram ur höjdkartan och den förra nivåns djup. Den vidgas med två fräsradier plus radavståndet och får en marginal för kammarna som en kulfräs lämnar.
+  - **Förflyttningen i sidled** görs som `G1` i skärmatning. Den fristående G-code-kontrollen, som förbjuder `G0` i sidled under säker höjd, gäller som förut.
+  - **Förflyttningshöjden** används som förut när en fastspänning ligger i vägen.
+- **Z följer X/Y:** 3D-banornas G-code går redan i skärmatningen med X, Y och Z på samma rad. Tidsuppskattningen räknade dem med rampmatningen (70 %) och bara XY-längd. Nu räknas skärmatningen och 3D-längden.
+- **Tester:** ett fristående test fräser bort materialet i ett rutnät och kontrollerar att varje kort förflyttning går fritt ovanför det som finns kvar, med både 40 % och 90 % stegning. Testerna visar också att lyften till förflyttningshöjd nästan försvinner, att G-code-kedjan går igenom och att tidsuppskattningen räknar rätt.
 
 ## 0.9.77 – Ställbar stegning för 3D-finfräsning
 

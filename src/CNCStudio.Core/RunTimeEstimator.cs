@@ -40,9 +40,17 @@ public static class RunTimeEstimator
                 rapid += Math.Max(xy / rapidXY, dz / rapidZ);
                 continue;
             }
-            var op = mv.OperationIndex >= 0 && mv.OperationIndex < report.Operations.Count
-                ? report.Operations[mv.OperationIndex].Operation : null;
+            var result = mv.OperationIndex >= 0 && mv.OperationIndex < report.Operations.Count ? report.Operations[mv.OperationIndex] : null;
+            var op = result?.Operation;
             if (op is null) continue;
+            if (mv.FollowsPath && result!.Preview is { Is3D: true } p3 && mv.PathIndex < p3.PathZ.Count)
+            {
+                // 3D: the G-code follows the surface point by point at the cutting feed – its 3D length, not a ramp.
+                double minutes3D = Length3D(p3.Centerlines[mv.PathIndex], p3.PathZ[mv.PathIndex]) / op.FeedRate;
+                cutting += minutes3D;
+                perOp[mv.OperationIndex] = perOp.GetValueOrDefault(mv.OperationIndex) + minutes3D;
+                continue;
+            }
             double minutes = xy > 1e-9
                 ? Math.Sqrt(xy * xy + dz * dz) / (dz > 1e-9 && mv.FollowsPath ? op.RampFeedRate : op.FeedRate) // ramps / cuts and links
                 : dz / op.PlungeRate;                        // straight plunges and tab lifts
@@ -57,6 +65,17 @@ public static class RunTimeEstimator
         bool manual = m.Spindle == SpindleControl.Manual;
         double dwell = manual ? 0 : changes * doc.Motion.SpindleSpinUpSeconds / 60.0;
         return new RunTimeEstimate(cutting, rapid, dwell, perOp, assumed, manual ? changes : 0);
+    }
+
+    private static double Length3D(IReadOnlyList<CamPoint> path, IReadOnlyList<double> z)
+    {
+        double total = 0;
+        for (int i = 1; i < path.Count && i < z.Count; i++)
+        {
+            double dx = path[i].X - path[i - 1].X, dy = path[i].Y - path[i - 1].Y, dz = z[i] - z[i - 1];
+            total += Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+        return total;
     }
 
     public static string Format(double minutes)

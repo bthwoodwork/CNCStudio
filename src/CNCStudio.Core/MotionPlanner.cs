@@ -347,7 +347,22 @@ public static class MotionPlanner
                 var path = paths[k]; var pz = preview.PathZ[k];
                 if (path.Count < 2) continue;
                 var s = path[0];
-                TravelTo(s);
+                // A short link: lift straight up to just above the most material can be on the way, cross at the cutting
+                // feed (G1, so the independent G-code check of rapids still holds) and feed down the last bit.
+                double? top = k < preview.LinkStockTop.Count ? preview.LinkStockTop[k] : null;
+                double linkZ = top is double t ? t + m.PlungeClearanceMm : double.PositiveInfinity;
+                if (at is not null && linkZ < m.TravelHeightMm - 1e-9 && linkZ > pz[0] + 1e-9 &&
+                    TravelHeight(at, s, toolRadius, m.TravelHeightMm, fixtures).Fixture is null)
+                {
+                    if (z < linkZ - 1e-9)
+                    {
+                        moves.Add(new MotionMove(MoveKind.Rapid, at.X, at.Y, z, at.X, at.Y, linkZ, "Kort lyft till nästa bana"));
+                        z = linkZ;
+                    }
+                    moves.Add(new MotionMove(MoveKind.Feed, at.X, at.Y, z, s.X, s.Y, z, "Till nästa bana strax över materialet", opIndex));
+                    at = s;
+                }
+                else TravelTo(s);
                 moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, z, s.X, s.Y, pz[0], $"Nedmatning till {F(-pz[0])} mm", opIndex));
                 moves.Add(new MotionMove(MoveKind.Feed, s.X, s.Y, pz[0], path[^1].X, path[^1].Y, pz.Min(), "3D-fräsning", opIndex, k, 0, PathMath.Length(path)));
                 z = pz[^1]; at = path[^1];

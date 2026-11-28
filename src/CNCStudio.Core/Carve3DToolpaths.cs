@@ -73,15 +73,57 @@ public static class Carve3DToolpaths
 
         var paths = new List<IReadOnlyList<CamPoint>>();
         var zs = new List<IReadOnlyList<double>>();
+        var links = new List<double?>();
         int total = 0;
-        void Add(List<(double X, double Y, double Z)> pts)
+
+        // Short links between roughing runs: the material is never higher than its bound (below), so the tool can cross
+        // just above it instead of lifting to travel height. Only when the rows overlap (no uncut strips between them).
+        bool linksPossible = step < 2 * r - 1e-9;
+        // A ball (or tapered) end leaves a scallop between rows above the tips it cut at.
+        double scallop = ball ? r - Math.Sqrt(Math.Max(r * r - step * step / 4, 0)) : 0;
+        double[][]? bound = null;
+        void BoundFor(double previousDepth)
+        {
+            // After the levels down to previousDepth the material at a tool position is at most
+            // min(0, max(-previousDepth, tip + allowance)). Material the moving tool can touch lies within its reach of the
+            // crossing, and was cut from a row point within its reach of that material: widen by twice the reach (+ one step).
+            var b = tips.Select(row => row.Select(t => Math.Min(0, Math.Max(-previousDepth, t + allowance))).ToArray()).ToList();
+            int wx = (int)Math.Ceiling((2 * outer + sample) / sample), wy = (int)Math.Ceiling((2 * outer + step) / step);
+            var across = b.Select(row => Enumerable.Range(0, row.Length)
+                .Select(i => { double best = double.MinValue; for (int d = Math.Max(0, i - wx); d <= Math.Min(row.Length - 1, i + wx); d++) best = Math.Max(best, row[d]); return best; })
+                .ToArray()).ToList();
+            bound = Enumerable.Range(0, across.Count)
+                .Select(k => Enumerable.Range(0, xs.Count)
+                    .Select(i => { double best = double.MinValue; for (int d = Math.Max(0, k - wy); d <= Math.Min(across.Count - 1, k + wy); d++) best = Math.Max(best, across[d][i]); return best; })
+                    .ToArray()).ToArray();
+        }
+        double? LinkTop((double X, double Y) a, (double X, double Y) b)
+        {
+            if (bound is null) return null;
+            double len = Math.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
+            int n = Math.Max(1, (int)Math.Ceiling(len / sample));
+            double top = double.MinValue;
+            for (int t = 0; t <= n; t++)
+            {
+                double x = a.X + (b.X - a.X) * t / n, y = a.Y + (b.Y - a.Y) * t / n;
+                int i = Math.Clamp((int)Math.Round((x - x0) / sample), 0, xs.Count - 1);
+                int k = Math.Clamp((int)Math.Round((y - y0) / step), 0, rows.Count - 1);
+                top = Math.Max(top, bound[k][i]);
+            }
+            return Math.Min(0, top + scallop);
+        }
+
+        void Add(List<(double X, double Y, double Z)> pts, bool link = false)
         {
             var s = Simplify(pts);
             if (s.Count < 2) return;
             total += s.Count;
             if (total > MaxPoints) throw new NotSupportedException("För många punkter – öka stegningen eller minska modellen.");
+            double? linkTop = link && linksPossible && paths.Count > 0
+                ? LinkTop((paths[^1][^1].X, paths[^1][^1].Y), (s[0].X, s[0].Y)) : null;
             paths.Add(s.Select(p => new CamPoint(p.X, p.Y)).ToList());
             zs.Add(s.Select(p => p.Z).ToList());
+            links.Add(linkTop);
         }
 
         var levels = new List<double>();
@@ -110,6 +152,7 @@ public static class Carve3DToolpaths
             foreach (double depth in levels)
             {
                 double floor = -depth;
+                if (linksPossible) BoundFor(previous);
                 for (int k = 0; k < rows.Count; k++)
                 {
                     var run = new List<(double, double, double)>();
@@ -118,9 +161,9 @@ public static class Carve3DToolpaths
                     {
                         double z = Math.Max(floor, tips[k][i] + allowance);
                         if (z < -previous - 1e-6) run.Add((xs[i], rows[k], z));
-                        else if (run.Count > 0) { Add(run); run = new(); }
+                        else if (run.Count > 0) { Add(run, link: true); run = new(); }
                     }
-                    Add(run);
+                    Add(run, link: true);
                 }
                 previous = depth;
             }
@@ -129,7 +172,7 @@ public static class Carve3DToolpaths
         string warn = op.Kind == CamOperationKind.Carve3D && op.SecondToolEnabled
             ? $"Grovfräsning lämnar {RoughAllowanceMm:0.#} mm till finfräsningen."
             : finish && !ball ? "Rak fräs för finfräsning ger trappsteg i sluttningar – en kulfräs ger jämnare yta." : "";
-        return new ContourPreview(paths[0], levels, warn) { Centerlines = paths, PathZ = zs, Is3D = true };
+        return new ContourPreview(paths[0], levels, warn) { Centerlines = paths, PathZ = zs, Is3D = true, LinkStockTop = links };
     }
 
     /// <summary>Removes points on a straight 3D line (within 0.01 mm), keeping every corner of the surface.</summary>
