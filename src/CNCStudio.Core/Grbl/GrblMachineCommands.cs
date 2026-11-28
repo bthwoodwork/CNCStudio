@@ -29,6 +29,18 @@ public static class GrblMachineCommands
         new JogPreset("Snabb", 20, 10, 5000),
     };
 
+    /// <summary>
+    /// The three presets to use: the saved ones where they are valid (all values above zero and finite),
+    /// the default for any that are missing or damaged. The names always come from the defaults.
+    /// </summary>
+    public static IReadOnlyList<JogPreset> PresetsFrom(IReadOnlyList<JogPreset?>? saved) =>
+        DefaultPresets.Select((d, i) =>
+            saved is not null && i < saved.Count && saved[i] is { } s && Valid(s.StepXY) && Valid(s.StepZ) && Valid(s.FeedRate)
+                ? d with { StepXY = s.StepXY, StepZ = s.StepZ, FeedRate = s.FeedRate }
+                : d).ToList();
+
+    private static bool Valid(double v) => v > 0 && double.IsFinite(v);
+
     /// <summary>Wiki: continuous jogging works with a time step of 0.025–0.06 s.</summary>
     public const double ContinuousJogStepSeconds = 0.05;
 

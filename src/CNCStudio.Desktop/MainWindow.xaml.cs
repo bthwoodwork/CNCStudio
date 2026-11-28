@@ -226,6 +226,7 @@ public partial class MainWindow : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         InitDocking();   // the saved panel layout, before the workspace decides which panels are shown
+        InitJogPresets();
         RefreshMacroList();
         if (_path is null && AppStorage.Current.LoadMachineProfile() is MachineProfile defaults) _document.Machine = defaults;
         FitToMaterial(); InitGrblUi(); InitGamepad(); InitSettingsBackup(); RefreshLocations(); RefreshCamTemplates();

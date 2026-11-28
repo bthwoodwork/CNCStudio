@@ -1,4 +1,4 @@
-﻿# CNC Studio – källkod (senaste: 0.9.78)
+﻿# CNC Studio – källkod (senaste: 0.9.79)
 
 ## 0.5.6 – CAM-kontroll av fastspänningar (XY)
 
@@ -265,6 +265,16 @@ Byggd i Windows (0 fel, 0 varningar), kontrollerad med skärmbilder. Användaren
 **Tester:** 316 tester. Inte testad mot riktig maskin ännu.
 ### Release-bygge
 `powershell -ExecutionPolicy Bypass -File tools\publish.ps1` bygger en fristående `CNC Studio.exe` (ingen .NET-installation behövs) med `Installera.txt` till `<CNC Studio-mappen>\Programversioner\CNC Studio <version>`. CNC Studio-mappen är synkmappen (Arkiv → Synkmapp), annars Dokument\CNC Studio. En befintlig version skrivs aldrig över.
+
+## 0.9.79 – Arbetsytan stannar kvar vid dockning, joggen kan sparas
+
+- **Arbetsytan försvinner inte vid dockning.** När Maskinstyrning drogs loss och dockades tillbaka med en dockningsikon kunde Arbetsytan tryckas ihop till ingenting. Den kom inte tillbaka utan omstart.
+  - **Efter varje dockning** kontrolleras att Arbetsytan finns kvar i huvudfönstret, ligger framme och är minst 200 × 150 stor.
+  - **Är den för liten** städas tomma rutor bort och Arbetsytan får platsen som blir över. Panelerna bredvid får en fast bredd (340) eller höjd (260). Hjälper inte det återställs fönsterlayouten, och det står på statusraden.
+  - **Paneler i Arbetsytans flikrad:** de kan inte längre dockas dit, där de skulle täcka ritytan. *Docka som tabbat dokument* är avstängt.
+- **Flytande paneler hålls på skärmen.** En panel som görs flytande, eller öppnas flytande från en sparad layout, flyttas in helt på skärmen. Den flyttas inte medan den dras.
+- **Spara joggens inställningar.** Bredvid Precis, Normal och Snabb i Maskinstyrning finns en sparknapp. Den sparar XY-steg, Z-steg och mm/min i den valda förinställningen, på den här datorn. Vid nästa start väljs samma förinställning med de sparade värdena. Ett värde som är noll eller inte är ett tal sparas inte, och ett trasigt sparat värde ersätts av standardvärdet.
+- **Tester:** sparade förinställningar och reserv vid trasiga värden, att de klarar inställningsfilen, och att fönster flyttas in på skärmen, även med en skärm till vänster.
 
 ## 0.9.78 – Korta lyft i 3D-fräsningen
 
